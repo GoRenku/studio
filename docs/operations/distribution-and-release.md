@@ -557,7 +557,12 @@ clears overrides that were absent, so skills setup uses the originating profiles
 To update from the CLI, stop Studio with `renku studio stop` or Ctrl+C in its
 terminal, then run `renku update`.
 It downloads the complete current beta, activates that version, and runs skills
-setup again. `renku update skills` uses the installed runtime to update only
+setup again. After activation, both platform installers invoke the newly installed
+release's bundled installer in skills-only mode, passing the activated product
+and installation paths. This ensures agent setup follows the downloaded release
+rather than the installer that started the update. A setup failure remains a
+failed update; the activated runtime remains available for retry.
+`renku update skills` uses the installed runtime to update only
 Renku skills, without downloading the application. Restart agent apps afterward.
 The installer records absolute installation and launcher directories in
 `INSTALLATION.json` inside the installed version; updates preserve those paths.

@@ -225,7 +225,10 @@ printf '%s\n' "INSTALL005 PATH was saved in $profile. The launch command below w
 
 printf '\nRenku %s installed.\n' "$version"
 printf 'Start Studio: %s studio start\n' "$(shell_quote "$BIN_ROOT/renku")"
-install_agent_skills
+printf '%s\n' 'Running agent setup from the installed Renku release.'
+RENKU_UPDATE_SCOPE=skills RENKU_INSTALLED_PRODUCT="$destination" \
+  RENKU_INSTALL_ROOT="$INSTALL_ROOT" RENKU_BIN_ROOT="$BIN_ROOT" \
+  /bin/sh "$destination/distribution/install.sh" || exit "$?"
 printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
 printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
 printf '%s\n' 'If you confirmed skills installation, restart your agent and start a new conversation to load the Renku skills.'

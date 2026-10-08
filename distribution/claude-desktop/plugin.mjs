@@ -27,8 +27,13 @@ function sameMarketplace(entry, directory) {
 
 export function installClaudeDesktopPlugin({ marketplaceDirectory, discover = findClaudeDesktopCli, prepare = prepareClaudeMarketplaceCheckout, execute = spawnSync, env = process.env, report = console.log } = {}) {
   try {
+    report('Checking for Claude Desktop.');
     const executable = discover({ env, execute });
-    if (!executable) return 2;
+    if (!executable) {
+      report('Claude Desktop was not detected. Skipping Claude plugin setup.');
+      return 2;
+    }
+    report('Claude Desktop detected. Setting up the Renku plugin.');
     if (!marketplaceDirectory || !path.isAbsolute(marketplaceDirectory)) throw new Error('Claude setup requires an absolute marketplace directory inside the Renku installation.');
     const run = (args) => invoke(executable, args, { execute, env });
     const installed = inventory(run, ['list']).filter((entry) => entry.id === pluginId);

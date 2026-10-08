@@ -235,7 +235,26 @@ try {
   Write-Host "`nRenku $($Manifest.version) installed."
   $LauncherLiteral = (Join-Path $BinRoot 'renku.cmd').Replace("'", "''")
   Write-Host "Start Studio: & '$LauncherLiteral' studio start"
-  Install-AgentSkills
+  Write-Host 'Running agent setup from the installed Renku release.'
+  $SetupEnvironment = @{
+    RENKU_UPDATE_SCOPE = 'skills'
+    RENKU_INSTALLED_PRODUCT = $Destination
+    RENKU_INSTALL_ROOT = $InstallRoot
+    RENKU_BIN_ROOT = $BinRoot
+  }
+  $PreviousSetupEnvironment = @{}
+  try {
+    foreach ($Name in $SetupEnvironment.Keys) {
+      $PreviousSetupEnvironment[$Name] = [Environment]::GetEnvironmentVariable($Name, 'Process')
+      [Environment]::SetEnvironmentVariable($Name, $SetupEnvironment[$Name], 'Process')
+    }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Destination 'distribution\install.ps1')
+    if ($LASTEXITCODE -ne 0) { throw 'INSTALL009 Agent setup did not complete. Run renku update skills to try again.' }
+  } finally {
+    foreach ($Name in $PreviousSetupEnvironment.Keys) {
+      [Environment]::SetEnvironmentVariable($Name, $PreviousSetupEnvironment[$Name], 'Process')
+    }
+  }
   Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'
   Write-Host 'For a custom location, run renku init <storage-root> before completing setup.'
   Write-Host 'If you confirmed skills installation, restart your agent and start a new conversation to load the Renku skills.'

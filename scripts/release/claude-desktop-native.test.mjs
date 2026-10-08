@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { findClaudeDesktopCli } from '../../distribution/claude-desktop/discovery.mjs';
 import { installClaudeDesktopPlugin } from '../../distribution/claude-desktop/plugin.mjs';
@@ -16,10 +17,13 @@ test('Desktop cached Code installs, updates and loads public Renku commands in a
   const executable = findClaudeDesktopCli({ env });
   assert.ok(executable, 'Native Claude Desktop and its initialized Code runtime are required');
   t.diagnostic(`Temporary profile: ${profile}; Desktop cached CLI: ${executable}`);
-  const reports = [];
-  const options = { env, marketplaceDirectory: path.join(profile, 'installation', 'plugins', 'claude', 'renku'), report: (message) => reports.push(message) };
-  assert.equal(installClaudeDesktopPlugin(options), 0, reports.join('\n'));
-  assert.equal(installClaudeDesktopPlugin(options), 0, reports.join('\n'));
+  const entrypoint = fileURLToPath(new URL('../../distribution/claude-desktop/plugin.mjs', import.meta.url));
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = spawnSync(process.execPath, [entrypoint, path.join(profile, 'installation', 'plugins', 'claude', 'renku')], { env, encoding: 'utf8', timeout: 240000 });
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /Renku Claude plugin is installed/);
+  }
   const commands = await loadCommands(executable, env, profile);
   assert.ok(commands.includes('renku:movie-director'));
   t.diagnostic(`Fresh native Code process loaded ${commands.length} Renku commands, including renku:movie-director. No model request or Desktop UI automation was performed.`);

@@ -16,6 +16,8 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pl
   mkdirSync(bin);
   mkdirSync(path.join(product, 'app', 'dist'), { recursive: true });
   mkdirSync(path.join(product, 'distribution'), { recursive: true });
+  writeFileSync(path.join(product, 'distribution', 'install.sh'),
+    'printf "%s\\n" "$0" "$RENKU_UPDATE_SCOPE" "$RENKU_INSTALLED_PRODUCT" >> "$TEST_ROOT/bundled-setup"\n' + readFileSync(installer, 'utf8'));
   cpSync(new URL('../../distribution/install-codex-plugin.mjs', import.meta.url), path.join(product, 'distribution', 'install-codex-plugin.mjs'));
   cpSync(new URL('../../distribution/codex-cli.mjs', import.meta.url), path.join(product, 'distribution', 'codex-cli.mjs'));
   cpSync(new URL('../../distribution/codex-app-server.mjs', import.meta.url), path.join(product, 'distribution', 'codex-app-server.mjs'));
@@ -264,6 +266,10 @@ test('full update activates the new runtime, retains the previous version, and i
   assert.equal(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'retained-marker'), 'utf8'), 'keep');
   assert.match(readFileSync(path.join(env.RENKU_BIN_ROOT, 'renku'), 'utf8'), /versions\/0\.0\.1/);
   assert.ok(existsSync(path.join(root, 'skills-args')));
+  const installed = path.join(env.RENKU_INSTALL_ROOT, 'versions', '0.0.1');
+  assert.deepEqual(readFileSync(path.join(root, 'bundled-setup'), 'utf8').trim().split('\n'), [
+    path.join(installed, 'distribution', 'install.sh'), 'skills', installed,
+  ]);
 });
 
 test('macOS installer initiates missing Git setup before installing skills', { skip: process.platform !== 'darwin' }, () => {

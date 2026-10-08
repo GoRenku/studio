@@ -111,7 +111,7 @@ for (const [name, fixture] of Object.entries({
     const { options, calls, reports } = pluginFixture(fixture);
     assert.equal(installClaudeDesktopPlugin(options), 1);
     assert.ok(calls.every((args) => args.includes('list')));
-    assert.match(reports[0], /INSTALL013/);
+    assert.match(reports.at(-1), /INSTALL013/);
   });
 }
 
@@ -119,6 +119,6 @@ for (const fixture of [{ failedCommand: 'install' }, { mutation: { outcome: 'fai
   test(`failed setup is reported: ${JSON.stringify(fixture)}`, () => {
     const { options, reports } = pluginFixture(fixture);
     assert.equal(installClaudeDesktopPlugin(options), 1);
-    assert.match(reports[0], /^INSTALL013 /);
+    assert.match(reports.at(-1), /^INSTALL013 /);
   });
 }
