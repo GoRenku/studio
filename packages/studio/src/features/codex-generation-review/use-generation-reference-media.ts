@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationReviewReference } from '@gorenku/studio-codex/client';
-import type { CodexApp } from '@/services/codex-app';
+import { readCodexAppMediaBlob, type CodexApp } from '@/services/codex-app';
 
 export function useGenerationReferenceMedia(bridge: CodexApp, reference: GenerationReviewReference, container: RefObject<HTMLDivElement | null>) {
   const resources = useRef(new Map<string, string>());
@@ -16,7 +16,7 @@ export function useGenerationReferenceMedia(bridge: CodexApp, reference: Generat
     if (existing) return Promise.resolve(existing);
     const loading = pending.current.get(uri);
     if (loading) return loading;
-    const request = readMediaResource(bridge, uri).then((blob) => {
+    const request = readCodexAppMediaBlob(bridge, uri).then((blob) => {
       if (disposed.current) throw new Error('The reference is no longer visible.');
       const url = URL.createObjectURL(blob);
       resources.current.set(uri, url);
@@ -50,25 +50,6 @@ export function useGenerationReferenceMedia(bridge: CodexApp, reference: Generat
 
   const visibleMedia = media.scope === scope ? media : { loading: false, browserUrl: undefined, error: undefined };
   return { error: visibleMedia.error, loading: visibleMedia.loading, source: { browserUrl: visibleMedia.browserUrl, loadPreview: () => { setMedia((current) => current.scope === scope ? { ...current, error: undefined } : { scope, loading: false }); return load(reference.resourceUri); } } };
-}
-
-async function readMediaResource(bridge: CodexApp, uri: string): Promise<Blob> {
-  let result;
-  try {
-    result = await bridge.app.readServerResource({ uri });
-  } catch (failure) {
-    const code = failure !== null && typeof failure === 'object' && 'code' in failure && typeof failure.code === 'number' ? failure.code : undefined;
-    throw new StructuredError({ code: 'CODEX_REFERENCE_READ_FAILED', message: `The host could not read this reference${code === undefined ? '.' : ` (MCP ${code}).`}` });
-  }
-  const content = result.contents.find((content) => content.uri === uri);
-  if (!content || !('blob' in content) || !content.mimeType) throw new StructuredError({ code: 'CODEX_REFERENCE_BYTES_MISSING', message: 'The host returned a reference without its media bytes.' });
-  let bytes: Uint8Array<ArrayBuffer>;
-  try {
-    bytes = Uint8Array.from(atob(content.blob), (character) => character.charCodeAt(0));
-  } catch {
-    throw new StructuredError({ code: 'CODEX_REFERENCE_BYTES_INVALID', message: 'The host returned invalid reference bytes.' });
-  }
-  return new Blob([bytes], { type: content.mimeType });
 }
 
 class ReferenceMediaQueue {

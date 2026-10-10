@@ -7,8 +7,8 @@ if (!destination) throw new Error('The developer observer requires an output URL
 const modules = new Set();
 const measurements = [];
 const allowedPhases = {
-  cli: new Set(['command-load', 'command', 'studio-notification']),
-  core: new Set(['database-open', 'project-operation']),
+  cli: new Set(['command-load', 'command']),
+  core: new Set(['database-open', 'project-operation', 'studio-notification']),
   engines: new Set(['metadata', 'validation', 'upload', 'provider-wait', 'download']),
 };
 registerHooks({ load(url, context, nextLoad) {

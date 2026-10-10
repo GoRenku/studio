@@ -12,10 +12,13 @@ import { consumeGenerationReview, respondToGenerationReview } from './generation
 import { readGenerationReference } from './generation-reference-resources.js';
 import { integrationErrorResult } from './diagnostics.js';
 import { assertGenerationReviewCapability, readGenerationReviewCapabilities } from './generation-review-capabilities.js';
+import { registerDialogueDirection } from './dialogue-direction/index.js';
 
 export interface CodexServerOptions {
   version: string;
   generationReviewHtml: string;
+  elevenV4DialogueDirectionHtml: string;
+  seedAudioDialogueDirectionHtml: string;
   homeDir?: string;
 }
 
@@ -29,6 +32,7 @@ export function createCodexServer(options: CodexServerOptions): McpServer {
   registerReviewTools(server, state, options.homeDir);
   registerReviewResources(server, state, options.homeDir);
   server.server.onclose = () => state.expire();
+  registerDialogueDirection(server, { elevenV4Html: options.elevenV4DialogueDirectionHtml, seedAudioHtml: options.seedAudioDialogueDirectionHtml, homeDir: options.homeDir });
   return server;
 }
 

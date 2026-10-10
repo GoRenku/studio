@@ -1,11 +1,11 @@
 import {
   createStudioOperationId,
   createStudioCoordinationService,
+  notifyStudioProjectResourcesChanged,
   resolveRenkuStorageRoot,
   type StudioProjectRef,
   type StudioSelection,
 } from '@gorenku/studio-core/server';
-import { notifyStudioProjectResourcesChanged } from './studio-notification-client.js';
 import type { CliCommandRuntime } from './structured-command.js';
 
 export interface StudioResourceChangedReport {

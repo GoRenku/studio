@@ -1,5 +1,6 @@
 import type {
   DialogueTurnRange,
+  ShotPlanDialogueAudioLine,
   ShotPlanDialogueAudioResource,
   ShotPlanDialogueAudioSpeaker,
   ShotPlanDialogueAudioTake,
@@ -58,8 +59,36 @@ export function readShotPlanDialogueAudio(input: {
       title: shotPlan.title,
     },
     takes,
+    lines: linesCoveredByTakes(input.session, dialogueTurns, takes),
     resourceKeys: [studioShotPlanDialogueAudioResourceKey(shotPlan.id)],
   };
+}
+
+function linesCoveredByTakes(
+  session: DatabaseSession,
+  dialogueTurns: ReturnType<typeof listNumberedDialogueTurns>,
+  takes: ShotPlanDialogueAudioTake[],
+): ShotPlanDialogueAudioLine[] {
+  return dialogueTurns
+    .filter((context) => takes.some((take) =>
+      context.number >= take.turnRange.start && context.number <= take.turnRange.end
+    ))
+    .map((context) => ({
+      number: context.number,
+      speakerName: speakerNameForTurn(session, context),
+      castMemberId: context.castMemberId,
+      plainText: context.plainText,
+    }));
+}
+
+function speakerNameForTurn(
+  session: DatabaseSession,
+  context: ReturnType<typeof listNumberedDialogueTurns>[number],
+): string {
+  const castMember = context.castMemberId
+    ? readCastMemberRecord(session, context.castMemberId)
+    : null;
+  return castMember?.name ?? context.turn.characterName;
 }
 
 function compareDialogueAudioTakes(

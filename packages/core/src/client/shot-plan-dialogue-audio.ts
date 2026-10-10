@@ -25,6 +25,13 @@ export interface ShotPlanDialogueAudioTake {
   updatedAt: string;
 }
 
+export interface ShotPlanDialogueAudioLine {
+  number: number;
+  speakerName: string;
+  castMemberId: string | null;
+  plainText: string;
+}
+
 export interface ShotPlanDialogueAudioResource {
   shotPlan: {
     id: string;
@@ -32,6 +39,7 @@ export interface ShotPlanDialogueAudioResource {
     title: string;
   };
   takes: ShotPlanDialogueAudioTake[];
+  lines: ShotPlanDialogueAudioLine[];
   resourceKeys: string[];
 }
 

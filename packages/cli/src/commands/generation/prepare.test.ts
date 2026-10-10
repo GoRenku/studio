@@ -4,15 +4,19 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { EngineError } from '@gorenku/studio-engines';
-import { createProjectDataService, initRenkuConfig, projectMediaGenerationPreview } from '@gorenku/studio-core/server';
-import { notifyStudioGenerationPreviews } from '../studio-notification-client.js';
+import {
+  createProjectDataService,
+  initRenkuConfig,
+  notifyStudioGenerationPreviews,
+  projectMediaGenerationPreview,
+} from '@gorenku/studio-core/server';
 import { prepareGenerationRequest } from './prepare.js';
 
 vi.mock('@gorenku/studio-core/server', async (original) => ({
   ...await original<typeof import('@gorenku/studio-core/server')>(),
+  notifyStudioGenerationPreviews: vi.fn(),
   projectMediaGenerationPreview: vi.fn(),
 }));
-vi.mock('../studio-notification-client.js', () => ({ notifyStudioGenerationPreviews: vi.fn() }));
 
 beforeEach(() => {
   vi.resetAllMocks();

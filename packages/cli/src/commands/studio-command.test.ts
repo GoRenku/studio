@@ -4,12 +4,13 @@ import path from 'node:path';
 import {
   createProjectDataService,
   initRenkuConfig,
+  notifyStudioProjectResourcesChanged,
 } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runStudioCommand } from './studio/index.js';
-import { notifyStudioProjectResourcesChanged } from './studio-notification-client.js';
 
-vi.mock('./studio-notification-client.js', () => ({
+vi.mock('@gorenku/studio-core/server', async (original) => ({
+  ...await original<typeof import('@gorenku/studio-core/server')>(),
   notifyStudioProjectResourcesChanged: vi.fn(),
 }));
 

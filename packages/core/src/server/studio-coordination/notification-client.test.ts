@@ -2,25 +2,25 @@ import fs from 'node:fs/promises';
 import { createServer, type IncomingMessage } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import {
-  STUDIO_RUNTIME_STALE_AFTER_MS,
-  claimStudioRuntimeDescriptor,
-  resolveStudioEventStorePath,
-  resolveStudioRuntimeDescriptorPath,
-} from '@gorenku/studio-core/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resolveStudioEventStorePath } from './event-store.js';
 import {
   notifyStudioGenerationPreviews,
   notifyStudioProjectResourcesChanged,
   type StudioProjectResourcesChangedNotification,
-} from './studio-notification-client.js';
+} from './notification-client.js';
+import {
+  STUDIO_RUNTIME_STALE_AFTER_MS,
+  claimStudioRuntimeDescriptor,
+  resolveStudioRuntimeDescriptorPath,
+} from './runtime-descriptor.js';
 
 describe('Studio notification client', () => {
   let homeDir: string;
   const servers: Array<{ close: () => Promise<void> }> = [];
 
   beforeEach(async () => {
-    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-cli-notify-'));
+    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-core-notify-'));
   });
 
   afterEach(async () => {

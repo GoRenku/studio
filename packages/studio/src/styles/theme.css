@@ -272,6 +272,77 @@
   --popover-foreground: var(--foreground);
 }
 
+@keyframes dd-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Codex dialogue direction panels: the approved mockup's exact palette and type. */
+.dialogue-direction {
+  --dd-bg: hsl(60 51% 91%);
+  --dd-rail: hsl(46 52% 88%);
+  --dd-card: hsl(50 100% 93%);
+  --dd-fg: hsl(45 62% 21%);
+  --dd-card-fg: hsl(0 0% 20%);
+  --dd-muted: hsl(60 35% 87%);
+  --dd-muted-fg: hsl(0 0% 45%);
+  --dd-border: hsl(0 0% 80%);
+  --dd-primary: hsl(42 58% 50%);
+  --dd-primary-fg: hsl(0 0% 0%);
+  --dd-hover: hsl(60 35% 86%);
+  --dd-active: hsl(45 44% 83%);
+  --dd-active-border: hsl(42 60% 48% / 0.45);
+  --dd-sel-bg: hsl(128 34% 84%);
+  --dd-sel-border: hsl(135 36% 42% / 0.5);
+  --dd-sel-fg: hsl(135 40% 28%);
+  --dd-ok: hsl(135 40% 42%);
+  --dd-tag: hsl(202 70% 36%);
+  --dd-tag-bg: hsl(202 70% 36% / 0.1);
+  --dd-ref: hsl(18 62% 38%);
+  --dd-ref-bg: hsl(18 62% 38% / 0.12);
+  --dd-quote: hsl(45 62% 21%);
+  --dd-editor: hsl(47 55% 89%);
+  --dd-destructive: hsl(9 85% 50%);
+  --dd-wave: hsl(45 25% 66%);
+  --dd-spk-l: 34%;
+  --dd-font-sans: 'Montserrat', system-ui, sans-serif;
+  --dd-font-script: 'Courier Prime', 'Courier New', monospace;
+  --dd-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  background: var(--dd-bg);
+  color: var(--dd-fg);
+  font-family: var(--dd-font-sans);
+  font-size: 13px;
+}
+
+.dark .dialogue-direction {
+  --dd-bg: hsl(0 0% 20%);
+  --dd-rail: hsl(0 0% 16%);
+  --dd-card: hsl(0 0% 25%);
+  --dd-fg: hsl(60 51% 91%);
+  --dd-card-fg: hsl(60 51% 91%);
+  --dd-muted: hsl(0 0% 30%);
+  --dd-muted-fg: hsl(0 0% 64%);
+  --dd-border: hsl(0 0% 33%);
+  --dd-primary: hsl(42 75% 48%);
+  --dd-hover: hsl(0 0% 27%);
+  --dd-active: hsl(42 65% 45% / 0.2);
+  --dd-active-border: hsl(42 65% 45% / 0.55);
+  --dd-sel-bg: hsl(142 35% 31% / 0.32);
+  --dd-sel-border: hsl(142 48% 54% / 0.55);
+  --dd-sel-fg: hsl(142 48% 72%);
+  --dd-tag: hsl(200 75% 68%);
+  --dd-tag-bg: hsl(200 75% 68% / 0.12);
+  --dd-ref: hsl(17 72% 68%);
+  --dd-ref-bg: hsl(17 72% 68% / 0.14);
+  --dd-quote: hsl(48 60% 82%);
+  --dd-editor: hsl(30 5% 16%);
+  --dd-destructive: hsl(16 100% 60%);
+  --dd-wave: hsl(0 0% 44%);
+  --dd-spk-l: 72%;
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-timeline-clip-1: var(--timeline-clip-1);
   --color-timeline-clip-2: var(--timeline-clip-2);

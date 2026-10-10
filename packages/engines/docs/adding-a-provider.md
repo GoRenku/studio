@@ -221,3 +221,34 @@ a local model schema. Investigate actual protocol failures as provider work rath
 than requiring a transport/output audit for every route addition. ElevenLabs'
 fixed music path and unavailable generic speech/music schema inspection remain
 explicit integration limits.
+
+### ElevenLabs operation registry
+
+ElevenLabs serves several protocol operations from one provider. `provider.ts`
+only checks the credential, rejects local-media markers, and delegates to the
+operation returned by `resolveElevenLabsOperation(model)` in
+`providers/elevenlabs/operations/registry.ts`. Each operation module exports
+`validate` and `execute`; SDK client creation, retries, and error normalization
+live in `client.ts`, and stream collection and artifact writing live in
+`audio-output.ts`. The registry is a bounded table:
+
+- `voice-sample-audio` → voice sample retrieval (the only route with an input
+  schema);
+- `music_v1` → music composition;
+- `<model>/text-to-dialogue` → Text to Dialogue, sending `<model>` as the
+  ElevenLabs `modelId` (for example `eleven_v4/text-to-dialogue` sends
+  `eleven_v4`);
+- any other model → Text to Speech with the route id as `modelId`.
+
+New speech models need no registry change. Add a table entry only when
+ElevenLabs adds a new operation kind.
+
+The dialogue route accepts
+`{ inputs: [{ text, voice }], settings?: { stability, similarity }, output_format?, language_code?, seed? }`.
+Validation collects every issue into one `ENGINE_REQUEST_INVALID` error whose
+`details` lists `instancePath`, `keyword`, and `message`: `inputs` must be a
+non-empty array of entries with non-empty `text` and `voice`, at most 10
+distinct voices are allowed, and unknown fields are rejected. Engines does not
+enforce ElevenLabs' recommended total character limit. Execution maps `voice`
+to `voiceId`, writes one audio artifact, and reports the route id as the result
+model.

@@ -8,7 +8,8 @@ const sourceRoot = path.dirname(fileURLToPath(import.meta.url));
 
 it('isolates the Codex HTML entries from server packages and router frameworks', async () => {
   const workspace = path.dirname(sourceRoot);
-  const entries = ['codex-generation-review.html'];
+  const entries = (await fs.readdir(path.join(workspace, 'codex-apps'))).filter((entry) => entry.endsWith('.html')).map((entry) => path.join('codex-apps', entry));
+  expect(entries.length).toBeGreaterThan(0);
   const queue: string[] = [];
   for (const entry of entries) {
     const html = await fs.readFile(path.join(workspace, entry), 'utf8');

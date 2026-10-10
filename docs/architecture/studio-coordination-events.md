@@ -27,7 +27,12 @@ refreshes. ADR 0030 defines the uniform implementation shape: core owns the
 resource-key catalog, CLI commands notify the running Studio server through one
 resource-change notifier, Studio server mutation routes preserve returned
 resource keys, and browser surfaces subscribe through one shared
-resource-refresh hook or module. ADR 0054 defines the string resource-key
+resource-refresh hook or module. The notifier is the Core-owned notification
+client in `packages/core/src/server/studio-coordination/notification-client.ts`,
+exported from `@gorenku/studio-core/server`. Its notifications carry the
+existing `StudioEventSource`: CLI commands send the `cli` source, and agent
+runtimes outside the CLI, such as Codex panel Take mutations, send the `agent`
+source. ADR 0054 defines the string resource-key
 vocabulary and the `surface:` and `navigation:` projection namespaces.
 ADR 0031 defines the delivery boundary: the Studio server appends live
 coordination events, and closed Studio sessions do not accumulate offline

@@ -302,19 +302,19 @@ export function fakeProjectDataService(): NonNullable<
       };
     },
     async readShotPlanDialogueAudio() {
-      return { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] };
+      return { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], lines: [], resourceKeys: [] };
     },
     async readMediaGenerationPreview() { return generationPreviewResource(); },
     async updateMediaGenerationPreviewPrompt() { return generationPreviewResource(); },
     async readAssetFileMediaGenerationRequest() { return { ...generationPreviewResource(), documentPath: undefined, editable: false }; },
     async discardShotPlanDialogueAudioTake() {
-      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
+      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], lines: [], resourceKeys: [] }, resourceKeys: [] };
     },
     async selectShotPlanDialogueAudioTake() {
-      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
+      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], lines: [], resourceKeys: [] }, resourceKeys: [] };
     },
     async clearShotPlanDialogueAudioTakeSelection() {
-      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
+      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], lines: [], resourceKeys: [] }, resourceKeys: [] };
     },
     async resolveShotPlanDialogueAudioTakeFile() {
       throw new Error('No dialogue audio fixture file.');

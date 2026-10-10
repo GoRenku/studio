@@ -42,7 +42,7 @@
     "elevenlabs"
   ],
   "dependencies": {
-    "@elevenlabs/elevenlabs-js": "^2.31.0",
+    "@elevenlabs/elevenlabs-js": "^2.71.0",
     "@fal-ai/client": "^1.7.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",

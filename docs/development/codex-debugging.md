@@ -110,3 +110,36 @@ tmp/studio-dev-server.log
 This file is ignored by git. It may contain server lifecycle messages such as
 start, listen, descriptor claim failure, heartbeat failure, release failure, and
 close events. It must not contain runtime API tokens.
+
+## Dialogue Direction Panels
+
+The Eleven v4 and Seed Audio dialogue direction panels are served by the local
+`renku studio mcp` runtime from the packaged
+`@gorenku/studio/codex-apps/*-dialogue-direction.html` builds. Run
+`pnpm build` (or the Studio `build:codex` script) after changing panel code so
+the MCP runtime serves the current HTML, then restart the Codex MCP connection.
+
+To open each panel against Urban Basilica in Codex Desktop:
+
+1. With Urban Basilica as the current project, read the dialogue context and
+   note the Shot Plan id, line numbers and Cast Voice ids:
+
+   ```bash
+   renku generation context --purpose shot-plan.dialogue-audio \
+     --target shot-plan:<shot plan 02-01 id> --json
+   ```
+
+2. Ask the agent to direct dialogue for Scene 02, Shot Plan 02-01, lines 4–9,
+   naming the route: Eleven v4 for the Eleven panel, or Seed Audio 1.0 on
+   Fal.ai, WaveSpeed or Pika for the Seed Audio panel. The agent calls
+   `dialogue.direction.eleven-v4.open` or `dialogue.direction.seed-audio.open`
+   and ends its turn; the panel opens fullscreen in the right pane.
+3. Click Generate. Confirm the posted message, a single
+   `dialogue.direction.consume` call, execution through the provider Skill and
+   CLI, `renku media import --turns`, and `dialogue.direction.report`.
+
+Opening fails with `CODEX_REVIEW_UNSUPPORTED` when the connection is not a
+Codex client with MCP App UI support. Other failures use the
+`CODEX_DIALOGUE_DIRECTION_*` codes. Sessions live in the MCP connection's
+memory, so restarting the connection expires open panels
+(`CODEX_DIALOGUE_DIRECTION_NOT_FOUND`).

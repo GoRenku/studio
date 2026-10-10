@@ -133,6 +133,44 @@ review confirmation, including built-in images, with no duplicate question.
 The plugin has no Studio sidebar launcher. Only the review UI is packaged as an
 MCP resource; no certificate/trust installation or embedded Studio is required.
 
+## Codex dialogue direction panels
+
+For `shot-plan.dialogue-audio` requests on an Eleven v4 route
+(`eleven_v4` / `eleven_v4/text-to-dialogue`) or a Seed Audio 1.0 route, and
+only when the Codex panel probe advertises support, the Media Producer Skill
+opens a model-specific fullscreen panel instead of the conversational flow:
+`dialogue.direction.eleven-v4.open` or `dialogue.direction.seed-audio.open`.
+The panels are not generation reviews: they never read `codexGenerationReview`
+or its display mode, and their UI resources declare fullscreen only.
+
+The agent pre-fills one consecutive line range with its direction (per-line
+acting scripts for Eleven v4, per-range performance prompts for Seed Audio) and
+the compatible Cast Voices per speaker, then ends its turn. `packages/codex`
+keeps the session in the MCP connection's memory, projects lines, voices and
+the route's Takes from Core reads, and serves media through opaque
+`renku-direction://{sessionId}/media/{mediaId}` resources.
+
+Generate is a message handoff, not execution. The panel records one action
+through the app-only `dialogue.direction.generate` tool (validated against the
+panel's draft contract; at most one outstanding action) and posts a one-line
+message to the conversation. The agent consumes the action once with
+`dialogue.direction.consume`, which returns the exact route id (speech model for
+one line, range model for a range) and the draft. Execution still runs through
+the provider Skill and CLI: the agent authors the native request, validates,
+executes, imports with `--turns`, and reports the imported Asset File or a
+failure message through `dialogue.direction.report`. No MCP tool executes
+generation. Panel select and discard call Core Take commands and notify Studio
+with the `agent` event source. Every generated Take keeps its exact request in
+provenance; panel drafts are lost when the connection closes.
+
+Successful reports retain `lastCompletedAction: { actionId, takeId } | null` in
+the connection-local session, using the Take resolved from the reported Asset
+File. Panels autoplay newly observed completions once, without inferring the
+result from Take-list changes or replaying a completion on initial load.
+Visible panels refresh the session every two seconds even while idle; refreshes
+preserve local drafts, focus and playback. A saved Generate notification remains
+retryable independently of errors from other panel operations.
+
 ## Transient Visualize configuration
 
 When the Media Producer Skill selects `visualize` in Codex desktop, it

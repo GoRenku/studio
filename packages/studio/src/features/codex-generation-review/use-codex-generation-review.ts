@@ -24,7 +24,7 @@ export function useCodexGenerationReview() {
 
   useEffect(() => {
     let disposed = false;
-    const app = createCodexApp('Renku generation review');
+    const app = createCodexApp('Renku generation review', ['inline', 'fullscreen']);
     app.app.addEventListener('hostcontextchanged', (context) => {
       if (!disposed && (context.displayMode === 'inline' || context.displayMode === 'fullscreen')) setDisplayMode(context.displayMode);
     });

@@ -30,7 +30,7 @@ describe('Shot Plan Dialogue Audio Hono route', () => {
     });
   });
 
-  it('delegates independent multi-selection and deletion to Core', async () => {
+  it('delegates selection and deletion to Core', async () => {
     const selectShotPlanDialogueAudioTake = vi.fn(async () => mutation());
     const clearShotPlanDialogueAudioTakeSelection = vi.fn(async () => mutation());
     const discardShotPlanDialogueAudioTake = vi.fn(async () => mutation());
@@ -116,6 +116,11 @@ function resource(): ShotPlanDialogueAudioResource {
         updatedAt: '2026-08-31T10:00:00.000Z',
       },
     }],
+    lines: [
+      { number: 2, speakerName: 'Speaker', castMemberId: null, plainText: 'Line two.' },
+      { number: 3, speakerName: 'Speaker', castMemberId: null, plainText: 'Line three.' },
+      { number: 4, speakerName: 'Speaker', castMemberId: null, plainText: 'Line four.' },
+    ],
     resourceKeys: ['surface:shotPlan:plan one:dialogue-audio'],
   };
 }

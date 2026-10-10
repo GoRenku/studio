@@ -1,5 +1,10 @@
 # 0090 Use Shot Plan Dialogue Audio And Provider-Neutral Cast Voices
 
+> **Decision 0112 update:** [ADR 0112](0112-select-one-dialogue-audio-take-per-line.md)
+> narrows the selection rule below: at most one selected Take covers each
+> Dialogue Turn, newly attached Takes start selected, and multi-Turn Takes may
+> also come from Eleven v4 Dialogue.
+
 > **Decision 0103 update:** Audio Settings offers keyed general media providers
 > and ElevenLabs, but never World Labs. The preference remains an opaque agent
 > default; the agent resolves support for the requested Audio operation through

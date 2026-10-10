@@ -27,7 +27,7 @@ beforeEach(() => {
 
 describe('Codex review display handshake', () => {
   it('advertises both supported modes and enables SDK size notifications', () => {
-    createCodexApp('Review');
+    createCodexApp('Review', ['inline', 'fullscreen']);
     expect(integration.App).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Review' }),
       { availableDisplayModes: ['inline', 'fullscreen'] },
@@ -37,24 +37,24 @@ describe('Codex review display handshake', () => {
 
   it.each(['inline', 'fullscreen'])('accepts the host-selected %s mode without requesting a different mode', async (mode) => {
     integration.app.getHostContext.mockReturnValue({ displayMode: mode, availableDisplayModes: [mode] });
-    await expect(connectCodexApp(createCodexApp('Review'), true)).resolves.toBe(mode);
+    await expect(connectCodexApp(createCodexApp('Review', ['inline', 'fullscreen']), true)).resolves.toBe(mode);
     expect(integration.app.requestDisplayMode).not.toHaveBeenCalled();
   });
 
   it.each([undefined, 'pip'])('rejects an unsupported or missing mode (%s)', async (mode) => {
     integration.app.getHostContext.mockReturnValue({ displayMode: mode, availableDisplayModes: ['inline', 'fullscreen'] });
-    await expect(connectCodexApp(createCodexApp('Review'), true)).rejects.toMatchObject({ code: 'CODEX_REVIEW_UNSUPPORTED' });
+    await expect(connectCodexApp(createCodexApp('Review', ['inline', 'fullscreen']), true)).rejects.toMatchObject({ code: 'CODEX_REVIEW_UNSUPPORTED' });
     expect(integration.app.requestDisplayMode).not.toHaveBeenCalled();
   });
 
   it('requires conversation messaging in inline mode before enabling review interaction', async () => {
     integration.extensions.message = undefined;
-    await expect(connectCodexApp(createCodexApp('Review'), true)).rejects.toMatchObject({ code: 'CODEX_REVIEW_UNSUPPORTED' });
+    await expect(connectCodexApp(createCodexApp('Review', ['inline', 'fullscreen']), true)).rejects.toMatchObject({ code: 'CODEX_REVIEW_UNSUPPORTED' });
   });
 
   it('propagates a failed connection instead of guessing a display mode', async () => {
     integration.app.connect.mockRejectedValue(new Error('Host connection failed.'));
-    await expect(connectCodexApp(createCodexApp('Review'), true)).rejects.toThrow('Host connection failed.');
+    await expect(connectCodexApp(createCodexApp('Review', ['inline', 'fullscreen']), true)).rejects.toThrow('Host connection failed.');
     expect(integration.app.getHostContext).not.toHaveBeenCalled();
   });
 });

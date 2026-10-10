@@ -26,7 +26,7 @@ beforeAll(async () => {
   await fs.writeFile(reviewFile, JSON.stringify({ provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Café\nα', request: { prompt: 'Café\nα', resolution: '2K' } }));
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Protocol resource fixture</body></html>');
-  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, homeDir });
+  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0', title: 'Codex' }, {
     capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } },
   });
@@ -52,13 +52,13 @@ const opening = {
 
 describe('official MCP registration and transport', () => {
   it('discovers the capability probe, review tools and an inline-preferred review resource supporting both modes', async () => {
-    const tools = (await client.listTools()).tools;
+    const tools = (await client.listTools()).tools.filter((tool) => tool.name.startsWith('generation.review'));
     expect(tools.map((tool) => tool.name).sort()).toEqual(['generation.review', 'generation.review.capabilities', 'generation.review.consume', 'generation.review.respond']);
     expect(tools.find((tool) => tool.name === 'generation.review.respond')?._meta?.ui).toMatchObject({ visibility: ['app'] });
     expect(tools.every((tool) => !(tool._meta?.['openai/ui'] as { entrypoints?: unknown[] } | undefined)?.entrypoints?.length)).toBe(true);
     const resource = await client.readResource({ uri: 'ui://renku/generation-review' });
     expect(resource.contents[0]).toMatchObject({ mimeType: 'text/html;profile=mcp-app', _meta: { 'openai/ui': { preferredDisplayMode: 'inline', availableDisplayModes: ['inline', 'fullscreen'] }, ui: { csp: { connectDomains: ['blob:'], resourceDomains: ['blob:'] } } } });
-    expect((await client.listResources()).resources.map((resource) => resource.uri)).toEqual(['ui://renku/generation-review']);
+    expect((await client.listResources()).resources.map((resource) => resource.uri)).toContain('ui://renku/generation-review');
   });
 
   it.each(['inline', 'fullscreen'])('reads the current %s preference without restarting the MCP connection', async (mode) => {
@@ -153,7 +153,7 @@ describe('host capability negotiation', () => {
     ['claude-desktop', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } }, 'non-codex-client'],
     ['unknown-agent', {}, 'non-codex-client'],
   ])('requires Studio Preview for %s with capabilities %j', async (name, capabilities, reason) => {
-    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html') });
+    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), elevenV4DialogueDirectionHtml: path.join(root, 'app.html'), seedAudioDialogueDirectionHtml: path.join(root, 'app.html') });
     const isolatedClient = new Client({ name, version: 'test' }, { capabilities });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {

@@ -1,10 +1,10 @@
 import { channel } from 'node:diagnostics_channel';
+import type { MediaGenerationPreviewResource } from '../../client/media-generation-review.js';
+import type { StudioEventSource, StudioProjectRef } from './events.js';
 import {
   isStudioRuntimeDescriptorUsable,
   readStudioRuntimeDescriptor,
-  type MediaGenerationPreviewResource,
-  type StudioProjectRef,
-} from '@gorenku/studio-core/server';
+} from './runtime-descriptor.js';
 
 const performanceChannel = channel('renku.performance');
 
@@ -23,14 +23,14 @@ export type StudioNotificationDeliveryResult =
 export interface StudioProjectResourcesChangedNotification {
   projectRef: StudioProjectRef;
   resourceKeys: string[];
-  source: { kind: 'cli'; command: string };
+  source: StudioEventSource;
   operationId?: string;
 }
 
 export interface StudioGenerationPreviewsNotification {
   projectRef: StudioProjectRef;
   previews: MediaGenerationPreviewResource[];
-  source: { kind: 'cli'; command: string };
+  source: StudioEventSource;
   operationId?: string;
 }
 
@@ -135,7 +135,7 @@ async function postStudioNotification(input: {
     }
   } finally {
     if (started !== undefined) {
-      performanceChannel.publish({ package: 'cli', phase: 'studio-notification', durationMs: performance.now() - started, outcome });
+      performanceChannel.publish({ package: 'core', phase: 'studio-notification', durationMs: performance.now() - started, outcome });
     }
   }
 }

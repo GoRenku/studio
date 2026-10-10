@@ -23,6 +23,8 @@ function resolveCodexAppAssetFiles() {
   try {
     return {
       generationReviewHtml: require.resolve('@gorenku/studio/codex-apps/generation-review.html'),
+      elevenV4DialogueDirectionHtml: require.resolve('@gorenku/studio/codex-apps/eleven-v4-dialogue-direction.html'),
+      seedAudioDialogueDirectionHtml: require.resolve('@gorenku/studio/codex-apps/seed-audio-dialogue-direction.html'),
     };
   } catch {
     throw new StructuredError({ code: 'CODEX_REVIEW_UNSUPPORTED', message: 'The packaged Codex app resources are unavailable.', suggestion: 'Build or reinstall the complete Renku Studio runtime before connecting its MCP server.' });

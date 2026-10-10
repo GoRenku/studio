@@ -10,6 +10,8 @@ interface SliderProps
   showTicks?: boolean;
   tickCount?: number;
   sliderSize?: SliderSize;
+  /** `compact` mirrors a native range: thin track and a filled thumb. */
+  appearance?: 'default' | 'compact';
 }
 
 const trackSizeClasses: Record<SliderSize, string> = {
@@ -34,6 +36,7 @@ const Slider = React.forwardRef<
       showTicks = false,
       tickCount = 5,
       sliderSize = 'md',
+      appearance = 'default',
       ...props
     },
     ref
@@ -51,7 +54,9 @@ const Slider = React.forwardRef<
           <SliderPrimitive.Track
             className={cn(
               'relative w-full grow overflow-hidden rounded-full bg-muted shadow-inner data-[orientation=vertical]:h-full data-[orientation=vertical]:w-auto',
-              trackSizeClasses[sliderSize]
+              appearance === 'compact'
+                ? 'h-1 shadow-none'
+                : trackSizeClasses[sliderSize]
             )}
           >
             <SliderPrimitive.Range className='absolute h-full rounded-full bg-primary data-[orientation=vertical]:w-full' />
@@ -61,7 +66,9 @@ const Slider = React.forwardRef<
             aria-labelledby={props['aria-labelledby']}
             className={cn(
               'block rounded-full border-2 border-primary bg-background shadow-md ring-offset-background transition hover:scale-105 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-              thumbSizeClasses[sliderSize]
+              appearance === 'compact'
+                ? 'size-4 border-0 bg-primary shadow-none hover:scale-100 hover:shadow-none'
+                : thumbSizeClasses[sliderSize]
             )}
           />
         </SliderPrimitive.Root>

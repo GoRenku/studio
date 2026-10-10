@@ -6,7 +6,10 @@ import type {
 } from '../../client/shot-plan-dialogue-audio.js';
 import { normalizeAssetFileMetadata } from '../asset-files/metadata.js';
 import { validateMediaGenerationProvenance } from '../asset-files/generation-provenance.js';
-import { insertShotPlanDialogueAudioTakeRecord } from '../database/access/shot-plan-dialogue-audio.js';
+import {
+  clearOverlappingShotPlanDialogueAudioTakeSelections,
+  insertShotPlanDialogueAudioTakeRecord,
+} from '../database/access/shot-plan-dialogue-audio.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
@@ -76,8 +79,15 @@ export function attachShotPlanDialogueAudio(input: {
         assetFileId,
         turnStartNumber: turnRange.start,
         turnEndNumber: turnRange.end,
-        selectedAt: null,
+        selectedAt: now,
         createdAt: now,
+        updatedAt: now,
+      });
+      clearOverlappingShotPlanDialogueAudioTakeSelections(session, {
+        shotPlanId: shotPlan.id,
+        exceptTakeId: takeId,
+        turnStartNumber: turnRange.start,
+        turnEndNumber: turnRange.end,
         updatedAt: now,
       });
       writeSet.markCommitted();

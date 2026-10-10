@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, isNull, lte, ne } from 'drizzle-orm';
 import { shotPlanDialogueAudioTakes } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -63,5 +63,29 @@ export function setShotPlanDialogueAudioTakeSelectedAt(
     .update(shotPlanDialogueAudioTakes)
     .set({ selectedAt: input.selectedAt, updatedAt: input.updatedAt })
     .where(eq(shotPlanDialogueAudioTakes.id, input.takeId))
+    .run();
+}
+
+export function clearOverlappingShotPlanDialogueAudioTakeSelections(
+  session: DatabaseSession,
+  input: {
+    shotPlanId: string;
+    exceptTakeId: string;
+    turnStartNumber: number;
+    turnEndNumber: number;
+    updatedAt: string;
+  },
+): void {
+  session.db
+    .update(shotPlanDialogueAudioTakes)
+    .set({ selectedAt: null, updatedAt: input.updatedAt })
+    .where(and(
+      eq(shotPlanDialogueAudioTakes.shotPlanId, input.shotPlanId),
+      ne(shotPlanDialogueAudioTakes.id, input.exceptTakeId),
+      isNull(shotPlanDialogueAudioTakes.discardedAt),
+      isNotNull(shotPlanDialogueAudioTakes.selectedAt),
+      lte(shotPlanDialogueAudioTakes.turnStartNumber, input.turnEndNumber),
+      gte(shotPlanDialogueAudioTakes.turnEndNumber, input.turnStartNumber),
+    ))
     .run();
 }

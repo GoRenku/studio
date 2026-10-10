@@ -7,6 +7,13 @@ export {
   StudioCoordinationError,
 } from './errors.js';
 export {
+  notifyStudioGenerationPreviews,
+  notifyStudioProjectResourcesChanged,
+  type StudioGenerationPreviewsNotification,
+  type StudioNotificationDeliveryResult,
+  type StudioProjectResourcesChangedNotification,
+} from './notification-client.js';
+export {
   resolveStudioSelectionForProject,
   validateStudioFocusRequestForProject,
 } from './focus-validation.js';

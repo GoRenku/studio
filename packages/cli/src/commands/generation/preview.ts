@@ -1,7 +1,7 @@
 import { StructuredError } from '@gorenku/studio-diagnostics';
-import { notifyStudioGenerationPreviews } from '../studio-notification-client.js';
+import { notifyStudioGenerationPreviews } from '@gorenku/studio-core/server';
 import type { GenerationCommandInput } from './command.js';
-import type { StudioGenerationPreviewsNotification } from '../studio-notification-client.js';
+import type { StudioGenerationPreviewsNotification } from '@gorenku/studio-core/server';
 
 export async function showGenerationPreview(input: GenerationCommandInput) {
   const files = flagValues(input.flags.file);
