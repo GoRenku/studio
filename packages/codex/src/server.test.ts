@@ -26,7 +26,7 @@ beforeAll(async () => {
   await fs.writeFile(reviewFile, JSON.stringify({ provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Café\nα', request: { prompt: 'Café\nα', resolution: '2K' } }));
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Protocol resource fixture</body></html>');
-  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, homeDir });
+  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0', title: 'Codex' }, {
     capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } },
   });
@@ -153,7 +153,7 @@ describe('host capability negotiation', () => {
     ['claude-desktop', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } }, 'non-codex-client'],
     ['unknown-agent', {}, 'non-codex-client'],
   ])('requires Studio Preview for %s with capabilities %j', async (name, capabilities, reason) => {
-    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), elevenV4DialogueDirectionHtml: path.join(root, 'app.html'), seedAudioDialogueDirectionHtml: path.join(root, 'app.html') });
+    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), elevenV4DialogueDirectionHtml: path.join(root, 'app.html'), seedAudioDialogueDirectionHtml: path.join(root, 'app.html'), flux3ImageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html') });
     const isolatedClient = new Client({ name, version: 'test' }, { capabilities });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {

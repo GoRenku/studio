@@ -88,18 +88,36 @@ export function assetFileSelectionTargetForOwnerType(
   owner: AssetFileOwner,
   assetFileType: string
 ): AssetFileSelectionTarget {
-  const target = owner.kind === 'project' && assetFileType === 'project_cover'
-    ? { kind: 'project' as const }
-    : owner.kind === 'location' && assetFileType === 'location_world'
-      ? { kind: 'locationWorld' as const, id: owner.id }
-      : assetFileSelectionTargetForOwner(owner);
-  if (!target || selectedAssetFileTypes[target.kind] !== assetFileType) {
+  const target = selectableAssetFileTarget(owner, assetFileType);
+  if (!target) {
     throw new ProjectDataError(
       'CORE_ASSET_SELECTION_UNSUPPORTED',
       `Asset type ${assetFileType} does not support canonical selection for ${owner.kind}.`
     );
   }
   return target;
+}
+
+/** The canonical selection target for this owner and Asset type, or null when the type has no selection. */
+export function selectableAssetFileTarget(
+  owner: AssetFileOwner,
+  assetFileType: string
+): AssetFileSelectionTarget | null {
+  const target = owner.kind === 'project' && assetFileType === 'project_cover'
+    ? { kind: 'project' as const }
+    : owner.kind === 'location' && assetFileType === 'location_world'
+      ? { kind: 'locationWorld' as const, id: owner.id }
+      : assetFileSelectionTargetForOwner(owner);
+  return target && selectedAssetFileTypes[target.kind] === assetFileType ? target : null;
+}
+
+export function assetFileSelectionResourceKeys(
+  session: DatabaseSession,
+  target: AssetFileSelectionTarget
+): string[] {
+  return target.kind === 'project'
+    ? projectCoverSelectionResourceKeys()
+    : assetFileOwnerResourceKeys(session, selectionTargetOwner(target));
 }
 
 export function selectFirstContinuityImageInSession(
@@ -179,8 +197,6 @@ function selectionReport(
     project: { id: project.id, projectName: project.projectName, projectFolder },
     target,
     selectedAssetFileId,
-    resourceKeys: target.kind === 'project'
-      ? projectCoverSelectionResourceKeys()
-      : assetFileOwnerResourceKeys(session, selectionTargetOwner(target)),
+    resourceKeys: assetFileSelectionResourceKeys(session, target),
   };
 }

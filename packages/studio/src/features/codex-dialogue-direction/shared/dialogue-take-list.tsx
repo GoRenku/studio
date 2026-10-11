@@ -5,7 +5,7 @@ import { Button } from '@/ui/button';
 import { CompactAudioWaveformPlayer } from '@/ui/compact-audio-waveform-player';
 import { cn } from '@/lib/utils';
 import { sameDialogueLineRange } from './dialogue-line-range';
-import { useDirectionMediaUrl, type DirectionMediaLibrary } from './use-direction-media';
+import { usePanelMediaUrl, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 
 const TAKE_ROW_CLASS = 'grid grid-cols-[22px_52px_28px_minmax(0,1fr)_44px_auto] items-center gap-2.5 rounded-[10px] border px-2.5 py-2 max-[860px]:grid-cols-[22px_28px_minmax(0,1fr)_auto]';
 const ICON_BUTTON_CLASS = 'grid size-7 place-items-center rounded-full p-0 text-[var(--dd-muted-fg)] shadow-none hover:bg-[var(--dd-hover)] hover:text-[var(--dd-fg)]';
@@ -15,7 +15,7 @@ export function DialogueTakeList(input: {
   takes: DialogueDirectionTake[];
   selection: DialogueLineRange;
   action: DialogueDirectionAction | null;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   autoPlayTakeId?: string;
   disabled: boolean;
   onSelect: (takeId: string, selected: boolean) => void;
@@ -71,7 +71,7 @@ export function DialogueTakeList(input: {
 function DialogueTakeRow(input: {
   take: DialogueDirectionTake;
   number: number;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   autoPlay: boolean;
   confirming: boolean;
   disabled: boolean;
@@ -82,7 +82,7 @@ function DialogueTakeRow(input: {
   onEditFromTake?: () => void;
 }) {
   const { take } = input;
-  const audio = useDirectionMediaUrl(input.media, take.audioUri);
+  const audio = usePanelMediaUrl(input.media, take.audioUri);
   const label = `Take ${input.number}`;
   return (
     <div

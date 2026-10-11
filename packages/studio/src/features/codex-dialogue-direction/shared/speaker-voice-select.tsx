@@ -1,13 +1,13 @@
 import type { DialogueDirectionVoice } from '@gorenku/studio-codex/dialogue-direction';
 import { AudioPlayButton } from '@/ui/audio-play-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
-import type { DirectionMediaLibrary } from './use-direction-media';
+import type { PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 
 export function SpeakerVoiceSelect(input: {
   speakerName: string;
   voices: DialogueDirectionVoice[];
   castVoiceId: string;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   onCastVoiceChange: (castVoiceId: string) => void;
 }) {
   const voice = input.voices.find((candidate) => candidate.castVoiceId === input.castVoiceId);

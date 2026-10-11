@@ -28,6 +28,7 @@ export const assetFiles = sqliteTable('asset_file', {
   availability: text('availability').notNull(),
   generationProvenance: text('generation_provenance', { mode: 'json' })
     .$type<MediaGenerationProvenance>(),
+  imageEditSourceAssetFileId: text('image_edit_source_asset_file_id'),
   authoredFromShotPlanId: text('authored_from_shot_plan_id'),
   previsRevisionId: text('previs_revision_id'),
   projectRelativePath: text('project_relative_path').notNull(),

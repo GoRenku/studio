@@ -108,7 +108,7 @@ beforeAll(async () => {
 
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
   client = await connectedClient(server, 'codex-mcp-client', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } });
 });
 
@@ -209,7 +209,7 @@ describe('dialogue direction MCP registration', () => {
 
   it.each([['claude-code', {}], ['codex-mcp-client', {}]])('rejects opening for %s before reading the Project', async (name, capabilities) => {
     const html = path.join(root, 'app.html');
-    const isolated = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, homeDir });
+    const isolated = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
     const isolatedClient = await connectedClient(isolated, name, capabilities);
     try {
       for (const tool of ['eleven-v4', 'seed-audio']) {

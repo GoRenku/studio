@@ -84,8 +84,56 @@ describe('image.edit source-derived attachment continuation', () => {
         new RegExp(`^${destinationPrefix}[a-z0-9]+\\.png$`),
       );
       expect(report.resourceKeys).toContain(resourceKey);
+      const page = await projectData.listAssetFilePage({ projectName: 'constantinople', homeDir, owner: owner as AssetFileOwner, type });
+      expect(page.selectedAssetFileId).toBe(type.endsWith('_sheet') ? null : report.assetFile.id);
     },
   );
+
+  it('returns the shell selection keys when an edited cover becomes the selected cover', async () => {
+    const sourcePath = 'tmp/source-cover.png' as ProjectRelativePath;
+    const outputPath = 'tmp/output-cover.png' as ProjectRelativePath;
+    await writeImage(sourcePath);
+    await writeImage(outputPath);
+    const source = await createTestAssetFileFixture({
+      projectName: 'constantinople', homeDir, owner: { kind: 'project' }, type: 'project_cover',
+      mediaKind: 'image', title: 'Cover', projectRelativePath: sourcePath,
+    });
+    const selection = await projectData.selectAssetFile({ projectName: 'constantinople', homeDir, target: { kind: 'project' }, assetFileId: source.id });
+
+    const report = await projectData.attachGenerationMedia({
+      projectName: 'constantinople', homeDir, purpose: 'image.edit',
+      target: { kind: 'assetFile', assetFileId: source.id },
+      sourceProjectRelativePath: outputPath,
+      generationProvenance: provenance(sourcePath),
+    });
+
+    expect(report.resourceKeys).toEqual(expect.arrayContaining(selection.resourceKeys));
+    const page = await projectData.listAssetFilePage({ projectName: 'constantinople', homeDir, owner: { kind: 'project' }, type: 'project_cover' });
+    expect(page.selectedAssetFileId).toBe(report.assetFile.id);
+  });
+
+  it('leaves no selection when the selected edit is discarded', async () => {
+    const sourcePath = 'tmp/source-profile.png' as ProjectRelativePath;
+    const outputPath = 'tmp/output-profile.png' as ProjectRelativePath;
+    await writeImage(sourcePath);
+    await writeImage(outputPath);
+    const owner = { kind: 'castMember' as const, id: 'cast_test0002' };
+    const source = await createTestAssetFileFixture({
+      projectName: 'constantinople', homeDir, owner, type: 'cast_profile',
+      mediaKind: 'image', title: 'Profile', projectRelativePath: sourcePath,
+    });
+    const report = await projectData.attachGenerationMedia({
+      projectName: 'constantinople', homeDir, purpose: 'image.edit',
+      target: { kind: 'assetFile', assetFileId: source.id },
+      sourceProjectRelativePath: outputPath,
+      generationProvenance: provenance(sourcePath),
+    });
+
+    await projectData.discardAssetFile({ projectName: 'constantinople', homeDir, owner, assetFileId: report.assetFile.id });
+
+    const page = await projectData.listAssetFilePage({ projectName: 'constantinople', homeDir, owner, type: 'cast_profile' });
+    expect(page.selectedAssetFileId).toBeNull();
+  });
 
   it('fails before copying output when provenance does not reference a current source file', async () => {
     const sourcePath = 'tmp/source-invalid.png' as ProjectRelativePath;
@@ -379,7 +427,7 @@ describe('image.edit source-derived attachment continuation', () => {
     }
   });
 
-  it('keeps edited Beat and Shot candidates unselected beside their exact source surfaces', async () => {
+  it('selects edited Beat and Shot candidates beside their exact source surfaces', async () => {
     const screenplay = await projectData.readScreenplayStructure({
       projectName: 'constantinople',
       homeDir,
@@ -432,7 +480,7 @@ describe('image.edit source-derived attachment continuation', () => {
       sceneId: scene.id,
       sceneBeatsRevisionId: revision.activeRevisionId,
     });
-    expect(storyboardStatus.beats[0]).toMatchObject({ selectedImageId: beatSource.id });
+    expect(storyboardStatus.beats[0]).toMatchObject({ selectedImageId: beatEdited.assetFile.id });
     expect(storyboardStatus.beats[0]?.images.map((assetFile) => assetFile.id))
       .toContain(beatEdited.assetFile.id);
     await expect(projectData.selectSceneStoryboardImageCandidate({
@@ -509,7 +557,8 @@ describe('image.edit source-derived attachment continuation', () => {
     const currentPlan = await projectData.readShotPlan({
       projectName: 'constantinople', homeDir, shotPlanId: plan.shotPlan.id,
     });
-    expect(currentPlan.shotPlan.shots[0]?.selectedImageId).toBe(shotSource.assetFile.id);
+    expect(currentPlan.shotPlan.shots[0]?.selectedImageId).toBe(shotEdited.assetFile.id);
+    expect(shotEdited.resourceKeys).toContain(`surface:scene:${scene.id}:shot-plans`);
     expect(currentPlan.shotPlan.shots[0]?.images.map((assetFile) => assetFile.id))
       .toContain(shotEdited.assetFile.id);
   });

@@ -4,7 +4,7 @@ import { DirectionRevertButton } from '../shared/direction-revert-button';
 import type { DirectionCastSpeaker } from '../shared/direction-speakers';
 import { SpeakerAvatar } from '../shared/speaker-avatar';
 import { SpeakerVoiceSelect } from '../shared/speaker-voice-select';
-import type { DirectionMediaLibrary } from '../shared/use-direction-media';
+import type { PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { ActingTagChips } from './acting-tag-chips';
 import { actingScriptHighlight } from './acting-script-highlight';
 
@@ -13,7 +13,7 @@ export function DialogueDesk(input: {
   speakers: DirectionCastSpeaker[];
   voices: Record<string, DialogueDirectionVoice[]>;
   castVoiceIds: Record<string, string>;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   actingScripts: Record<number, string>;
   agentActingScripts: Record<number, string>;
   suggestedTags: string[];

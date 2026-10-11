@@ -1,5 +1,9 @@
 # 0088 Use Exact Request References And Source-Derived Image Continuation
 
+> **Decision 0113 update:** [Imported image edits are selected](0113-select-imported-image-edits.md)
+> when their owner and type have a canonical selection. Sheets and Shot Plan
+> images are still only added beside the source.
+
 > **Decision 0099 update:** [Prepared Shot Plan references](0099-register-prepared-shot-plan-references.md)
 > extend the References collection to image, video and audio imports with exact
 > Previs attribution, preserving this decision's weak authorship and request markers.

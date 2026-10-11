@@ -7,16 +7,18 @@ import type {
 } from '@gorenku/studio-codex/dialogue-direction';
 import { CharacterCount } from '../shared/character-count';
 import { DialogueLineRail } from '../shared/dialogue-line-rail';
+import { DirectionGenerateDisclosure } from '../shared/direction-generate-disclosure';
+import { directionProviderLabel } from '../shared/direction-provider-label';
 import { dialogueLineRangeKey, sameDialogueLineRange } from '../shared/dialogue-line-range';
 import { DialogueTakeList } from '../shared/dialogue-take-list';
 import { DirectionEditor, type DirectionEditorHandle } from '../shared/direction-editor';
 import { DirectionPanelFrame } from '../shared/direction-panel-frame';
 import { DirectionRevertButton } from '../shared/direction-revert-button';
-import { DirectionGenerateButton, DirectionSessionNotice, DirectionSessionPending } from '../shared/direction-session-notice';
+import { CodexPanelGenerateButton, CodexPanelNotice, CodexPanelPending } from '@/features/codex-panels/codex-panel-notice';
 import { directionSpeakers, linesInDialogueRange } from '../shared/direction-speakers';
 import { speakerHue, speakerTextColour } from '../shared/speaker-colour';
 import { useDialogueDirectionSession, type DialogueDirectionSessionInteraction } from '../shared/use-dialogue-direction-session';
-import { useDirectionMediaLibrary, type DirectionMediaLibrary } from '../shared/use-direction-media';
+import { usePanelMediaLibrary, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { performancePromptHighlight } from './performance-prompt-highlight';
 import { SEED_AUDIO_VOICE_REFERENCE_LIMIT, SeedAudioVoiceReferences } from './seed-audio-voice-references';
 
@@ -24,10 +26,10 @@ const SEED_AUDIO_PROMPT_CHARACTER_LIMIT = 2048;
 
 export function SeedAudioDirectionPanel() {
   const interaction = useDialogueDirectionSession('Renku Seed Audio dialogue direction');
-  const media = useDirectionMediaLibrary(interaction.bridge);
+  const media = usePanelMediaLibrary(interaction.bridge);
   const { session } = interaction;
-  if (!session) return <DirectionSessionPending error={interaction.error} />;
-  if (session.initial.panel !== 'seed-audio') return <DirectionSessionPending error='This session belongs to another dialogue direction panel.' />;
+  if (!session) return <CodexPanelPending error={interaction.error} label='dialogue direction' themeClass='dialogue-direction' />;
+  if (session.initial.panel !== 'seed-audio') return <CodexPanelPending error='This session belongs to another dialogue direction panel.' label='dialogue direction' themeClass='dialogue-direction' />;
   return <SeedAudioDirectionDesk key={session.sessionId} session={session} initial={session.initial} interaction={interaction} media={media} />;
 }
 
@@ -35,7 +37,7 @@ function SeedAudioDirectionDesk(input: {
   session: DialogueDirectionSession;
   initial: SeedAudioDirectionInitial;
   interaction: DialogueDirectionSessionInteraction;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
 }) {
   const { session, initial, interaction, media } = input;
   const [selection, setSelection] = useState<DialogueLineRange>(initial.selection);
@@ -69,6 +71,7 @@ function SeedAudioDirectionDesk(input: {
     const index = speakers.findIndex((speaker) => speaker.castMemberId === line.castMemberId);
     return index >= 0 && index < SEED_AUDIO_VOICE_REFERENCE_LIMIT ? index + 1 : null;
   };
+  const provider = directionProviderLabel(session.route.provider);
   const generate = () => {
     if (generateDisabled) return;
     void interaction.generate({
@@ -80,7 +83,7 @@ function SeedAudioDirectionDesk(input: {
         castMemberId: speaker.castMemberId,
         castVoiceId: castVoiceIds[speaker.castMemberId] ?? '',
       })),
-    });
+    }, `I approve uploading the chosen voice samples and this performance prompt to ${provider} and running one paid Seed Audio 1.0 generation with my saved ${provider} key.`);
   };
 
   return (
@@ -89,7 +92,7 @@ function SeedAudioDirectionDesk(input: {
       modelLabel='Seed Audio 1.0'
       allLinesSelected={sameDialogueLineRange(selection, fullRange)}
       onSelectAll={() => changeSelection(fullRange)}
-      notice={<DirectionSessionNotice error={interaction.error} notificationPending={interaction.notificationPending} busy={interaction.busy} onRetryNotification={() => { void interaction.retryNotification(); }} />}
+      notice={<CodexPanelNotice error={interaction.error} notificationPending={interaction.notificationPending} busy={interaction.busy} onRetryNotification={() => { void interaction.retryNotification(); }} />}
       rail={<DialogueLineRail lines={session.lines} takes={session.takes} selection={selection} media={media} speakerBadge={speakerBadge} onSelectionChange={changeSelection} />}
     >
       <SeedAudioVoiceReferences
@@ -126,8 +129,9 @@ function SeedAudioDirectionDesk(input: {
         </>}
       />
       <div className='flex flex-wrap items-center gap-[22px]'>
-        <DirectionGenerateButton generating={interaction.actionActive} disabled={generateDisabled} onGenerate={generate} />
+        <CodexPanelGenerateButton generating={interaction.actionActive} disabled={generateDisabled} onGenerate={generate} />
       </div>
+      <DirectionGenerateDisclosure>{`Generate uploads the chosen voice samples and this performance prompt to ${provider} and runs one paid Seed Audio 1.0 generation with your saved ${provider} key.`}</DirectionGenerateDisclosure>
       <DialogueTakeList
         takes={session.takes}
         selection={selection}

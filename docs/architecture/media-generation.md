@@ -153,7 +153,11 @@ the route's Takes from Core reads, and serves media through opaque
 Generate is a message handoff, not execution. The panel records one action
 through the app-only `dialogue.direction.generate` tool (validated against the
 panel's draft contract; at most one outstanding action) and posts a one-line
-message to the conversation. The agent consumes the action once with
+message to the conversation. That message is posted as the user and states the
+user's approval for what is sent to the provider and the paid run, matching
+the disclosure shown beside Generate; Codex's approval review accepts only
+consent the user gave, not Skill instructions. The image edit panel's message
+follows the same rule. The agent consumes the action once with
 `dialogue.direction.consume`, which returns the exact route id (speech model for
 one line, range model for a range) and the draft. Execution still runs through
 the provider Skill and CLI: the agent authors the native request, validates,
@@ -170,6 +174,63 @@ result from Take-list changes or replaying a completion on initial load.
 Visible panels refresh the session every two seconds even while idle; refreshes
 preserve local drafts, focus and playback. A saved Generate notification remains
 retryable independently of errors from other panel operations.
+
+## Codex image edit panels
+
+FLUX 3 Image Edit (`blackforestlabs/flux-3/edit-image` on Fal.ai) is the
+default `image.edit` route whenever a Fal.ai key is saved and the user names no
+other model or provider. For that route, and only when the Codex panel probe
+advertises support, the Media Producer Skill uses two Codex apps instead of the
+conversational flow
+([plan 0227](../../plans/active/0227-codex-flux-3-image-edit-panel.md)):
+
+- **Image Edit Target Chooser** (`image.edit.target.choose`, inline only). When
+  the request matches several images, the agent passes 2–24 active image Asset
+  Files. Core's `readImageEditTargets` validates them and projects owner, type,
+  take number (creation order among every file of that owner and type,
+  discarded ones included) and selection state. The user answers once; the
+  panel posts a message and the agent consumes the answer once with
+  `image.edit.target.consume`.
+- **FLUX 3 Image Edit panel** (`image.edit.flux-3.open`, fullscreen only). The
+  user draws rectangular regions on the 0–1000 grid, gives each an Edit or
+  Remove instruction, adds an optional whole-image instruction and an optional
+  Production or Storyboard Lookbook sheet as style reference, and picks a
+  resolution.
+
+Region geometry, modes, instruction presence and resolution are envelope data
+the runtime validates (`CODEX_IMAGE_EDIT_*`); instruction text stays opaque
+(ADR 0041). Generate follows the dialogue panels' handoff: one outstanding
+action, a conversation message, `image.edit.consume` once, then the agent
+writes the FLUX 3 prompt and box rows, resolves any project items the user
+named into ordered reference images, executes through the CLI, imports with
+`renku media import --purpose image.edit --target assetFile:<base>` and reports
+through `image.edit.report`. No Codex tool writes prompts, executes, imports,
+selects or deletes images.
+
+Each import is a new version of the image beside its source. Under ADR 0113 it
+becomes the selection when its type has one, so the panel's edit base is the
+target's current Core selection and follows changes made in Studio; for sheets
+and Shot Plan images it is the newest version in the lineage. The panel's
+versions use Core's `readImageEditLineage`: the opening source and each base
+used by the session, plus every active image of the same owner and type edited
+from them, directly or through earlier edits. Core persists the exact validated
+import target as the result's source in the attachment transaction; other
+provider request references never establish parentage. Completion is checked
+against the action's base, including an image selected outside the opening
+source's lineage.
+Versions therefore survive a failed report, an edit recovered in chat and a
+later selection change. Sessions re-read Core on every projection and serve
+media through `renku-image-edit://` and `renku-image-target://` resources.
+Lookbook style choices are also refreshed on every projection. Generate and
+consume resolve the chosen active Asset Files through Core. If a dependency
+disappears before consume, the action fails clearly and permits another Generate.
+
+Both panel families share `packages/codex/src/panel-sessions/` (the
+one-action session store, media registry, resource registration and result
+serialization) and, in Studio, `services/codex-panel.ts` and
+`features/codex-panels/` (connection, messaging, session polling, media and
+notices). Model-specific code lives in per-model folders; shared image edit
+components receive a model's region actions and output controls as props.
 
 ## Transient Visualize configuration
 

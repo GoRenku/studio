@@ -43,6 +43,6 @@ export function persistReferenceFile(input: {
     createdAt: input.now, updatedAt: input.now };
   insertAssetFileRecord(input.session, record);
   return toAssetFile({ ...record, localeId: null, oneLineSummary: null, referenceName: null, tags: [],
-    generationProvenance: null, authoredFromShotPlanId: null, previsRevisionId: null,
+    generationProvenance: null, imageEditSourceAssetFileId: null, authoredFromShotPlanId: null, previsRevisionId: null,
     width: null, height: null, durationSeconds: null, discardedAt: null, discardOperationId: null, restoredAt: null });
 }

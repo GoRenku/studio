@@ -161,6 +161,7 @@ import type {
   StudioProjectRef,
 } from './studio-coordination/events.js';
 import type { RenkuConfigPathOptions } from './config/index.js';
+import type { ImageEditLineageEntry, ImageEditTarget } from './image-edit-targets/index.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
 import type {
   ImportFdxScreenplayInput,
@@ -291,6 +292,12 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   readShotPlanDialogueAudio(
     input: ReadShotPlanDialogueAudioInput
   ): Promise<ShotPlanDialogueAudioResource>;
+  readImageEditTargets(
+    input: RenkuConfigPathOptions & { projectName?: string; assetFileIds: string[] }
+  ): Promise<ImageEditTarget[]>;
+  readImageEditLineage(
+    input: RenkuConfigPathOptions & { projectName?: string; sourceAssetFileId: string }
+  ): Promise<ImageEditLineageEntry[]>;
   attachShotPlanDialogueAudio(
     input: AttachShotPlanDialogueAudioProjectInput
   ): Promise<ShotPlanDialogueAudioMutationReport>;

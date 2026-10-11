@@ -28,7 +28,7 @@ export async function generateDirectionTake(
     throw directionError('CODEX_DIALOGUE_DIRECTION_INVALID', `This session directs ${record.panel} drafts, not ${input.draft.panel}.`);
   }
   const draft = DRAFT_VALIDATORS[record.panel](input.draft, { lines: record.lines, voices: record.voices });
-  const action = state.startAction(input.sessionId, draft);
+  const action = state.startAction(input.sessionId, draft, { turnRange: { ...draft.turnRange } });
   return {
     sessionId: input.sessionId,
     actionId: action.actionId,
@@ -68,6 +68,6 @@ export async function reportDirectionAction(state: DialogueDirectionState, input
   if (take.turnRange.start !== action.turnRange.start || take.turnRange.end !== action.turnRange.end) {
     throw directionError('CODEX_DIALOGUE_DIRECTION_INVALID', `The imported Take covers lines ${take.turnRange.start}–${take.turnRange.end}, but the action directed lines ${action.turnRange.start}–${action.turnRange.end}.`);
   }
-  state.completeAction(input.sessionId, input.actionId, take.id);
+  state.completeAction(input.sessionId, input.actionId, { actionId: input.actionId, takeId: take.id });
   return projectDialogueDirectionSession(state.record(input.sessionId), takes);
 }

@@ -102,6 +102,8 @@ describe('Eleven v4 dialogue direction panel', () => {
       voiceSettings: { stability: 0.45, similarity: 0.75 },
     });
     expect(integration.generate.mock.invocationCallOrder[0]).toBeLessThan(integration.notify.mock.invocationCallOrder[0]!);
+    expect(integration.notify.mock.calls[0]![2]).toBe('I approve sending these lines and the chosen voices to ElevenLabs and running one paid Eleven v4 generation with my saved ElevenLabs key.');
+    expect(screen.getByText('Generate sends the selected lines and voices to ElevenLabs and runs one paid Eleven v4 generation with your saved ElevenLabs key.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Generating…' })).toHaveProperty('disabled', true);
     expect(screen.getByRole('listitem', { name: 'Generating Take 1' })).toBeTruthy();
   });

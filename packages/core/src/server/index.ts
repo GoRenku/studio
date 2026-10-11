@@ -56,6 +56,7 @@ export { attachGenerationMedia, type AttachGenerationMediaInput, type Generation
 export { attachSceneStoryboardImages } from './generation/scene-storyboard-attachments.js';
 export * from './cast-voices/index.js';
 export * from './shot-plan-dialogue-audio/index.js';
+export * from './image-edit-targets/index.js';
 export {
   parseMediaGenerationProvenance,
   parseMediaGenerationReviewDocument,

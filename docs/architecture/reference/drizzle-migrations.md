@@ -1,5 +1,12 @@
 # Drizzle Migrations
 
+Migration 0090 adds the nullable internal image-edit source Asset File id using
+Drizzle Kit schema generation. The only custom addition advances `user_version`
+to 72 because Asset File reads require the new column. Core writes the exact
+validated source in the attachment transaction. Existing files and provenance
+are preserved; no parent relationship is guessed or backfilled from references.
+The relationship is a weak id so collecting a source does not delete its edits.
+
 Migration 0088 adds revision-scoped raw clips and takes without assigning existing
 media. Its generation guard advances to 70 because Previs projections query these
 tables. Existing Assets and files are preserved unchanged.

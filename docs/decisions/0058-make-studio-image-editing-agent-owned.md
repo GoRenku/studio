@@ -1,5 +1,9 @@
 # 0058 Make Studio Image Editing Agent-Owned
 
+> **Decision 0113 update:** [Imported image edits are selected](0113-select-imported-image-edits.md)
+> when their owner and type have a canonical selection. Sheets and Shot Plan
+> images are still only added beside the source.
+
 > **Decision 0086 update:** Agent-owned image editing, artifact inspection, output acceptance, and focused attachment remain. Spec/Run/freeze provenance is replaced by temporary review plus Asset provenance.
 >
 > **Decision 0088 update:** the import destination is derived exclusively from

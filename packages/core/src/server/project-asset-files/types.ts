@@ -110,6 +110,7 @@ export interface RetainedAssetFileMetadata {
   referenceName?: string | null;
   tags?: string[];
   generationProvenance?: MediaGenerationProvenance | null;
+  imageEditSourceAssetFileId?: string;
   authoredFromShotPlanId?: string | null;
   previsRevisionId?: string | null;
 }

@@ -2,20 +2,20 @@ import type { DialogueDirectionLine } from '@gorenku/studio-codex/dialogue-direc
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import { speakerAvatarColour, speakerHue, speakerInitials, speakerTextColour } from './speaker-colour';
-import { useDirectionMediaUrl, type DirectionMediaLibrary } from './use-direction-media';
+import { usePanelMediaUrl, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 
 export type DirectionSpeaker = Pick<DialogueDirectionLine, 'castMemberId' | 'speakerName' | 'profileUri'>;
 
 export function SpeakerAvatar(input: {
   speaker: DirectionSpeaker;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   badge?: number | null;
   onActivate?: () => void;
   activateLabel?: string;
 }) {
   const { speaker } = input;
   const hue = speakerHue(speaker.castMemberId, speaker.speakerName);
-  const profile = useDirectionMediaUrl(input.media, speaker.profileUri);
+  const profile = usePanelMediaUrl(input.media, speaker.profileUri);
   const face = (
     <>
       {profile.url

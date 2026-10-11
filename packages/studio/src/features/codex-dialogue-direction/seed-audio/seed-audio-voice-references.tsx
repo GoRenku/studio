@@ -2,7 +2,7 @@ import type { DialogueDirectionVoice } from '@gorenku/studio-codex/dialogue-dire
 import type { DirectionCastSpeaker } from '../shared/direction-speakers';
 import { SpeakerAvatar } from '../shared/speaker-avatar';
 import { SpeakerVoiceSelect } from '../shared/speaker-voice-select';
-import type { DirectionMediaLibrary } from '../shared/use-direction-media';
+import type { PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 
 export const SEED_AUDIO_VOICE_REFERENCE_LIMIT = 3;
 
@@ -10,7 +10,7 @@ export function SeedAudioVoiceReferences(input: {
   speakers: DirectionCastSpeaker[];
   voices: Record<string, DialogueDirectionVoice[]>;
   castVoiceIds: Record<string, string>;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   insertsAudioTags: boolean;
   onInsertAudioTag: (position: number) => void;
   onCastVoiceChange: (castMemberId: string, castVoiceId: string) => void;

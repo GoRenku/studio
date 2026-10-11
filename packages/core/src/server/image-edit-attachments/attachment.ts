@@ -8,6 +8,7 @@ import type { ProjectIdGenerator } from '../entity-ids.js';
 import { persistGeneratedMediaAttachment } from '../generation/attachment-persistence.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { resolveImageEditContinuation } from './continuation-registry.js';
+import { imageEditResultSelection } from './selection.js';
 import { readImageEditSource } from './source.js';
 
 export function attachImageEditMedia(input: {
@@ -31,6 +32,11 @@ export function attachImageEditMedia(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
+  const selection = imageEditResultSelection(input.session, {
+    owner: continuation.owner,
+    assetFileType: continuation.assetFileType,
+  });
+  const resourceKeys = [...new Set([...continuation.resourceKeys, ...(selection?.resourceKeys ?? [])])];
   const metadata = normalizeAssetFileMetadata({
     oneLineSummary: input.assetFileMetadata?.oneLineSummary === undefined
       ? source.oneLineSummary
@@ -41,6 +47,7 @@ export function attachImageEditMedia(input: {
     tags: input.assetFileMetadata?.tags === undefined ? source.tags : input.assetFileMetadata.tags,
   });
   const persisted = persistGeneratedMediaAttachment({
+    imageEditSourceAssetFileId: source.id,
     previsRevisionId: source.authoredFrom?.previsRevisionId,
     session: input.session,
     projectFolder: input.projectFolder,
@@ -50,8 +57,9 @@ export function attachImageEditMedia(input: {
     destination: {
       file: continuation.destination,
       owner: continuation.owner,
-      resourceKeys: continuation.resourceKeys,
+      resourceKeys,
     },
+    ...(selection ? { selectionTarget: selection.target } : {}),
     assetFileMetadata: {
       localeId: source.localeId,
       type: continuation.assetFileType,
@@ -82,7 +90,7 @@ export function attachImageEditMedia(input: {
     target: input.target,
     assetFile,
     generationProvenance: input.generationProvenance,
-    resourceKeys: continuation.resourceKeys,
+    resourceKeys,
     project: {
       projectName: project.projectName,
       id: project.id,

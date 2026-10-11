@@ -8,26 +8,32 @@ import type {
 } from '@gorenku/studio-codex/dialogue-direction';
 import { CharacterCount } from '../shared/character-count';
 import { DialogueLineRail } from '../shared/dialogue-line-rail';
+import { DirectionGenerateDisclosure } from '../shared/direction-generate-disclosure';
 import { sameDialogueLineRange } from '../shared/dialogue-line-range';
 import { DialogueTakeList } from '../shared/dialogue-take-list';
 import type { DirectionEditorHandle } from '../shared/direction-editor';
 import { DirectionPanelFrame } from '../shared/direction-panel-frame';
-import { DirectionGenerateButton, DirectionSessionNotice, DirectionSessionPending } from '../shared/direction-session-notice';
+import { CodexPanelGenerateButton, CodexPanelNotice, CodexPanelPending } from '@/features/codex-panels/codex-panel-notice';
 import { directionSpeakers, linesInDialogueRange } from '../shared/direction-speakers';
 import { useDialogueDirectionSession, type DialogueDirectionSessionInteraction } from '../shared/use-dialogue-direction-session';
-import { useDirectionMediaLibrary, type DirectionMediaLibrary } from '../shared/use-direction-media';
+import { usePanelMediaLibrary, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { DialogueDesk } from './dialogue-desk';
 import { SingleLineDesk } from './single-line-desk';
 import { VoiceSettingsControls } from './voice-settings-controls';
 
 const ELEVEN_V4_DIALOGUE_CHARACTER_LIMIT = 2000;
+const ELEVEN_V4_GENERATE_DISCLOSURE = 'Generate sends the selected lines and voices to ElevenLabs and runs one paid Eleven v4 generation with your saved ElevenLabs key.';
+
+function elevenV4Approval(multiLine: boolean): string {
+  return `I approve sending ${multiLine ? 'these lines' : 'this line'} and the chosen voices to ElevenLabs and running one paid Eleven v4 generation with my saved ElevenLabs key.`;
+}
 
 export function ElevenV4DirectionPanel() {
   const interaction = useDialogueDirectionSession('Renku Eleven v4 dialogue direction');
-  const media = useDirectionMediaLibrary(interaction.bridge);
+  const media = usePanelMediaLibrary(interaction.bridge);
   const { session } = interaction;
-  if (!session) return <DirectionSessionPending error={interaction.error} />;
-  if (session.initial.panel !== 'eleven-v4') return <DirectionSessionPending error='This session belongs to another dialogue direction panel.' />;
+  if (!session) return <CodexPanelPending error={interaction.error} label='dialogue direction' themeClass='dialogue-direction' />;
+  if (session.initial.panel !== 'eleven-v4') return <CodexPanelPending error='This session belongs to another dialogue direction panel.' label='dialogue direction' themeClass='dialogue-direction' />;
   return <ElevenV4DirectionDesk key={session.sessionId} session={session} initial={session.initial} interaction={interaction} media={media} />;
 }
 
@@ -35,7 +41,7 @@ function ElevenV4DirectionDesk(input: {
   session: DialogueDirectionSession;
   initial: ElevenV4DirectionInitial;
   interaction: DialogueDirectionSessionInteraction;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
 }) {
   const { session, initial, interaction, media } = input;
   const [selection, setSelection] = useState<DialogueLineRange>(initial.selection);
@@ -65,7 +71,7 @@ function ElevenV4DirectionDesk(input: {
       lines: selectedLines.map((line) => ({ number: line.number, actingScript: actingScripts[line.number] ?? '' })),
       voices: speakers.map((speaker) => ({ castMemberId: speaker.castMemberId, castVoiceId: castVoiceIds[speaker.castMemberId] ?? '' })),
       voiceSettings,
-    });
+    }, elevenV4Approval(multiLine));
   };
   const insertDialogueTag = (tag: string) => {
     const target = focusedLine !== undefined && editors.current.has(focusedLine) ? focusedLine : selectedLines[0]?.number;
@@ -81,7 +87,7 @@ function ElevenV4DirectionDesk(input: {
       modelLabel='Eleven v4'
       allLinesSelected={sameDialogueLineRange(selection, fullRange)}
       onSelectAll={() => setSelection(fullRange)}
-      notice={<DirectionSessionNotice error={interaction.error} notificationPending={interaction.notificationPending} busy={interaction.busy} onRetryNotification={() => { void interaction.retryNotification(); }} />}
+      notice={<CodexPanelNotice error={interaction.error} notificationPending={interaction.notificationPending} busy={interaction.busy} onRetryNotification={() => { void interaction.retryNotification(); }} />}
       rail={<DialogueLineRail lines={session.lines} takes={session.takes} selection={selection} media={media} onSelectionChange={setSelection} />}
     >
       {multiLine ? (
@@ -122,8 +128,9 @@ function ElevenV4DirectionDesk(input: {
       <div className='flex flex-wrap items-center gap-[22px]'>
         <VoiceSettingsControls voiceSettings={voiceSettings} onVoiceSettingsChange={setVoiceSettings} />
         {multiLine ? <CharacterCount count={totalCharacters} limit={ELEVEN_V4_DIALOGUE_CHARACTER_LIMIT} /> : null}
-        <DirectionGenerateButton generating={interaction.actionActive} disabled={generateDisabled} onGenerate={generate} />
+        <CodexPanelGenerateButton generating={interaction.actionActive} disabled={generateDisabled} onGenerate={generate} />
       </div>
+      <DirectionGenerateDisclosure>{ELEVEN_V4_GENERATE_DISCLOSURE}</DirectionGenerateDisclosure>
       <DialogueTakeList
         takes={session.takes}
         selection={selection}

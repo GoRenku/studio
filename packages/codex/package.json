@@ -17,6 +17,10 @@
     "./dialogue-direction": {
       "types": "./dist/dialogue-direction/contracts.d.ts",
       "import": "./dist/dialogue-direction/contracts.js"
+    },
+    "./image-edit": {
+      "types": "./dist/image-edit/contracts.d.ts",
+      "import": "./dist/image-edit/contracts.js"
     }
   },
   "files": [

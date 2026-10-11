@@ -4,7 +4,7 @@ import { DirectionEditor, type DirectionEditorHandle } from '../shared/direction
 import { DirectionRevertButton } from '../shared/direction-revert-button';
 import { SpeakerAvatar } from '../shared/speaker-avatar';
 import { SpeakerVoiceSelect } from '../shared/speaker-voice-select';
-import type { DirectionMediaLibrary } from '../shared/use-direction-media';
+import type { PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { ActingTagChips } from './acting-tag-chips';
 import { actingScriptHighlight } from './acting-script-highlight';
 
@@ -12,7 +12,7 @@ export function SingleLineDesk(input: {
   line: DialogueDirectionLine;
   voices: DialogueDirectionVoice[];
   castVoiceId?: string;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   actingScript: string;
   agentActingScript: string;
   suggestedTags: string[];

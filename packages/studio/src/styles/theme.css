@@ -278,8 +278,9 @@
   }
 }
 
-/* Codex dialogue direction panels: the approved mockup's exact palette and type. */
-.dialogue-direction {
+/* Codex panels (dialogue direction, image edit): the approved mockups' exact palette and type. */
+.dialogue-direction,
+.image-edit {
   --dd-bg: hsl(60 51% 91%);
   --dd-rail: hsl(46 52% 88%);
   --dd-card: hsl(50 100% 93%);
@@ -315,7 +316,8 @@
   font-size: 13px;
 }
 
-.dark .dialogue-direction {
+.dark .dialogue-direction,
+.dark .image-edit {
   --dd-bg: hsl(0 0% 20%);
   --dd-rail: hsl(0 0% 16%);
   --dd-card: hsl(0 0% 25%);

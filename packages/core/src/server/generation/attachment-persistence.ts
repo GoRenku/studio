@@ -43,6 +43,7 @@ export interface PersistGeneratedMediaAttachmentInput {
   };
   selectionTarget?: AssetFileSelectionTarget;
   generationProvenance?: MediaGenerationProvenance;
+  imageEditSourceAssetFileId?: string;
   authoredFromShotPlanId?: string;
   previsRevisionId?: string;
   clipTake?: { clipId: string; title?: string; sourceTakeId?: string };
@@ -69,6 +70,7 @@ export interface PersistGeneratedMediaAssetFileInSessionInput {
   selectionTarget?: AssetFileSelectionTarget;
   assetFileMetadata: PersistGeneratedMediaAttachmentInput['assetFileMetadata'];
   generationProvenance?: MediaGenerationProvenance;
+  imageEditSourceAssetFileId?: string;
   authoredFromShotPlanId?: string;
   previsRevisionId?: string;
 }
@@ -80,6 +82,7 @@ export function persistOwnedGeneratedMediaAssetFileInSession(
     owner: input.owner,
     assetFileMetadata: {
       previsRevisionId: input.previsRevisionId,
+      imageEditSourceAssetFileId: input.imageEditSourceAssetFileId,
       ...(input.assetFileMetadata.localeId !== undefined
         ? { localeId: input.assetFileMetadata.localeId }
         : {}),
@@ -157,6 +160,7 @@ export function persistGeneratedMediaAttachment(
       const session = { ...input.session, db: tx };
       persistOwnedGeneratedMediaAssetFileInSession({
         previsRevisionId: input.previsRevisionId,
+        imageEditSourceAssetFileId: input.imageEditSourceAssetFileId,
         session,
         projectFolder: input.projectFolder,
         writeSet,

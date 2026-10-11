@@ -3,7 +3,8 @@ import type { MediaGenerationContextReport, ShotPlanDialogueAudioTake } from '@g
 import { isStructuredError, StructuredError } from '@gorenku/studio-diagnostics';
 import type { DialogueDirectionLine, DialogueDirectionSession, DialogueDirectionTake, DialogueDirectionVoice, DialogueLineRange } from './contracts.js';
 import { directionIssue } from './diagnostics.js';
-import type { DialogueDirectionBinding, DialogueDirectionSessionRecord, DialogueDirectionState, DirectionMediaRegistry } from './session-state.js';
+import type { PanelMediaRegistry } from '../panel-sessions/media-registry.js';
+import type { DialogueDirectionBinding, DialogueDirectionSessionRecord, DialogueDirectionState } from './session-state.js';
 
 export interface DirectionTurn {
   number: number;
@@ -63,7 +64,7 @@ export function turnsInRange(turns: DirectionTurn[], range: DialogueLineRange): 
   return turns.filter((turn) => turn.number >= range.start && turn.number <= range.end);
 }
 
-export function projectDirectionLines(turns: DirectionTurn[], media: DirectionMediaRegistry): DialogueDirectionLine[] {
+export function projectDirectionLines(turns: DirectionTurn[], media: PanelMediaRegistry): DialogueDirectionLine[] {
   return turns.map(({ profilePath, ...turn }) => ({ ...turn, profileUri: profilePath ? media.uri(profilePath) : null }));
 }
 
@@ -71,7 +72,7 @@ export function projectDirectionLines(turns: DirectionTurn[], media: DirectionMe
 export function projectDirectionVoices(
   context: DirectionContext,
   speakers: Array<{ castMemberId: string; castVoiceIds: string[] }>,
-  media: DirectionMediaRegistry,
+  media: PanelMediaRegistry,
 ): Record<string, DialogueDirectionVoice[]> {
   return Object.fromEntries(speakers.map((speaker) => {
     const voices = context.castVoicesByCastMemberId[speaker.castMemberId] ?? [];

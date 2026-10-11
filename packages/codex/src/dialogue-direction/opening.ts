@@ -11,7 +11,8 @@ import type {
 } from './contracts.js';
 import { assertNoDirectionIssues, directionIssue } from './diagnostics.js';
 import { projectDialogueDirectionSession, projectDirectionLines, projectDirectionVoices, readDirectionContext, readShotPlanTakes, turnsInRange, type DirectionContext } from './session-projection.js';
-import { DialogueDirectionState, DirectionMediaRegistry, type TakeActingScriptsReader } from './session-state.js';
+import { PanelMediaRegistry } from '../panel-sessions/media-registry.js';
+import { DIALOGUE_DIRECTION_MEDIA_SCHEME, DialogueDirectionState, type TakeActingScriptsReader } from './session-state.js';
 import { duplicateIssues, lineRangeIssues, speakersInOrder } from './validation.js';
 
 export interface DirectionOpeningInput {
@@ -47,8 +48,8 @@ export async function openDirectionSession(
   const context = await readDirectionContext({ project: input.project, shotPlanId: input.shotPlanId, homeDir });
   assertNoDirectionIssues([...commonOpeningIssues(input, context), ...opening.issues(context)], 'The dialogue direction panel cannot open.');
   const sessionId = randomUUID();
-  const media = new DirectionMediaRegistry(sessionId);
-  const record = state.create(sessionId, media, {
+  const media = new PanelMediaRegistry(DIALOGUE_DIRECTION_MEDIA_SCHEME, sessionId);
+  const record = state.create(sessionId, {
     binding: context.binding,
     panel: opening.panel,
     route: input.route,
@@ -57,6 +58,7 @@ export async function openDirectionSession(
     voices: projectDirectionVoices(context, input.speakers, media),
     initial: opening.initial(Object.fromEntries(input.speakers.map((speaker) => [speaker.castMemberId, speaker.initialCastVoiceId]))),
     takeActingScripts: opening.takeActingScripts,
+    media,
   });
   return projectDialogueDirectionSession(record, await readShotPlanTakes(context.binding, homeDir));
 }

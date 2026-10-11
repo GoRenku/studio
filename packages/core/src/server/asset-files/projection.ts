@@ -105,7 +105,7 @@ export function toAssetFile(row: AssetFileRecord): AssetFile {
   if (row.availability !== 'ready') {
     throw new ProjectDataError('CORE_ASSET_STORAGE_INVALID', `Stored file availability is invalid: ${row.availability}.`);
   }
-  const { ownerKey, authoredFromShotPlanId, previsRevisionId, discardedAt: _discardedAt, discardOperationId: _discardOperationId, restoredAt: _restoredAt, ...facts } = row;
+  const { ownerKey, authoredFromShotPlanId, previsRevisionId, imageEditSourceAssetFileId: _imageEditSourceAssetFileId, discardedAt: _discardedAt, discardOperationId: _discardOperationId, restoredAt: _restoredAt, ...facts } = row;
   return {
     ...facts,
     owner: parseAssetFileOwnerKey(ownerKey),

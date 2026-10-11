@@ -21,6 +21,7 @@ import {
   selectShotPlanDialogueAudioTake,
 } from '../shot-plan-dialogue-audio/index.js';
 import { readMediaGenerationContext } from '../media-generation-context/index.js';
+import { readImageEditLineage, readImageEditTargets } from '../image-edit-targets/index.js';
 import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
@@ -35,6 +36,16 @@ export function createGenerationServiceWiring() {
     async readShotPlanDialogueAudio(input: ProjectInput & { shotPlanId: string }) {
       return withProject(input, ({ session }) =>
         readShotPlanDialogueAudio({ session, shotPlanId: input.shotPlanId })
+      );
+    },
+    async readImageEditTargets(input: ProjectInput & { assetFileIds: string[] }) {
+      return withProject(input, ({ session }) =>
+        readImageEditTargets({ session, assetFileIds: input.assetFileIds })
+      );
+    },
+    async readImageEditLineage(input: ProjectInput & { sourceAssetFileId: string }) {
+      return withProject(input, ({ session }) =>
+        readImageEditLineage({ session, sourceAssetFileId: input.sourceAssetFileId })
       );
     },
     async attachShotPlanDialogueAudio(input: ProjectInput & {

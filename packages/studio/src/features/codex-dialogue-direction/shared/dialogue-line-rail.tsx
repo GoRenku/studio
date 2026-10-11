@@ -4,13 +4,13 @@ import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import { adjustDialogueLineRange, dialogueLineGutterAction, dialogueLineRangeContains } from './dialogue-line-range';
 import { SpeakerAvatar } from './speaker-avatar';
-import type { DirectionMediaLibrary } from './use-direction-media';
+import type { PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 
 export function DialogueLineRail(input: {
   lines: DialogueDirectionLine[];
   takes: DialogueDirectionTake[];
   selection: DialogueLineRange;
-  media: DirectionMediaLibrary;
+  media: PanelMediaLibrary;
   speakerBadge?: (line: DialogueDirectionLine) => number | null;
   onSelectionChange: (selection: DialogueLineRange) => void;
 }) {

@@ -1931,9 +1931,12 @@ accept lists or create durable Dialogue Turn relations.
 
 `image.create` becomes an unselected generic Reference Image beside that exact
 Shot Plan. `image.edit` accepts no destination flag: Core verifies that
-provenance references a current source file and derives the new unselected
-candidate's same-place owner, type, canonical path, and surface from the source
-Asset's durable relationships.
+provenance references a current source file and derives the new candidate's
+same-place owner, type, canonical path, and surface from the source Asset's
+durable relationships. When that owner and type have a canonical selection
+(cover, Cast profile, Location or Prop hero, Lookbook image, Shot image, Scene
+Beat storyboard image), the new candidate becomes the selection; sheets and
+Shot Plan images have no selection and are only added.
 
 `video.edit` accepts any active registered Asset with a current video file,
 regardless of type or owner. Core requires that exact source path once in safe

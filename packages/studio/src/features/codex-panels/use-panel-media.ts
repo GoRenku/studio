@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { readCodexAppMediaBlob, type CodexApp } from '@/services/codex-app';
 
-export interface DirectionMediaLibrary {
+export interface PanelMediaLibrary {
   load: (uri: string) => Promise<string>;
 }
 
-/** Reads `renku-direction://` media blobs once per URI and revokes their object URLs on unmount. */
-export function useDirectionMediaLibrary(bridge: CodexApp | undefined): DirectionMediaLibrary {
+/** Reads panel media blobs once per URI and revokes their object URLs on unmount. */
+export function usePanelMediaLibrary(bridge: CodexApp | undefined): PanelMediaLibrary {
   const urls = useRef(new Map<string, Promise<string>>());
   const created = useRef<string[]>([]);
   const disposed = useRef(false);
@@ -31,7 +31,7 @@ export function useDirectionMediaLibrary(bridge: CodexApp | undefined): Directio
       const url = URL.createObjectURL(blob);
       if (disposed.current) {
         URL.revokeObjectURL(url);
-        throw new Error('The dialogue direction panel closed.');
+        throw new Error('The panel closed.');
       }
       created.current.push(url);
       return url;
@@ -45,7 +45,7 @@ export function useDirectionMediaLibrary(bridge: CodexApp | undefined): Directio
 }
 
 /** Projects one media URI to its object URL, loading it when the URI is present. */
-export function useDirectionMediaUrl(media: DirectionMediaLibrary, uri: string | null): { url?: string; failed: boolean } {
+export function usePanelMediaUrl(media: PanelMediaLibrary, uri: string | null): { url?: string; failed: boolean } {
   const [loaded, setLoaded] = useState<{ uri: string; url?: string; failed: boolean }>();
   useEffect(() => {
     if (!uri) return;

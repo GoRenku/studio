@@ -18,7 +18,7 @@ describe('unified AssetFile conversion', () => {
     const migrations = path.join(directory, 'drizzle');
     await fs.mkdir(path.join(migrations, 'meta'), { recursive: true });
     const journal = JSON.parse(await fs.readFile('drizzle/meta/_journal.json', 'utf8'));
-    journal.entries = journal.entries.filter((entry: { tag: string }) => !entry.tag.startsWith('0089_'));
+    journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx < 89);
     for (const entry of journal.entries) {
       await fs.copyFile(`drizzle/${entry.tag}.sql`, path.join(migrations, `${entry.tag}.sql`));
     }

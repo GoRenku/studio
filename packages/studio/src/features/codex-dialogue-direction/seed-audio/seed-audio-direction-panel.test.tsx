@@ -116,6 +116,8 @@ describe('Seed Audio dialogue direction panel', () => {
         ],
       },
     });
+    expect(integration.notify.mock.calls[0]![2]).toBe('I approve uploading the chosen voice samples and this performance prompt to Fal.ai and running one paid Seed Audio 1.0 generation with my saved Fal.ai key.');
+    expect(screen.getByText('Generate uploads the chosen voice samples and this performance prompt to Fal.ai and runs one paid Seed Audio 1.0 generation with your saved Fal.ai key.')).toBeTruthy();
     expect(screen.getByRole('listitem', { name: 'Generating Take 1' })).toBeTruthy();
   });
 

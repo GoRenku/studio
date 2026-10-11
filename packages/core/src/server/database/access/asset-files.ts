@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { assetFiles } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import { assertDurableProjectAssetFilePath } from '../../project-asset-files/path-guards.js';
@@ -22,6 +22,17 @@ export function listAssetFileRecords(session: DatabaseSession): AssetFileRecord[
 
 export function listAssetFileRecordsIncludingDiscarded(session: DatabaseSession): AssetFileRecord[] {
   return session.db.select().from(assetFiles).all();
+}
+
+/** Every file of one owner and type, discarded ones included, oldest first. */
+export function listAssetFileRecordsForOwnerTypeIncludingDiscarded(
+  session: DatabaseSession,
+  input: { ownerKey: string; type: string }
+): AssetFileRecord[] {
+  return session.db.select().from(assetFiles)
+    .where(and(eq(assetFiles.ownerKey, input.ownerKey), eq(assetFiles.type, input.type)))
+    .orderBy(asc(assetFiles.createdAt), asc(assetFiles.id))
+    .all();
 }
 
 export function readAssetFileRecord(

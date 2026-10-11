@@ -45,6 +45,14 @@ describe('Core server architecture boundaries', () => {
     );
   });
 
+  it('keeps Core independent from the Codex panel runtime', async () => {
+    const coreFolder = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const sources = await Promise.all(
+      (await sourceFiles(coreFolder)).map((file) => readFile(file, 'utf8')),
+    );
+    expect(sources.join('\n')).not.toMatch(/from ['"]@gorenku\/studio-codex(?:\/[^'"]*)?['"]/);
+  });
+
   it('keeps media generation context independent from provider and UI capabilities', async () => {
     const folder = join(dirname(fileURLToPath(import.meta.url)), 'media-generation-context');
     const sources = await Promise.all(
