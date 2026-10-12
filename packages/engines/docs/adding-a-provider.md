@@ -219,8 +219,8 @@ Use the existing live metadata/schema and execution path for compatible new
 routes. Optional prompting advice belongs in Skills or personal Markdown, never
 a local model schema. Investigate actual protocol failures as provider work rather
 than requiring a transport/output audit for every route addition. ElevenLabs'
-fixed music path and unavailable generic speech/music schema inspection remain
-explicit integration limits.
+fixed music path and unavailable music schema inspection remain explicit
+integration limits.
 
 ### ElevenLabs operation registry
 
@@ -232,8 +232,7 @@ operation returned by `resolveElevenLabsOperation(model)` in
 live in `client.ts`, and stream collection and artifact writing live in
 `audio-output.ts`. The registry is a bounded table:
 
-- `voice-sample-audio` → voice sample retrieval (the only route with an input
-  schema);
+- `voice-sample-audio` → voice sample retrieval;
 - `music_v1` → music composition;
 - `<model>/text-to-dialogue` → Text to Dialogue, sending `<model>` as the
   ElevenLabs `modelId` (for example `eleven_v4/text-to-dialogue` sends
@@ -243,12 +242,21 @@ live in `client.ts`, and stream collection and artifact writing live in
 New speech models need no registry change. Add a table entry only when
 ElevenLabs adds a new operation kind.
 
+Speech, dialogue and voice-sample operations declare `inputSchema`, which
+answers `renku generation schema show`. Speech and dialogue validate through
+the shared Engines JSON Schema validator (`shared/json-schema-validation.ts`);
+their schemas live in `operations/speech-schema.ts` and
+`operations/dialogue-schema.ts`, with the documented sources and ranges noted
+in each file. Unknown fields, out-of-range settings and missing required fields
+fail with `ENGINE_REQUEST_INVALID` before any SDK call.
+
+The speech route accepts
+`{ text, voice, voice_settings?: { stability, similarity_boost, style, speed, use_speaker_boost }, output_format? }`.
 The dialogue route accepts
 `{ inputs: [{ text, voice }], settings?: { stability, similarity }, output_format?, language_code?, seed? }`.
-Validation collects every issue into one `ENGINE_REQUEST_INVALID` error whose
-`details` lists `instancePath`, `keyword`, and `message`: `inputs` must be a
-non-empty array of entries with non-empty `text` and `voice`, at most 10
-distinct voices are allowed, and unknown fields are rejected. Engines does not
-enforce ElevenLabs' recommended total character limit. Execution maps `voice`
-to `voiceId`, writes one audio artifact, and reports the route id as the result
-model.
+Dialogue adds one rule the schema cannot express: at most 10 distinct voices.
+Its schema issues and that rule are collected into one `ENGINE_REQUEST_INVALID`
+error whose `details` lists `instancePath`, `keyword`, and `message`. Engines
+does not enforce ElevenLabs' recommended total character limit. Execution maps
+`voice` to `voiceId`, writes one audio artifact, and reports the route id as the
+result model.

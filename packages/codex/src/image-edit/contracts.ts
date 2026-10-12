@@ -2,10 +2,16 @@
  * Type-only contracts shared by the Codex image edit runtime and the Studio image edit apps.
  * This file is the `@gorenku/studio-codex/image-edit` package export; keep it free of runtime code.
  */
+import type { JsonValue } from '@gorenku/studio-core/client';
+import type { NativeRequestControls } from '../native-request-controls/contracts.js';
 
-export type ImageEditPanel = 'flux-3';
-export type ImageEditRegionMode = 'edit' | 'remove';
-export type ImageEditResolution = '1k' | '2k' | '4k';
+/** A region action the route accepts, from the Skill's Route Description. */
+export interface ImageEditRegionMode {
+  id: string;
+  label: string;
+  instructionRequired: boolean;
+  placeholder: string;
+}
 
 /** A rectangle on the model's 0–1000 grid, origin top-left. */
 export interface ImageEditRegionBox {
@@ -17,15 +23,22 @@ export interface ImageEditRegionBox {
 
 export interface ImageEditRegion {
   number: number;
-  mode: ImageEditRegionMode;
+  /** An `ImageEditRegionMode.id` of the session route. */
+  mode: string;
   box: ImageEditRegionBox;
   instruction: string;
 }
 
-/** Opaque provider and route ids, echoed back on consume. */
+/** The Skill-supplied Route Description of the selected route; provider and model ids are opaque and echoed back on consume. */
 export interface ImageEditRoute {
   provider: string;
+  providerLabel: string;
   model: string;
+  label: string;
+  /** Region actions in display order, the first being the default; null when the route takes no regions. */
+  regionModes: ImageEditRegionMode[] | null;
+  styleReference: boolean;
+  controls: NativeRequestControls;
 }
 
 export interface ImageEditOwner {
@@ -57,15 +70,9 @@ export interface ImageEditAction {
   message?: string;
 }
 
-export interface ImageEditInitial {
-  wholeImageInstruction: string;
-  resolution: ImageEditResolution;
-}
-
 export interface ImageEditSession {
   sessionId: string;
   revision: number;
-  panel: ImageEditPanel;
   route: ImageEditRoute;
   owner: ImageEditOwner;
   /** The Asset File type of every version; Studio maps it to a label. */
@@ -75,29 +82,28 @@ export interface ImageEditSession {
   versions: ImageEditVersion[];
   /** The version the next edit starts from, or null when a selectable image has no selection. */
   editBaseAssetFileId: string | null;
+  /** Empty when route.styleReference is false. */
   styleReferences: ImageEditStyleReference[];
   action: ImageEditAction | null;
   lastCompletedAction: { actionId: string; assetFileId: string } | null;
-  initial: ImageEditInitial;
+  initialWholeImageInstruction: string;
 }
 
-export interface Flux3ImageEditDraft {
-  panel: 'flux-3';
+export interface ImageEditDraft {
   baseAssetFileId: string;
   wholeImageInstruction: string;
   styleReferenceAssetFileId: string | null;
   regions: ImageEditRegion[];
-  resolution: ImageEditResolution;
+  /** Values of every route control, keyed by JSON Pointer. */
+  values: Record<string, JsonValue>;
 }
 
-export type ImageEditDraft = Flux3ImageEditDraft;
-
-export interface Flux3ImageEditOpenInput {
+export interface ImageEditOpenInput {
   project: string;
   sourceAssetFileId: string;
   route: ImageEditRoute;
-  wholeImageInstruction: string;
-  resolution: ImageEditResolution;
+  /** Prefill from the user request; empty when none. */
+  initialWholeImageInstruction: string;
 }
 
 export interface ImageEditGenerateInput {
@@ -116,6 +122,7 @@ export interface ImageEditConsumeInput {
   actionId: string;
 }
 
+/** `draft` is the route-neutral draft; the agent maps it into the route's native request. */
 export type ImageEditConsumeResult =
   | {
     status: 'consumed';

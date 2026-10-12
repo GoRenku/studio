@@ -34,9 +34,9 @@ describe('DialogueTakeList', () => {
   });
 
   it('replaces the placeholder with the reported failure', () => {
-    renderTakes([], { actionId: 'action', turnRange: { start: 7, end: 9 }, status: 'failed', message: 'ElevenLabs rejected the voice.' });
+    renderTakes([], { actionId: 'action', turnRange: { start: 7, end: 9 }, status: 'failed', message: 'The provider rejected the voice.' });
     expect(screen.queryByRole('listitem', { name: /Generating/ })).toBeNull();
-    expect(screen.getByRole('alert').textContent).toBe('ElevenLabs rejected the voice.');
+    expect(screen.getByRole('alert').textContent).toBe('The provider rejected the voice.');
   });
 
   it('toggles selection from the radio', () => {

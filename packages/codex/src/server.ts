@@ -18,9 +18,8 @@ import { registerImageEdit } from './image-edit/index.js';
 export interface CodexServerOptions {
   version: string;
   generationReviewHtml: string;
-  elevenV4DialogueDirectionHtml: string;
-  seedAudioDialogueDirectionHtml: string;
-  flux3ImageEditHtml: string;
+  dialogueDirectionHtml: string;
+  imageEditHtml: string;
   imageEditTargetChooserHtml: string;
   homeDir?: string;
 }
@@ -35,8 +34,8 @@ export function createCodexServer(options: CodexServerOptions): McpServer {
   registerReviewTools(server, state, options.homeDir);
   registerReviewResources(server, state, options.homeDir);
   server.server.onclose = () => state.expire();
-  registerDialogueDirection(server, { elevenV4Html: options.elevenV4DialogueDirectionHtml, seedAudioHtml: options.seedAudioDialogueDirectionHtml, homeDir: options.homeDir });
-  registerImageEdit(server, { flux3Html: options.flux3ImageEditHtml, targetChooserHtml: options.imageEditTargetChooserHtml, homeDir: options.homeDir });
+  registerDialogueDirection(server, { html: options.dialogueDirectionHtml, homeDir: options.homeDir });
+  registerImageEdit(server, { editHtml: options.imageEditHtml, targetChooserHtml: options.imageEditTargetChooserHtml, homeDir: options.homeDir });
   return server;
 }
 

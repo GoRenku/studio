@@ -1,19 +1,60 @@
-// Type-only, browser-safe contracts shared by the Codex runtime and the Studio dialogue direction apps.
-
-export type DialogueDirectionPanel = 'eleven-v4' | 'seed-audio';
+// Type-only, browser-safe contracts shared by the Codex runtime and the Studio dialogue direction app.
+import type { JsonValue } from '@gorenku/studio-core/client';
+import type { NativeRequestControls } from '../native-request-controls/contracts.js';
 
 export interface DialogueLineRange {
   start: number;
   end: number;
 }
 
-/** Route ids are opaque to the runtime and echoed back to the agent on consume. */
+/** Line Scripts: one direction text per screenplay line. Range Prompt: one direction text for the selected range. */
+export type DialogueDirectionScriptLayout = 'line-scripts' | 'range-prompt';
+
+/** Presentation-only highlighting of the route's emphasis syntax. */
+export type DialogueDirectionEmphasis = 'bracket-tags' | 'quoted-spans';
+
+export type DialogueDirectionVoiceBinding =
+  /** Each speaker is performed by one Cast Voice, sent to the provider by its identity. */
+  | { kind: 'speaker-voices' }
+  /** Ordered reference samples, one per speaker. `mentions` holds the exact prompt text per reference position; null when the route has no mention syntax. */
+  | { kind: 'voice-references'; mentions: string[] | null };
+
+/** Where an operation's native request keeps its direction text. */
+export type DialogueDirectionScriptLocation =
+  | { kind: 'text'; pointer: string }
+  | { kind: 'line-list'; listPointer: string; textPointer: string };
+
+export interface DialogueDirectionOperation {
+  /** Exact provider route id; opaque to Codex and Studio. */
+  model: string;
+  /** Advisory maximum characters of direction text per Generate; shown as a counter, never enforced. */
+  characterLimit: number | null;
+  controls: NativeRequestControls;
+  scriptLocation: DialogueDirectionScriptLocation | null;
+}
+
+/** The Skill-supplied Route Description of the selected route. */
 export interface DialogueDirectionRoute {
   provider: string;
-  /** Exact route id for a single-line Take, e.g. `eleven_v4`. */
-  speechModel: string;
-  /** Exact route id for a multi-line Take, e.g. `eleven_v4/text-to-dialogue`. */
-  rangeModel: string;
+  providerLabel: string;
+  label: string;
+  scriptLayout: DialogueDirectionScriptLayout;
+  voiceBinding: DialogueDirectionVoiceBinding;
+  /** Most distinct voices one Generate may use. */
+  maxVoices: number;
+  /** null when the route has no emphasis syntax worth highlighting. */
+  emphasis: DialogueDirectionEmphasis | null;
+  operations: {
+    singleLine: DialogueDirectionOperation;
+    /** null when the route directs one line per Take. */
+    lineRange: DialogueDirectionOperation | null;
+  };
+}
+
+/** Line Scripts: one single-line script per line. Range Prompt: one script for the whole range. */
+export interface DialogueDirectionScript {
+  turnRange: DialogueLineRange;
+  text: string;
 }
 
 export interface DialogueDirectionSpeakerInput {
@@ -23,36 +64,17 @@ export interface DialogueDirectionSpeakerInput {
   initialCastVoiceId: string;
 }
 
-export interface ElevenV4VoiceSettings {
-  /** 0..1 */
-  stability: number;
-  /** 0..1 */
-  similarity: number;
-}
-
-export interface ElevenV4DialogueDirectionOpenInput {
+export interface DialogueDirectionOpenInput {
   project: string;
   shotPlanId: string;
   route: DialogueDirectionRoute;
   turnRange: DialogueLineRange;
   initialSelection: DialogueLineRange;
-  lines: Array<{ number: number; actingScript: string }>;
   speakers: DialogueDirectionSpeakerInput[];
-  voiceSettings: ElevenV4VoiceSettings;
+  /** Line Scripts: one per line in turnRange. Range Prompt: prefilled prompts for ranges within turnRange. */
+  initialScripts: DialogueDirectionScript[];
+  /** Inserted verbatim as chips; never validated. */
   suggestedTags: string[];
-}
-
-export type SeedAudioPromptMentions = 'audio-tags' | 'none';
-
-export interface SeedAudioDialogueDirectionOpenInput {
-  project: string;
-  shotPlanId: string;
-  route: DialogueDirectionRoute;
-  promptMentions: SeedAudioPromptMentions;
-  turnRange: DialogueLineRange;
-  initialSelection: DialogueLineRange;
-  prompts: Array<{ turnRange: DialogueLineRange; prompt: string }>;
-  speakers: DialogueDirectionSpeakerInput[];
 }
 
 export interface DialogueDirectionLine {
@@ -80,10 +102,10 @@ export interface DialogueDirectionTake {
   /** `renku-direction://` media URI of the Take audio. */
   audioUri: string;
   createdAt: string;
-  /** True when the Take's provenance is this session's route (speech or range model). Rail counts and Take lists use only matching Takes; the selected-line indicator considers every Take. */
+  /** Provenance provider equals route.provider and provenance model is one of the route's operation models. Rail counts and Take lists use only matching Takes; the selected-line indicator considers every Take. */
   matchesRoute: boolean;
-  /** Eleven v4 sessions only: acting scripts recovered from Eleven v4 provenance, keyed by line number. */
-  actingScripts: Record<number, string> | null;
+  /** Read through the operation's Script Location; null when unavailable. */
+  scripts: DialogueDirectionScript[] | null;
 }
 
 export interface DialogueDirectionAction {
@@ -93,27 +115,9 @@ export interface DialogueDirectionAction {
   message?: string;
 }
 
-export interface ElevenV4DirectionInitial {
-  panel: 'eleven-v4';
-  selection: DialogueLineRange;
-  actingScripts: Record<number, string>;
-  voices: Record<string, string>;
-  voiceSettings: ElevenV4VoiceSettings;
-  suggestedTags: string[];
-}
-
-export interface SeedAudioDirectionInitial {
-  panel: 'seed-audio';
-  selection: DialogueLineRange;
-  promptMentions: SeedAudioPromptMentions;
-  prompts: Array<{ turnRange: DialogueLineRange; prompt: string }>;
-  voices: Record<string, string>;
-}
-
 export interface DialogueDirectionSession {
   sessionId: string;
   revision: number;
-  panel: DialogueDirectionPanel;
   route: DialogueDirectionRoute;
   shotPlan: { id: string; title: string; sceneHeading: string };
   lines: DialogueDirectionLine[];
@@ -123,26 +127,24 @@ export interface DialogueDirectionSession {
   action: DialogueDirectionAction | null;
   /** Most recent successful report, retained across resource reads. */
   lastCompletedAction: { actionId: string; takeId: string } | null;
-  initial: ElevenV4DirectionInitial | SeedAudioDirectionInitial;
+  initial: {
+    selection: DialogueLineRange;
+    scripts: DialogueDirectionScript[];
+    /** Initial Cast Voice id keyed by Cast Member id. */
+    voices: Record<string, string>;
+    suggestedTags: string[];
+  };
 }
 
-export interface ElevenV4DirectionDraft {
-  panel: 'eleven-v4';
-  /** start === end uses `route.speechModel`; otherwise `route.rangeModel`. */
+export interface DialogueDirectionDraft {
   turnRange: DialogueLineRange;
-  lines: Array<{ number: number; actingScript: string }>;
+  /** Direction Scripts covering turnRange, by the route's layout. */
+  scripts: DialogueDirectionScript[];
+  /** One per speaker in the selected lines, in order of first appearance. The Skill maps position n to `mentions[n - 1]`. */
   voices: Array<{ castMemberId: string; castVoiceId: string }>;
-  voiceSettings: ElevenV4VoiceSettings;
+  /** Values of every control of the operation the selection uses, keyed by JSON Pointer. */
+  values: Record<string, JsonValue>;
 }
-
-export interface SeedAudioDirectionDraft {
-  panel: 'seed-audio';
-  turnRange: DialogueLineRange;
-  prompt: string;
-  voiceReferences: Array<{ position: 1 | 2 | 3; castMemberId: string; castVoiceId: string }>;
-}
-
-export type DialogueDirectionDraft = ElevenV4DirectionDraft | SeedAudioDirectionDraft;
 
 export interface DialogueDirectionGenerateInput {
   sessionId: string;
@@ -172,6 +174,7 @@ export interface DialogueDirectionConsumeInput {
   actionId: string;
 }
 
+/** `model` is the operation the draft's range uses. */
 export type DialogueDirectionConsumeResult =
   | {
       status: 'consumed';
@@ -179,9 +182,8 @@ export type DialogueDirectionConsumeResult =
       actionId: string;
       project: string;
       shotPlanId: string;
-      /** Exact route id the agent must execute for this draft. */
-      model: string;
       provider: string;
+      model: string;
       draft: DialogueDirectionDraft;
     }
   | { status: 'alreadyConsumed'; sessionId: string; actionId: string };

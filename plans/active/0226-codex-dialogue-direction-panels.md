@@ -2,6 +2,7 @@
 
 Status: proposed
 Date: 2026-10-09
+Model-specific panel parts superseded by plan 0228.
 
 ## Summary
 

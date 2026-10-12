@@ -2,34 +2,26 @@ import type {
   ImageEditConsumeInput,
   ImageEditConsumeResult,
   ImageEditGenerateReceipt,
-  ImageEditPanel,
   ImageEditReportInput,
   ImageEditSession,
 } from './contracts.js';
-import type { ImageEditDraftValidator } from './draft-context.js';
 import { imageEditError } from './diagnostics.js';
-import { validateFlux3Draft } from './flux-3/draft.js';
+import { validateImageEditDraft } from './draft-validation.js';
 import { projectImageEditSession, readImageEditLineageFor, readImageEditStyleReferences, readImageEditTargetsFor } from './session-projection.js';
 import type { ImageEditState } from './session-state.js';
 
-const DRAFT_VALIDATORS: Record<ImageEditPanel, ImageEditDraftValidator> = {
-  'flux-3': validateFlux3Draft,
-};
-
 export async function generateImageEdit(
   state: ImageEditState,
-  input: { sessionId: string; draft: { panel: ImageEditPanel } },
+  input: { sessionId: string; draft: unknown },
   homeDir?: string,
 ): Promise<ImageEditGenerateReceipt> {
   const record = state.record(input.sessionId);
-  if (input.draft.panel !== record.panel) {
-    throw imageEditError('CODEX_IMAGE_EDIT_INVALID', `This session edits with ${record.panel}, not ${input.draft.panel}.`);
-  }
   const current = await projectImageEditSession(record, homeDir);
   if (!current.editBaseAssetFileId) {
     throw imageEditError('CODEX_IMAGE_EDIT_INVALID', 'There is no selected image to edit.', 'Select an image in Studio, then generate again.');
   }
-  const draft = DRAFT_VALIDATORS[record.panel](input.draft, {
+  const draft = validateImageEditDraft(input.draft, {
+    route: record.route,
     editBaseAssetFileId: current.editBaseAssetFileId,
     styleReferenceAssetFileIds: current.styleReferences.map((reference) => reference.assetFileId),
   });

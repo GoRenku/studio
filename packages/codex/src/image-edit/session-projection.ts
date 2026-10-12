@@ -46,7 +46,7 @@ export async function projectImageEditSession(record: ImageEditSessionRecord, ho
     if (!entries.has(entry.target.assetFile.id)) entries.set(entry.target.assetFile.id, entry);
   }
   const lineage = [...entries.values()];
-  const styleReferences = await readImageEditStyleReferences(record.projectRef, homeDir);
+  const styleReferences = record.route.styleReference ? await readImageEditStyleReferences(record.projectRef, homeDir) : [];
   const selectedAssetFileId = record.selectable ? await readSelectedAssetFileId(record, lineage, homeDir) : null;
   const outside = selectedAssetFileId && !lineage.some((entry) => entry.target.assetFile.id === selectedAssetFileId)
     ? (await readImageEditTargetsFor(record.projectRef, [selectedAssetFileId], homeDir)).map((target) => ({ target, parentAssetFileId: null }))
@@ -56,7 +56,6 @@ export async function projectImageEditSession(record: ImageEditSessionRecord, ho
   return structuredClone({
     sessionId: record.sessionId,
     revision: record.revision,
-    panel: record.panel,
     route: record.route,
     owner: { kind: record.owner.kind, name: record.ownerName },
     imageType: record.imageType,
@@ -76,7 +75,7 @@ export async function projectImageEditSession(record: ImageEditSessionRecord, ho
     })),
     action: record.action,
     lastCompletedAction: record.lastCompletedAction,
-    initial: record.initial,
+    initialWholeImageInstruction: record.initialWholeImageInstruction,
   });
 }
 

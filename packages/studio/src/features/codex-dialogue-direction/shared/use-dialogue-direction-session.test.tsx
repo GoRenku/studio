@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DialogueDirectionSession } from '@gorenku/studio-codex/dialogue-direction';
-import { dialogueDirectionTakeFixture, elevenV4SessionFixture } from '../testing/dialogue-direction-session-fixture';
+import { dialogueDirectionTakeFixture, lineScriptsSessionFixture } from '../testing/dialogue-direction-session-fixture';
 import { useDialogueDirectionSession } from './use-dialogue-direction-session';
 
 const integration = vi.hoisted(() => ({
@@ -43,7 +43,7 @@ async function poll() {
 
 describe('dialogue direction session refresh', () => {
   it('refreshes idle Takes and selections even when the session revision is unchanged', async () => {
-    const session = elevenV4SessionFixture();
+    const session = lineScriptsSessionFixture();
     const { result } = await openSession(session);
     expect(integration.read).toHaveBeenCalledOnce();
     const changed = { ...session, takes: [dialogueDirectionTakeFixture('external', 5, 5, { selected: true })] };
@@ -54,7 +54,7 @@ describe('dialogue direction session refresh', () => {
   });
 
   it('pauses reads while hidden, refreshes on visibility and stops on unmount', async () => {
-    const { unmount } = await openSession(elevenV4SessionFixture());
+    const { unmount } = await openSession(lineScriptsSessionFixture());
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
     await poll();
     expect(integration.read).toHaveBeenCalledOnce();
@@ -67,7 +67,7 @@ describe('dialogue direction session refresh', () => {
   });
 
   it('keeps one read in flight and ignores a poll superseded by a Take mutation', async () => {
-    const session = elevenV4SessionFixture();
+    const session = lineScriptsSessionFixture();
     const { result } = await openSession(session);
     let finishRead!: (next: DialogueDirectionSession) => void;
     integration.read.mockReturnValue(new Promise<DialogueDirectionSession>((resolve) => { finishRead = resolve; }));
@@ -87,7 +87,7 @@ describe('dialogue direction session refresh', () => {
 
 describe('dialogue direction completion', () => {
   it('uses the reported Take after it appeared in an earlier poll, despite another newer import', async () => {
-    const running = elevenV4SessionFixture({ action: { actionId: 'action', turnRange: { start: 5, end: 5 }, status: 'running' } });
+    const running = lineScriptsSessionFixture({ action: { actionId: 'action', turnRange: { start: 5, end: 5 }, status: 'running' } });
     const { result } = await openSession(running);
     const imported = { ...running, takes: [
       dialogueDirectionTakeFixture('reported', 5, 5),
@@ -109,7 +109,7 @@ describe('dialogue direction completion', () => {
   });
 
   it('does not autoplay an existing completion on opening or when switching sessions', async () => {
-    const completed = elevenV4SessionFixture({ lastCompletedAction: { actionId: 'old-action', takeId: 'old-take' } });
+    const completed = lineScriptsSessionFixture({ lastCompletedAction: { actionId: 'old-action', takeId: 'old-take' } });
     const { result } = await openSession(completed);
     await poll();
     expect(result.current.autoPlayTakeId).toBeUndefined();
@@ -125,7 +125,7 @@ describe('dialogue direction completion', () => {
   });
 
   it('does not autoplay imports when the action fails', async () => {
-    const running = elevenV4SessionFixture({ action: { actionId: 'action', turnRange: { start: 5, end: 5 }, status: 'running' } });
+    const running = lineScriptsSessionFixture({ action: { actionId: 'action', turnRange: { start: 5, end: 5 }, status: 'running' } });
     const { result } = await openSession(running);
     integration.read.mockResolvedValue({ ...running, revision: 2, action: { ...running.action!, status: 'failed', message: 'Provider failed.' }, takes: [dialogueDirectionTakeFixture('external', 5, 5)] });
     await poll();

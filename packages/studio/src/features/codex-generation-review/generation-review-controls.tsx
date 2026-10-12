@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { GenerationReviewControls, GenerationReviewField } from '@gorenku/studio-codex/client';
+import type { NativeRequestControl, NativeRequestControls } from '@gorenku/studio-codex/native-request-controls';
 import type { JsonValue } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
@@ -8,14 +8,14 @@ import { Switch } from '@/ui/switch';
 import { Textarea } from '@/ui/textarea';
 
 interface ControlProps {
-  field: GenerationReviewField;
+  field: NativeRequestControl;
   value: JsonValue | undefined;
   disabled: boolean;
   onChange: (value: JsonValue | undefined) => void;
 }
 
 export function GenerationReviewConfiguration({ controls, values, disabled, onChange }: {
-  controls: GenerationReviewControls;
+  controls: NativeRequestControls;
   values: Record<string, JsonValue>;
   disabled: boolean;
   onChange: (key: string, value: JsonValue | undefined) => void;

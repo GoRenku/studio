@@ -5,6 +5,8 @@ const TOOL_BUTTON = 'h-auto gap-1.5 rounded-lg border border-[var(--dd-border)] 
 
 export function ImageEditStageToolbar(input: {
   onEditBase: boolean;
+  /** False when the route takes no regions. */
+  regionTools: boolean;
   canDraw: boolean;
   regionsHidden: boolean;
   hasRegions: boolean;
@@ -23,7 +25,7 @@ export function ImageEditStageToolbar(input: {
           <ArrowLeftRight className='size-3.5' />{input.comparison.active ? 'Hide comparison' : `Compare with Take ${input.comparison.parentTakeNumber}`}
         </Button>
       ) : null}
-      {input.onEditBase ? (
+      {input.onEditBase && input.regionTools ? (
         <>
           <Button type='button' variant='ghost' aria-pressed={input.regionsHidden} disabled={input.comparison?.active} onClick={input.onToggleRegions} className={TOOL_BUTTON}>
             {input.regionsHidden ? <Eye className='size-3.5' /> : <EyeOff className='size-3.5' />}{input.regionsHidden ? 'Show regions' : 'Hide regions'}

@@ -12,12 +12,14 @@ export function DialogueLineRail(input: {
   selection: DialogueLineRange;
   media: PanelMediaLibrary;
   speakerBadge?: (line: DialogueDirectionLine) => number | null;
+  /** False when the route directs one line per Take: shift-click and the gutter do not extend the selection. */
+  rangeSelectable: boolean;
   onSelectionChange: (selection: DialogueLineRange) => void;
 }) {
   const [anchor, setAnchor] = useState(input.selection.start);
   const adjust = (line: number) => input.onSelectionChange(adjustDialogueLineRange(input.selection, anchor, line));
   const choose = (event: MouseEvent<HTMLButtonElement>, line: number) => {
-    if (event.shiftKey) {
+    if (event.shiftKey && input.rangeSelectable) {
       adjust(line);
       return;
     }
@@ -31,7 +33,7 @@ export function DialogueLineRail(input: {
         const covering = input.takes.filter((take) => dialogueLineRangeContains(take.turnRange, line.number));
         const matchingCount = covering.filter((take) => take.matchesRoute).length;
         const coveredBySelectedTake = covering.some((take) => take.selected);
-        const gutter = dialogueLineGutterAction(input.selection, line.number);
+        const gutter = input.rangeSelectable ? dialogueLineGutterAction(input.selection, line.number) : null;
         const first = selected && line.number === input.selection.start;
         const last = selected && line.number === input.selection.end;
         return (

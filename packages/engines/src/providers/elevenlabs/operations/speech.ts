@@ -1,8 +1,9 @@
 import type { JsonValue } from '../../../media/contracts.js';
 import { outputFormat, saveElevenLabsAudioStream } from '../audio-output.js';
 import { requestElevenLabsAudio } from '../client.js';
-import { requireString } from './input-fields.js';
+import { validateJsonSchema } from '../../../shared/json-schema-validation.js';
 import type { ElevenLabsOperation } from './registry.js';
+import { elevenLabsSpeechInputSchema } from './speech-schema.js';
 
 interface VoiceSettings {
   stability?: number;
@@ -13,9 +14,9 @@ interface VoiceSettings {
 }
 
 export const elevenLabsSpeechOperation: ElevenLabsOperation = {
+  inputSchema: elevenLabsSpeechInputSchema,
   validate(input, target) {
-    requireString(input.text, 'text', target.model);
-    requireString(input.voice, 'voice', target.model);
+    validateJsonSchema({ provider: 'elevenlabs', model: target.model, schema: elevenLabsSpeechInputSchema, value: input });
   },
   async execute(input, target, context) {
     const stream = await requestElevenLabsAudio({

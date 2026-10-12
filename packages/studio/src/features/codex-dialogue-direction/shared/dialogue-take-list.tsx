@@ -61,7 +61,7 @@ export function DialogueTakeList(input: {
           onConfirmDiscard={() => setConfirmingTakeId(take.takeId)}
           onKeep={() => setConfirmingTakeId(undefined)}
           onDiscard={() => { setConfirmingTakeId(undefined); input.onDiscard(take.takeId); }}
-          onEditFromTake={input.onEditFromTake && take.actingScripts ? () => input.onEditFromTake!(take) : undefined}
+          onEditFromTake={input.onEditFromTake && take.scripts ? () => input.onEditFromTake!(take) : undefined}
         />
       ))}
     </div>

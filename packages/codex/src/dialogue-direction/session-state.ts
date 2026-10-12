@@ -1,17 +1,13 @@
-import type { ShotPlanDialogueAudioTake } from '@gorenku/studio-core/client';
 import type { StudioProjectRef } from '@gorenku/studio-core/server';
 import type { PanelMediaRegistry } from '../panel-sessions/media-registry.js';
 import { PanelSessionStore, type PanelSessionRecord } from '../panel-sessions/session-store.js';
 import type {
   DialogueDirectionDraft,
   DialogueDirectionLine,
-  DialogueDirectionPanel,
   DialogueDirectionRoute,
   DialogueDirectionSession,
   DialogueDirectionVoice,
   DialogueLineRange,
-  ElevenV4DirectionInitial,
-  SeedAudioDirectionInitial,
 } from './contracts.js';
 import { directionError } from './diagnostics.js';
 
@@ -22,18 +18,13 @@ export interface DialogueDirectionBinding {
   shotPlanId: string;
 }
 
-/** Panel hook that recovers editable direction from a Take's provenance; null when the panel has none. */
-export type TakeActingScriptsReader = (take: ShotPlanDialogueAudioTake, route: DialogueDirectionRoute) => Record<number, string> | null;
-
 export interface DialogueDirectionSessionParts {
   binding: DialogueDirectionBinding;
-  panel: DialogueDirectionPanel;
   route: DialogueDirectionRoute;
   shotPlan: { id: string; title: string; sceneHeading: string };
   lines: DialogueDirectionLine[];
   voices: Record<string, DialogueDirectionVoice[]>;
-  initial: ElevenV4DirectionInitial | SeedAudioDirectionInitial;
-  takeActingScripts: TakeActingScriptsReader | null;
+  initial: DialogueDirectionSession['initial'];
   media: PanelMediaRegistry;
 }
 

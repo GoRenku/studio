@@ -112,15 +112,14 @@ describe('ElevenLabs text to dialogue operation', () => {
     const paths = ((error as { details: { instancePath: string; keyword: string }[] }).details)
       .map((issue) => `${issue.instancePath}:${issue.keyword}`);
     expect(paths).toEqual(expect.arrayContaining([
-      '/voice_settings:additionalProperties',
-      '/inputs/0/text:required',
-      '/inputs/1/voice:required',
+      ':additionalProperties',
+      '/inputs/0/text:minLength',
+      '/inputs/1:required',
       '/inputs:maxDistinctVoices',
-      '/settings/style:additionalProperties',
+      '/settings:additionalProperties',
       '/settings/stability:type',
-      '/seed:type',
+      '/seed:minimum',
     ]));
-    expect(paths).toHaveLength(7);
     expect(elevenLabs.convertDialogue).not.toHaveBeenCalled();
   });
 
@@ -155,11 +154,39 @@ describe('ElevenLabs text to dialogue operation', () => {
     });
   });
 
-  it('does not expose an input schema for the dialogue route', async () => {
+  it('rejects out-of-range settings and unknown output formats', async () => {
+    const error = await createElevenLabsMediaProvider().validate({
+      model: 'eleven_v4/text-to-dialogue',
+      input: {
+        inputs: [{ text: 'Line', voice: 'voice_a' }],
+        settings: { stability: 1.5, similarity: -0.1 },
+        output_format: 'flac_44100',
+      },
+    }, providerContext('/unused')).catch((failure: unknown) => failure);
+    const paths = ((error as { details: { instancePath: string; keyword: string }[] }).details)
+      .map((issue) => `${issue.instancePath}:${issue.keyword}`);
+    expect(paths).toEqual(['/settings/stability:maximum', '/settings/similarity:minimum', '/output_format:enum']);
+    expect(elevenLabs.convertDialogue).not.toHaveBeenCalled();
+  });
+
+  it('exposes its input schema for the dialogue route', async () => {
     await expect(createElevenLabsMediaProvider().readInputSchema!(
       'eleven_v4/text-to-dialogue',
       providerContext('/unused'),
-    )).rejects.toMatchObject({ code: 'ENGINE_INPUT_SCHEMA_UNAVAILABLE' });
+    )).resolves.toMatchObject({
+      required: ['inputs'],
+      properties: { settings: { properties: { stability: { minimum: 0, maximum: 1 }, similarity: { minimum: 0, maximum: 1 } } } },
+    });
+  });
+
+  it('accepts the stored Urban Basilica dialogue request shape', async () => {
+    await expect(createElevenLabsMediaProvider().validate({
+      model: 'eleven_v4/text-to-dialogue',
+      input: {
+        inputs: [{ text: '[quiet, direct, troubled] They are afraid of your gun.', voice: 'voice_a' }, { text: '[long pause] [quiet, clipped, final] Work.', voice: 'voice_b' }],
+        settings: { stability: 0.45, similarity: 0.75 },
+      },
+    }, providerContext('/unused'))).resolves.toBeUndefined();
   });
 });
 

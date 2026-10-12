@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProviderExecutionContext } from '../../media/contracts.js';
+import type { JsonValue, ProviderExecutionContext } from '../../media/contracts.js';
 import { createMemoryProviderMetadataCache } from '../../shared/metadata-cache.js';
 
 const elevenLabs = vi.hoisted(() => ({
@@ -69,6 +69,37 @@ describe('ElevenLabs media provider', () => {
       input: { text: 'Line', voice: 'voice_1', audio: { $file: 'sample.wav' } },
     }, providerContext('/tmp', []))).rejects.toMatchObject({
       code: 'ENGINE_LOCAL_MEDIA_INVALID',
+    });
+  });
+
+  it('rejects unknown fields, out-of-range settings and missing required fields before any SDK call', async () => {
+    const error = await createElevenLabsMediaProvider().validate({
+      model: 'eleven_v4',
+      input: { text: '', style: 'loud', voice_settings: { stability: 2, speed: 2, pitch: 1 } },
+    }, providerContext('/tmp', [])).catch((failure: unknown) => failure);
+    expect(error).toMatchObject({ code: 'ENGINE_REQUEST_INVALID', provider: 'elevenlabs', model: 'eleven_v4' });
+    const paths = ((error as { details: { instancePath: string; keyword: string }[] }).details)
+      .map((issue) => `${issue.instancePath}:${issue.keyword}`);
+    expect(paths).toEqual(expect.arrayContaining([
+      ':required', ':additionalProperties', '/text:minLength',
+      '/voice_settings:additionalProperties', '/voice_settings/stability:maximum', '/voice_settings/speed:maximum',
+    ]));
+    expect(elevenLabs.convert).not.toHaveBeenCalled();
+  });
+
+  it('accepts the stored Urban Basilica speech request shapes and exposes the speech schema', async () => {
+    const provider = createElevenLabsMediaProvider();
+    const inputs: JsonValue[] = [
+      { text: '[shouts] ...Fire.', voice: 'voice_1', output_format: 'mp3_44100_128', voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0, speed: 1, use_speaker_boost: true } },
+      { text: 'The barrel is still angry.', voice: 'voice_1', voice_settings: {}, output_format: 'mp3_44100_128' },
+      { text: '[quiet, direct, troubled] They are afraid of your gun.', voice: 'voice_1', voice_settings: { stability: 0.45, similarity_boost: 0.75 } },
+    ];
+    for (const input of inputs) {
+      await expect(provider.validate({ model: 'eleven_v4', input }, providerContext('/tmp', []))).resolves.toBeUndefined();
+    }
+    await expect(provider.readInputSchema!('eleven_v4', providerContext('/tmp', []))).resolves.toMatchObject({
+      required: ['text', 'voice'],
+      properties: { voice_settings: { properties: { stability: { minimum: 0, maximum: 1 }, similarity_boost: { minimum: 0, maximum: 1 } } } },
     });
   });
 

@@ -23,10 +23,10 @@ beforeAll(async () => {
   await createProjectDataService().createMovieProject({ homeDir, projectName: 'movie', title: 'MCP protocol fixture' });
   const reviewFile = path.join(storage, 'movie', 'tmp/operations/media-generation/request.json');
   await fs.mkdir(path.dirname(reviewFile), { recursive: true });
-  await fs.writeFile(reviewFile, JSON.stringify({ provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Café\nα', request: { prompt: 'Café\nα', resolution: '2K' } }));
+  await fs.writeFile(reviewFile, JSON.stringify({ provider: 'acme-images', model: 'image-model', mediaKind: 'image', prompt: 'Café\nα', request: { prompt: 'Café\nα', resolution: '2K' } }));
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Protocol resource fixture</body></html>');
-  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
+  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0', title: 'Codex' }, {
     capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } },
   });
@@ -45,7 +45,7 @@ const opening = {
   project: 'movie',
   requests: [{
     reviewFile: 'tmp/operations/media-generation/request.json',
-    routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' }],
+    routes: [{ provider: 'acme-images', providerLabel: 'Acme Images', model: 'image-model', label: 'Image model', mediaKind: 'image' }],
     controls: { groups: [{ label: 'Image settings', fields: [{ key: '/resolution', label: 'Resolution', kind: 'enum', required: true, initialValue: '2K', options: [{ label: '2K', value: '2K' }, { label: '4K', value: '4K' }] }] }] },
   }],
 };
@@ -59,6 +59,14 @@ describe('official MCP registration and transport', () => {
     const resource = await client.readResource({ uri: 'ui://renku/generation-review' });
     expect(resource.contents[0]).toMatchObject({ mimeType: 'text/html;profile=mcp-app', _meta: { 'openai/ui': { preferredDisplayMode: 'inline', availableDisplayModes: ['inline', 'fullscreen'] }, ui: { csp: { connectDomains: ['blob:'], resourceDomains: ['blob:'] } } } });
     expect((await client.listResources()).resources.map((resource) => resource.uri)).toContain('ui://renku/generation-review');
+  });
+
+  it('registers one purpose panel per family, with one opening tool and one UI resource each', async () => {
+    const tools = (await client.listTools()).tools.map((tool) => tool.name);
+    expect(tools.filter((name) => name.endsWith('.open')).sort()).toEqual(['dialogue.direction.open', 'image.edit.open']);
+    expect((await client.listResources()).resources.map((resource) => resource.uri).filter((uri) => uri.startsWith('ui://')).sort()).toEqual([
+      'ui://renku/dialogue-direction', 'ui://renku/generation-review', 'ui://renku/image-edit', 'ui://renku/image-edit/target-chooser',
+    ]);
   });
 
   it.each(['inline', 'fullscreen'])('reads the current %s preference without restarting the MCP connection', async (mode) => {
@@ -116,7 +124,7 @@ describe('official MCP registration and transport', () => {
     const image = await service.writeInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, fileName: 'frame.png', contents: pixels });
     const reviewFile = 'tmp/operations/media-generation/inspiration.json';
     await fs.writeFile(path.join(root, 'movies/movie', reviewFile), JSON.stringify({
-      provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Reference appearance',
+      provider: 'acme-images', model: 'image-model', mediaKind: 'image', prompt: 'Reference appearance',
       request: { image: { $file: `${folder.projectRelativePath}/frame.png`, reviewLabel: 'Coco appearance' }, resolution: '2K' },
     }));
     const opened = await client.callTool({ name: 'generation.review', arguments: {
@@ -153,7 +161,7 @@ describe('host capability negotiation', () => {
     ['claude-desktop', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } }, 'non-codex-client'],
     ['unknown-agent', {}, 'non-codex-client'],
   ])('requires Studio Preview for %s with capabilities %j', async (name, capabilities, reason) => {
-    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), elevenV4DialogueDirectionHtml: path.join(root, 'app.html'), seedAudioDialogueDirectionHtml: path.join(root, 'app.html'), flux3ImageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html') });
+    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), dialogueDirectionHtml: path.join(root, 'app.html'), imageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html') });
     const isolatedClient = new Client({ name, version: 'test' }, { capabilities });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {

@@ -10,9 +10,9 @@ afterEach(cleanup);
 
 const media = { load: vi.fn(() => new Promise<string>(() => {})) };
 
-function RailHarness({ initial, takes = [] }: { initial: DialogueLineRange; takes?: DialogueDirectionTake[] }) {
+function RailHarness({ initial, takes = [], rangeSelectable = true }: { initial: DialogueLineRange; takes?: DialogueDirectionTake[]; rangeSelectable?: boolean }) {
   const [selection, setSelection] = useState(initial);
-  return <DialogueLineRail lines={dialogueDirectionLinesFixture()} takes={takes} selection={selection} media={media} onSelectionChange={setSelection} />;
+  return <DialogueLineRail lines={dialogueDirectionLinesFixture()} takes={takes} selection={selection} media={media} rangeSelectable={rangeSelectable} onSelectionChange={setSelection} />;
 }
 
 function selectedLines(): number[] {
@@ -43,6 +43,13 @@ describe('DialogueLineRail', () => {
     expect(selectedLines()).toEqual([5, 6, 7, 8, 9]);
     fireEvent.click(screen.getByRole('button', { name: 'Remove line 5 from the selection' }));
     expect(selectedLines()).toEqual([6, 7, 8, 9]);
+  });
+
+  it('keeps a single-line-only route to one line', () => {
+    render(<RailHarness initial={{ start: 5, end: 5 }} rangeSelectable={false} />);
+    fireEvent.click(row(8), { shiftKey: true });
+    expect(selectedLines()).toEqual([8]);
+    expect(screen.queryByRole('button', { name: 'Add line 9 to the selection' })).toBeNull();
   });
 
   it('counts covering Takes of this route and marks lines covered by any selected Take', () => {

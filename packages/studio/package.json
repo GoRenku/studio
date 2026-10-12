@@ -6,9 +6,8 @@
   "type": "module",
   "exports": {
     "./codex-apps/generation-review.html": "./codex-apps-dist/codex-apps/generation-review.html",
-    "./codex-apps/eleven-v4-dialogue-direction.html": "./codex-apps-dist/codex-apps/eleven-v4-dialogue-direction.html",
-    "./codex-apps/seed-audio-dialogue-direction.html": "./codex-apps-dist/codex-apps/seed-audio-dialogue-direction.html",
-    "./codex-apps/flux-3-image-edit.html": "./codex-apps-dist/codex-apps/flux-3-image-edit.html",
+    "./codex-apps/dialogue-direction.html": "./codex-apps-dist/codex-apps/dialogue-direction.html",
+    "./codex-apps/image-edit.html": "./codex-apps-dist/codex-apps/image-edit.html",
     "./codex-apps/image-edit-target-chooser.html": "./codex-apps-dist/codex-apps/image-edit-target-chooser.html",
     "./server": {
       "types": "./server-dist/index.d.ts",
@@ -23,7 +22,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && pnpm run build:server && vite build && pnpm run build:codex",
-    "build:codex": "pnpm run clean:codex && vite build --config vite.codex.config.ts --mode generation-review && vite build --config vite.codex.config.ts --mode eleven-v4-dialogue-direction && vite build --config vite.codex.config.ts --mode seed-audio-dialogue-direction && vite build --config vite.codex.config.ts --mode flux-3-image-edit && vite build --config vite.codex.config.ts --mode image-edit-target-chooser",
+    "build:codex": "pnpm run clean:codex && vite build --config vite.codex.config.ts --mode generation-review && vite build --config vite.codex.config.ts --mode dialogue-direction && vite build --config vite.codex.config.ts --mode image-edit && vite build --config vite.codex.config.ts --mode image-edit-target-chooser",
     "clean:codex": "node -e \"require('node:fs').rmSync('codex-apps-dist', { recursive: true, force: true })\"",
     "clean:server": "node -e \"require('node:fs').rmSync('server-dist', { recursive: true, force: true })\"",
     "build:server": "pnpm run clean:server && tsc --project tsconfig.server.json",

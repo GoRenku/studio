@@ -2,32 +2,21 @@ import type {
   DialogueDirectionConsumeInput,
   DialogueDirectionConsumeResult,
   DialogueDirectionGenerateReceipt,
-  DialogueDirectionPanel,
   DialogueDirectionReportInput,
   DialogueDirectionSession,
 } from './contracts.js';
 import { directionError } from './diagnostics.js';
-import { validateElevenV4Draft } from './eleven-v4/draft.js';
-import { validateSeedAudioDraft } from './seed-audio/draft.js';
+import { operationForRange, validateDirectionDraft } from './draft-validation.js';
 import { projectDialogueDirectionSession, readDialogueDirectionSession, readShotPlanTakes } from './session-projection.js';
 import type { DialogueDirectionState } from './session-state.js';
-import type { DraftValidator } from './validation.js';
-
-const DRAFT_VALIDATORS: Record<DialogueDirectionPanel, DraftValidator> = {
-  'eleven-v4': validateElevenV4Draft,
-  'seed-audio': validateSeedAudioDraft,
-};
 
 export async function generateDirectionTake(
   state: DialogueDirectionState,
-  input: { sessionId: string; draft: { panel: DialogueDirectionPanel } },
+  input: { sessionId: string; draft: unknown },
   homeDir?: string,
 ): Promise<DialogueDirectionGenerateReceipt> {
   const record = state.record(input.sessionId);
-  if (input.draft.panel !== record.panel) {
-    throw directionError('CODEX_DIALOGUE_DIRECTION_INVALID', `This session directs ${record.panel} drafts, not ${input.draft.panel}.`);
-  }
-  const draft = DRAFT_VALIDATORS[record.panel](input.draft, { lines: record.lines, voices: record.voices });
+  const draft = validateDirectionDraft(input.draft, { route: record.route, lines: record.lines, voices: record.voices });
   const action = state.startAction(input.sessionId, draft, { turnRange: { ...draft.turnRange } });
   return {
     sessionId: input.sessionId,
@@ -48,7 +37,7 @@ export function consumeDirectionAction(state: DialogueDirectionState, input: Dia
     project: binding.projectRef.name,
     shotPlanId: binding.shotPlanId,
     provider: route.provider,
-    model: draft.turnRange.start === draft.turnRange.end ? route.speechModel : route.rangeModel,
+    model: operationForRange(route, draft.turnRange)!.model,
     draft,
   };
 }

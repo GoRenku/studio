@@ -6,22 +6,15 @@ import { cn } from '@/lib/utils';
 import { ImageEditSectionHeading } from './image-edit-panel-frame';
 import { regionColor } from './region-geometry';
 
-/** A model's region actions, in display order, with the instruction rule the runtime enforces. */
-export interface RegionModeOption {
-  mode: ImageEditRegionMode;
-  label: string;
-  requiresInstruction: boolean;
-  placeholder: string;
-}
-
 export function RegionList(input: {
   regions: ImageEditRegion[];
-  modes: RegionModeOption[];
+  /** The route's region modes, in display order. */
+  modes: ImageEditRegionMode[];
   selectedNumber: number | null;
   focusNumber: number | null;
   disabled: boolean;
   onSelect: (number: number) => void;
-  onModeChange: (number: number, mode: ImageEditRegionMode) => void;
+  onModeChange: (number: number, mode: string) => void;
   onInstructionChange: (number: number, instruction: string) => void;
   onDelete: (number: number) => void;
   onSubmit: () => void;
@@ -52,19 +45,19 @@ export function RegionList(input: {
 
 function RegionCard(input: {
   region: ImageEditRegion;
-  modes: RegionModeOption[];
+  modes: ImageEditRegionMode[];
   selected: boolean;
   autoFocus: boolean;
   disabled: boolean;
   onSelect: () => void;
-  onModeChange: (mode: ImageEditRegionMode) => void;
+  onModeChange: (mode: string) => void;
   onInstructionChange: (instruction: string) => void;
   onDelete: () => void;
   onSubmit: () => void;
 }) {
   const color = regionColor(input.region.number);
-  const mode = input.modes.find((option) => option.mode === input.region.mode) ?? input.modes[0]!;
-  const missingInstruction = mode.requiresInstruction && !input.region.instruction.trim();
+  const mode = input.modes.find((option) => option.id === input.region.mode) ?? input.modes[0]!;
+  const missingInstruction = mode.instructionRequired && !input.region.instruction.trim();
   return (
     <div
       className={cn('flex flex-col gap-2 rounded-[10px] border border-[var(--dd-border)] bg-[var(--dd-card)] p-2.5')}
@@ -75,15 +68,15 @@ function RegionCard(input: {
         <div role='group' aria-label={`Region ${input.region.number} action`} className='inline-flex overflow-hidden rounded-lg border border-[var(--dd-border)] bg-[var(--dd-card)]'>
           {input.modes.map((option) => (
             <Button
-              key={option.mode}
+              key={option.id}
               type='button'
               variant='ghost'
-              aria-pressed={option.mode === input.region.mode}
+              aria-pressed={option.id === input.region.mode}
               disabled={input.disabled}
-              onClick={() => input.onModeChange(option.mode)}
+              onClick={() => input.onModeChange(option.id)}
               className={cn(
                 'h-auto rounded-none px-2.5 py-1 text-[11.5px] font-medium text-[var(--dd-muted-fg)] shadow-none hover:bg-[var(--dd-hover)] hover:text-[var(--dd-fg)] [&+&]:border-l [&+&]:border-[var(--dd-border)]',
-                option.mode === input.region.mode && 'bg-[var(--dd-active)] font-semibold text-[var(--dd-fg)]',
+                option.id === input.region.mode && 'bg-[var(--dd-active)] font-semibold text-[var(--dd-fg)]',
               )}
             >
               {option.label}

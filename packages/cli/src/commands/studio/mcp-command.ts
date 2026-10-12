@@ -23,9 +23,8 @@ function resolveCodexAppAssetFiles() {
   try {
     return {
       generationReviewHtml: require.resolve('@gorenku/studio/codex-apps/generation-review.html'),
-      elevenV4DialogueDirectionHtml: require.resolve('@gorenku/studio/codex-apps/eleven-v4-dialogue-direction.html'),
-      seedAudioDialogueDirectionHtml: require.resolve('@gorenku/studio/codex-apps/seed-audio-dialogue-direction.html'),
-      flux3ImageEditHtml: require.resolve('@gorenku/studio/codex-apps/flux-3-image-edit.html'),
+      dialogueDirectionHtml: require.resolve('@gorenku/studio/codex-apps/dialogue-direction.html'),
+      imageEditHtml: require.resolve('@gorenku/studio/codex-apps/image-edit.html'),
       imageEditTargetChooserHtml: require.resolve('@gorenku/studio/codex-apps/image-edit-target-chooser.html'),
     };
   } catch {

@@ -200,6 +200,36 @@ and agent loop; accepted application-specific output shapes and optimizations
 may belong to Studio. If ownership is unclear, treat it as a product and
 architecture decision before adding or removing core prompt logic.
 
+## Top Instruction: Model Knowledge Lives In Engines And Skills
+
+Provider and model ids, limits, labels and native request field names belong
+only in `packages/engines` provider modules and in studio-skills. Codex panels,
+Studio, CLI and Core consume Skill-supplied Route Descriptions and
+schema-derived Native Request Controls; they never read, branch on or encode a
+provider or model id beyond echoing it back and matching provenance against
+the described route.
+
+This is a hard architecture rule. The accepted decision is
+`docs/decisions/0114-describe-models-as-skill-data-in-codex-panels.md`.
+
+That means:
+
+- do not add per-model folders, files, components, tools, UI resources, HTML
+  builds, server options, Vite modes, fixtures or tests to Codex, Studio, CLI
+  or Core;
+- do not add a "route kind", "model family" or "panel variant" enum or any
+  other disguised model discriminator;
+- do not read native request fields from provenance except through a
+  Skill-declared Script Location;
+- variation in a panel is limited to its closed purpose-level vocabulary
+  (script layout, voice binding, emphasis, region modes, control kind); a new
+  interaction shape is a product decision and an ADR update, never a quiet
+  field;
+- Codex panel and Studio panel tests use fictional routes only.
+
+Reviewers treat model knowledge in these packages as a high-severity boundary
+violation even when tests pass.
+
 ## Top Instruction: Use Shadcn UI Controls Only
 
 In `packages/studio`, it is strictly forbidden to use raw HTML form or

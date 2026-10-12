@@ -10,8 +10,9 @@ import { openCurrentProject } from '@gorenku/studio-core/server/project-selectio
 import type { AssetFile } from '@gorenku/studio-core/client';
 import { createCodexServer } from '../server.js';
 import type {
-  Flux3ImageEditDraft,
   ImageEditConsumeResult,
+  ImageEditDraft,
+  ImageEditRoute,
   ImageEditGenerateReceipt,
   ImageEditSession,
   ImageEditTargetChooser,
@@ -19,7 +20,19 @@ import type {
 } from './contracts.js';
 
 const service = createProjectDataService();
-const route = { provider: 'fal-ai', model: 'blackforestlabs/flux-3/edit-image' };
+// Fictional routes: the runtime must edit with any route the Skill describes, with no model knowledge.
+const route: ImageEditRoute = {
+  provider: 'acme-images', providerLabel: 'Acme Images', model: 'acme/retouch', label: 'Acme Retouch',
+  regionModes: [
+    { id: 'paint', label: 'Paint', instructionRequired: true, placeholder: 'What goes here?' },
+    { id: 'erase', label: 'Erase', instructionRequired: false, placeholder: 'Optional fill' },
+  ],
+  styleReference: true,
+  controls: { groups: [{ label: 'Output', fields: [
+    { key: '/detail', label: 'Detail', kind: 'enum', options: [{ value: 'low', label: 'Low' }, { value: 'high', label: 'High' }], initialValue: 'high' },
+  ] }] },
+};
+const wholeImageRoute: ImageEditRoute = { ...route, model: 'acme/restyle', label: 'Acme Restyle', regionModes: null, styleReference: false, controls: { groups: [] } };
 
 let root: string;
 let homeDir: string;
@@ -55,7 +68,7 @@ beforeAll(async () => {
 
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0' }, { capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } } as never });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -78,7 +91,7 @@ async function writeImage(): Promise<string> {
 async function attach(purpose: string, target: Record<string, unknown>, select = false): Promise<AssetFile> {
   const report = await service.attachGenerationMedia({
     homeDir, projectName: 'movie', purpose, target, sourceProjectRelativePath: await writeImage(), select, title: `Ana image ${fileCount + 1}`,
-    generationProvenance: { provider: 'fal-ai', model: 'image', mediaKind: 'image', prompt: 'Ana', request: {} },
+    generationProvenance: { provider: 'acme-images', model: 'image', mediaKind: 'image', prompt: 'Ana', request: {} },
   } as never);
   return report.assetFile as AssetFile;
 }
@@ -104,16 +117,16 @@ async function callError(name: string, input: Record<string, unknown>) {
   return result.structuredContent as { error: { code: string; message: string }; issues?: Array<{ location?: { path?: string[] } }> };
 }
 
-async function open(sourceAssetFileId: string): Promise<ImageEditSession> {
-  return (await call<{ session: ImageEditSession }>('image.edit.flux-3.open', { project: 'movie', sourceAssetFileId, route, wholeImageInstruction: 'Colder light.', resolution: '2k' })).session;
+async function open(sourceAssetFileId: string, openRoute: ImageEditRoute = route): Promise<ImageEditSession> {
+  return (await call<{ session: ImageEditSession }>('image.edit.open', { project: 'movie', sourceAssetFileId, route: openRoute, initialWholeImageInstruction: 'Colder light.' })).session;
 }
 
-function draft(session: ImageEditSession, overrides: Partial<Flux3ImageEditDraft> = {}): Flux3ImageEditDraft {
+function draft(session: ImageEditSession, overrides: Partial<ImageEditDraft> = {}): ImageEditDraft {
   return {
-    panel: 'flux-3', baseAssetFileId: session.editBaseAssetFileId!, wholeImageInstruction: '', styleReferenceAssetFileId: null, resolution: '1k',
+    baseAssetFileId: session.editBaseAssetFileId!, wholeImageInstruction: '', styleReferenceAssetFileId: null, values: { '/detail': 'low' },
     regions: [
-      { number: 1, mode: 'edit', box: { top: 20, left: 270, bottom: 290, right: 730 }, instruction: 'Replace the crown with the helmet from Props.' },
-      { number: 2, mode: 'remove', box: { top: 40, left: 0, bottom: 550, right: 130 }, instruction: '' },
+      { number: 1, mode: 'paint', box: { top: 20, left: 270, bottom: 290, right: 730 }, instruction: 'Replace the crown with the helmet from Props.' },
+      { number: 2, mode: 'erase', box: { top: 40, left: 0, bottom: 550, right: 130 }, instruction: '' },
     ],
     ...overrides,
   };
@@ -130,13 +143,12 @@ async function deleteStyleSheet(assetFileId: string): Promise<void> {
   await service.deleteLookbookSheet({ homeDir, projectName: 'movie', sheetId: sheet.id });
 }
 
-describe('FLUX 3 image edit sessions', () => {
+describe('image edit sessions', () => {
   it('opens on the exact source with its owner, take number, selection and initial direction', async () => {
     const session = await open(profile.id);
     expect(session).toMatchObject({
-      panel: 'flux-3', route, owner: { kind: 'castMember', name: 'Ana Komnene' }, imageType: 'cast_profile', selectable: true,
-      editBaseAssetFileId: profile.id, action: null,
-      initial: { wholeImageInstruction: 'Colder light.', resolution: '2k' },
+      route, owner: { kind: 'castMember', name: 'Ana Komnene' }, imageType: 'cast_profile', selectable: true,
+      editBaseAssetFileId: profile.id, action: null, initialWholeImageInstruction: 'Colder light.',
     });
     expect(session.versions).toEqual([expect.objectContaining({ assetFileId: profile.id, takeNumber: 2, parentAssetFileId: null, selected: true })]);
     expect(session.styleReferences.map((reference) => [reference.assetFileId, reference.lookbook, reference.lookbookName])).toEqual([[lookbookSheet.id, 'production', 'Production Language']]);
@@ -154,16 +166,38 @@ describe('FLUX 3 image edit sessions', () => {
         baseAssetFileId: olderProfile.id,
         styleReferenceAssetFileId: 'asset_file_unknown',
         regions: [
-          { number: 1, mode: 'edit', box: { top: 0, left: 0, bottom: 1200, right: 100 }, instruction: ' ' },
-          { number: 1, mode: 'remove', box: { top: 100, left: 100, bottom: 105, right: 400 }, instruction: '' },
+          { number: 1, mode: 'paint', box: { top: 0, left: 0, bottom: 1200, right: 100 }, instruction: ' ' },
+          { number: 1, mode: 'erase', box: { top: 100, left: 100, bottom: 105, right: 400 }, instruction: '' },
+          { number: 3, mode: 'edit', box: { top: 100, left: 100, bottom: 400, right: 400 }, instruction: 'x' },
         ],
+        values: { '/detail': 'ultra', '/extra': 1 },
       }),
     });
     expect(failure.error.code).toBe('CODEX_IMAGE_EDIT_INVALID');
-    expect(failure.issues!.map((issue) => issue.location?.path?.join('.'))).toEqual(expect.arrayContaining([
+    expect(failure.issues!.map((issue) => issue.location?.path?.join('.'))).toEqual([
       'draft.baseAssetFileId', 'draft.styleReferenceAssetFileId', 'draft.regions.0.instruction', 'draft.regions.0.box', 'draft.regions.1.number', 'draft.regions.1.box',
-    ]));
+      'draft.regions.2.mode', 'draft.values./extra', 'draft.values./detail',
+    ]);
     expect((await readSession(session.sessionId)).action).toBeNull();
+  });
+
+  it('requires a change or a region and every control value', async () => {
+    const session = await open(profile.id);
+    const empty = await callError('image.edit.generate', { sessionId: session.sessionId, draft: draft(session, { regions: [], wholeImageInstruction: ' ', values: {} }) });
+    expect(empty.issues!.map((issue) => issue.location?.path?.join('.'))).toEqual(['draft', 'draft.values./detail']);
+  });
+
+  it('reports every Route Description inconsistency together', async () => {
+    const failure = await callError('image.edit.open', { project: 'movie', sourceAssetFileId: profile.id, initialWholeImageInstruction: '', route: {
+      ...route,
+      regionModes: [route.regionModes![0], route.regionModes![0]],
+      controls: { groups: [{ label: 'Output', fields: [{ key: '/mask', label: 'Mask', kind: 'array', element: { key: 'x', label: 'X', kind: 'number' } }] }] },
+    } });
+    expect(failure.issues!.map((issue) => issue.location?.path?.join('.'))).toEqual([
+      'route.regionModes', 'route.controls.groups.0.fields.0.kind', 'route.controls.groups.0.fields.0.initialValue',
+    ]);
+    const emptyModes = await callError('image.edit.open', { project: 'movie', sourceAssetFileId: profile.id, initialWholeImageInstruction: '', route: { ...route, regionModes: [] } });
+    expect(emptyModes.issues!.map((issue) => issue.location?.path?.join('.'))).toEqual(['route.regionModes']);
   });
 
   it('runs one Generate through consume and report, adds the selected result as a version and moves the edit base to it', async () => {
@@ -176,7 +210,7 @@ describe('FLUX 3 image edit sessions', () => {
     expect(consumed).toMatchObject({
       status: 'consumed', project: 'movie', provider: route.provider, model: route.model,
       base: { assetFileId: profile.id, projectRelativePath: profile.projectRelativePath }, styleReference: null,
-      draft: { regions: [expect.objectContaining({ number: 1 }), expect.objectContaining({ number: 2, mode: 'remove' })] },
+      draft: { regions: [expect.objectContaining({ number: 1 }), expect.objectContaining({ number: 2, mode: 'erase' })], values: { '/detail': 'low' } },
     });
     expect(await call<ImageEditConsumeResult>('image.edit.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).toMatchObject({ status: 'alreadyConsumed' });
 
@@ -315,6 +349,19 @@ describe('FLUX 3 image edit sessions', () => {
 
     expect(await call('image.edit.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).toMatchObject({
       status: 'consumed', styleReference: { assetFileId: style.id, projectRelativePath: style.projectRelativePath, name: 'Updated lighting reference' },
+    });
+  });
+
+  it('edits the whole image with a region-free route that takes no style reference', async () => {
+    const source = await attach('cast.profile', { kind: 'castMember', id: castMemberId }, true);
+    const session = await open(source.id, wholeImageRoute);
+    expect(session).toMatchObject({ route: wholeImageRoute, styleReferences: [] });
+    const rejected = await callError('image.edit.generate', { sessionId: session.sessionId, draft: draft(session, { values: {}, styleReferenceAssetFileId: lookbookSheet.id }) });
+    expect(rejected.issues!.map((issue) => issue.location?.path?.join('.'))).toEqual(['draft.styleReferenceAssetFileId', 'draft.regions']);
+    const receipt = await call<ImageEditGenerateReceipt>('image.edit.generate', { sessionId: session.sessionId, draft: draft(session, { regions: [], wholeImageInstruction: 'Warmer dusk light.', values: {} }) });
+    expect(await call<ImageEditConsumeResult>('image.edit.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).toMatchObject({
+      status: 'consumed', provider: 'acme-images', model: 'acme/restyle', styleReference: null,
+      draft: { regions: [], wholeImageInstruction: 'Warmer dusk light.', values: {} },
     });
   });
 });

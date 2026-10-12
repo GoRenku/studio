@@ -5,7 +5,8 @@ import { imageTypeLabel, ownerKindLabel } from './image-type-label';
 /** Header plus a stage column and a 340px direction column; columns stack below 760px. */
 export function ImageEditPanelFrame(input: {
   session: ImageEditSession;
-  modelLabel: string;
+  /** `{route label} · {provider label}`, from the Skill's Route Description. */
+  routeLabel: string;
   notice?: ReactNode;
   stage: ReactNode;
   direction: ReactNode;
@@ -13,11 +14,11 @@ export function ImageEditPanelFrame(input: {
 }) {
   const typeLabel = imageTypeLabel(input.session.imageType);
   return (
-    <section aria-label={`${input.modelLabel} image edit`} className='image-edit flex h-screen min-h-0 flex-col overflow-hidden max-[760px]:h-auto max-[760px]:min-h-screen max-[760px]:overflow-visible'>
+    <section aria-label='Image edit' className='image-edit flex h-screen min-h-0 flex-col overflow-hidden max-[760px]:h-auto max-[760px]:min-h-screen max-[760px]:overflow-visible'>
       <header className='flex flex-wrap items-center gap-2.5 border-b border-[var(--dd-border)] px-5 py-3'>
         <h1 className='m-0 text-sm font-semibold'>{input.session.owner.name ?? typeLabel}</h1>
         <span className='text-xs text-[var(--dd-muted-fg)]'>{ownerKindLabel(input.session.owner.kind)} · {typeLabel}</span>
-        <span className='ml-auto text-[11.5px] font-medium text-[var(--dd-muted-fg)]'>{input.modelLabel}</span>
+        <span className='ml-auto text-[11.5px] font-medium text-[var(--dd-muted-fg)]'>{input.routeLabel}</span>
       </header>
       {input.notice}
       <div className='grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_340px] max-[760px]:grid-cols-1'>

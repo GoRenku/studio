@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { JsonValue } from '@gorenku/studio-core/client';
-import type { GenerationReviewControls } from '@gorenku/studio-codex/client';
+import type { NativeRequestControls } from '@gorenku/studio-codex/native-request-controls';
 import { GenerationReviewConfiguration } from './generation-review-controls';
 
 afterEach(cleanup);
 
-function EditableConfiguration({ controls, initial }: { controls: GenerationReviewControls; initial: Record<string, JsonValue> }) {
+function EditableConfiguration({ controls, initial }: { controls: NativeRequestControls; initial: Record<string, JsonValue> }) {
   const [values, setValues] = useState(initial);
   return <>
     <GenerationReviewConfiguration controls={controls} values={values} disabled={false} onChange={(key, value) => setValues((current) => {

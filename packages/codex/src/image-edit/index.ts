@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerPanelAppResource } from '../panel-sessions/panel-resources.js';
 import { imageEditResourceResult } from './diagnostics.js';
-import { FLUX_3_IMAGE_EDIT_URI, registerFlux3ImageEditOpening } from './flux-3/open.js';
+import { IMAGE_EDIT_URI, registerImageEditOpening } from './opening.js';
 import { registerImageEditSessionResources } from './resources.js';
 import { ImageEditState } from './session-state.js';
 import { registerImageEditTargetChoiceTools } from './target-chooser/choice.js';
@@ -11,7 +11,7 @@ import { registerImageEditTargetChooserResources } from './target-chooser/resour
 import { registerImageEditTools } from './tools.js';
 
 export interface ImageEditOptions {
-  flux3Html: string;
+  editHtml: string;
   targetChooserHtml: string;
   homeDir?: string;
 }
@@ -19,9 +19,9 @@ export interface ImageEditOptions {
 export function registerImageEdit(server: McpServer, options: ImageEditOptions): void {
   const sessions = new ImageEditState();
   const choosers = new ImageEditTargetChooserState();
-  registerPanelAppResource(server, { uri: FLUX_3_IMAGE_EDIT_URI, title: 'FLUX 3 image edit', file: options.flux3Html, displayMode: 'fullscreen' }, imageEditResourceResult);
+  registerPanelAppResource(server, { uri: IMAGE_EDIT_URI, title: 'Image edit', file: options.editHtml, displayMode: 'fullscreen' }, imageEditResourceResult);
   registerPanelAppResource(server, { uri: IMAGE_EDIT_TARGET_CHOOSER_URI, title: 'Choose an image to edit', file: options.targetChooserHtml, displayMode: 'inline' }, imageEditResourceResult);
-  registerFlux3ImageEditOpening(server, sessions, options.homeDir);
+  registerImageEditOpening(server, sessions, options.homeDir);
   registerImageEditTools(server, sessions, options.homeDir);
   registerImageEditSessionResources(server, sessions, options.homeDir);
   registerImageEditTargetChooserOpening(server, choosers, options.homeDir);

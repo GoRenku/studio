@@ -2,21 +2,20 @@ import type { AssetFileOwner } from '@gorenku/studio-core/client';
 import type { StudioProjectRef } from '@gorenku/studio-core/server';
 import type { PanelMediaRegistry } from '../panel-sessions/media-registry.js';
 import { PanelSessionStore, type PanelSessionRecord } from '../panel-sessions/session-store.js';
-import type { ImageEditDraft, ImageEditInitial, ImageEditPanel, ImageEditRoute } from './contracts.js';
+import type { ImageEditDraft, ImageEditRoute } from './contracts.js';
 import { imageEditError } from './diagnostics.js';
 
 export const IMAGE_EDIT_MEDIA_SCHEME = 'renku-image-edit';
 
 export interface ImageEditSessionParts {
   projectRef: StudioProjectRef;
-  panel: ImageEditPanel;
   route: ImageEditRoute;
   owner: AssetFileOwner;
   ownerName: string | null;
   imageType: string;
   selectable: boolean;
   versionSourceAssetFileIds: string[];
-  initial: ImageEditInitial;
+  initialWholeImageInstruction: string;
   media: PanelMediaRegistry;
 }
 

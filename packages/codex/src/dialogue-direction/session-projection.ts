@@ -5,6 +5,7 @@ import type { DialogueDirectionLine, DialogueDirectionSession, DialogueDirection
 import { directionIssue } from './diagnostics.js';
 import type { PanelMediaRegistry } from '../panel-sessions/media-registry.js';
 import type { DialogueDirectionBinding, DialogueDirectionSessionRecord, DialogueDirectionState } from './session-state.js';
+import { takeDirectionScripts, takeMatchesRoute } from './take-directions.js';
 
 export interface DirectionTurn {
   number: number;
@@ -98,7 +99,6 @@ export function projectDialogueDirectionSession(record: DialogueDirectionSession
   return structuredClone({
     sessionId: record.sessionId,
     revision: record.revision,
-    panel: record.panel,
     route: record.route,
     shotPlan: record.shotPlan,
     lines: record.lines,
@@ -110,13 +110,8 @@ export function projectDialogueDirectionSession(record: DialogueDirectionSession
   });
 }
 
-function matchesRoute(take: ShotPlanDialogueAudioTake, record: DialogueDirectionSessionRecord): boolean {
-  const provenance = take.assetFile.generationProvenance;
-  return provenance?.provider === record.route.provider && [record.route.speechModel, record.route.rangeModel].includes(provenance.model);
-}
-
 function projectTake(take: ShotPlanDialogueAudioTake, record: DialogueDirectionSessionRecord): DialogueDirectionTake {
-  const routeTake = matchesRoute(take, record);
+  const routeTake = takeMatchesRoute(take, record.route);
   return {
     takeId: take.id,
     turnRange: take.turnRange,
@@ -125,7 +120,7 @@ function projectTake(take: ShotPlanDialogueAudioTake, record: DialogueDirectionS
     audioUri: record.media.uri(take.assetFile.projectRelativePath),
     createdAt: take.createdAt,
     matchesRoute: routeTake,
-    actingScripts: routeTake ? record.takeActingScripts?.(take, record.route) ?? null : null,
+    scripts: routeTake ? takeDirectionScripts(take, record.route) : null,
   };
 }
 

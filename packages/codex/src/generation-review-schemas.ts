@@ -1,24 +1,11 @@
 import { z } from 'zod';
-import type { GenerationReviewField } from './client.js';
+import { nativeRequestControlsSchema } from './native-request-controls/schemas.js';
 
 const identity = z.string().min(1).max(512);
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 const route = z.object({
   provider: identity, providerLabel: identity, model: identity, label: identity,
   mediaKind: z.enum(['image', 'video', 'audio']),
-}).strict();
-
-const field: z.ZodType<GenerationReviewField> = z.lazy(() => z.object({
-  key: identity, label: identity, description: z.string().optional(),
-  kind: z.enum(['text', 'multiline', 'number', 'integer', 'boolean', 'enum', 'multi-enum', 'object', 'array']),
-  initialValue: z.json().optional(), required: z.boolean().optional(), nullable: z.boolean().optional(),
-  minimum: z.number().finite().optional(), maximum: z.number().finite().optional(), step: z.number().positive().optional(),
-  options: z.array(z.object({ value: z.json(), label: identity, description: z.string().optional() }).strict()).optional(),
-  properties: z.array(field).optional(), element: field.optional(),
-}).strict());
-
-const controls = z.object({
-  groups: z.array(z.object({ label: identity, fields: z.array(field) }).strict()),
 }).strict();
 
 const issue = z.object({
@@ -32,7 +19,7 @@ export const generationReviewInputSchema = z.object({
   reviewId: identity.optional(), expectedRevision: z.number().int().positive().optional(),
   requests: z.array(z.object({
     reviewFile: identity.describe('Project-relative review file. Prepare replacements in a separate file; only the selected request may adopt a new file after validation. Keep all currently bound files unchanged.'), expectedRequestSha256: sha256.optional(),
-    routes: z.array(route).min(1), controls,
+    routes: z.array(route).min(1), controls: nativeRequestControlsSchema,
   }).strict()).min(1).optional(),
   preparationFailure: z.array(issue).min(1).optional(),
 }).strict();

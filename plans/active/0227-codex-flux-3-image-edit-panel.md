@@ -2,6 +2,7 @@
 
 Status: implemented (native Codex Desktop verification pending)
 Date: 2026-10-11
+Model-specific panel parts superseded by plan 0228.
 
 ## Summary
 

@@ -1,4 +1,4 @@
-import type { ImageEditSession, ImageEditTargetChooser, ImageEditVersion } from '@gorenku/studio-codex/image-edit';
+import type { ImageEditRoute, ImageEditSession, ImageEditTargetChooser, ImageEditVersion } from '@gorenku/studio-codex/image-edit';
 
 export function imageEditVersionFixture(assetFileId: string, takeNumber: number, change: Partial<ImageEditVersion> = {}): ImageEditVersion {
   return {
@@ -11,12 +11,28 @@ export function imageEditVersionFixture(assetFileId: string, takeNumber: number,
   };
 }
 
+/** A fictional route with its own region modes, a style reference and one output control. */
+export function imageEditRouteFixture(change: Partial<ImageEditRoute> = {}): ImageEditRoute {
+  return {
+    provider: 'acme-images', providerLabel: 'Acme Images', model: 'acme/retouch', label: 'Acme Retouch',
+    regionModes: [
+      { id: 'paint', label: 'Paint', instructionRequired: true, placeholder: 'What goes here?' },
+      { id: 'erase', label: 'Erase', instructionRequired: false, placeholder: 'Optional fill' },
+    ],
+    styleReference: true,
+    controls: { groups: [{ label: 'Output', fields: [{
+      key: '/detail', label: 'Detail', kind: 'enum', initialValue: 'medium',
+      options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }],
+    }] }] },
+    ...change,
+  };
+}
+
 export function imageEditSessionFixture(change: Partial<ImageEditSession> = {}): ImageEditSession {
   return {
     sessionId: 'session',
     revision: 1,
-    panel: 'flux-3',
-    route: { provider: 'fal-ai', model: 'blackforestlabs/flux-3/edit-image' },
+    route: imageEditRouteFixture(),
     owner: { kind: 'castMember', name: 'Constantine XI Palaiologos' },
     imageType: 'cast_profile',
     selectable: true,
@@ -28,7 +44,7 @@ export function imageEditSessionFixture(change: Partial<ImageEditSession> = {}):
     ],
     action: null,
     lastCompletedAction: null,
-    initial: { wholeImageInstruction: '', resolution: '2k' },
+    initialWholeImageInstruction: '',
     ...change,
   };
 }

@@ -1,9 +1,8 @@
 import type {
   DialogueDirectionLine,
+  DialogueDirectionRoute,
   DialogueDirectionSession,
   DialogueDirectionTake,
-  ElevenV4DirectionInitial,
-  SeedAudioDirectionInitial,
 } from '@gorenku/studio-codex/dialogue-direction';
 
 const speakers = {
@@ -36,12 +35,12 @@ export function dialogueDirectionTakeFixture(takeId: string, start: number, end:
     audioUri: `renku-direction://session/media/${takeId}`,
     createdAt: '2026-10-09T10:00:00.000Z',
     matchesRoute: true,
-    actingScripts: null,
+    scripts: null,
     ...change,
   };
 }
 
-function sessionBase(): Omit<DialogueDirectionSession, 'panel' | 'initial' | 'route'> {
+function sessionBase(): Omit<DialogueDirectionSession, 'initial' | 'route'> {
   const voice = (castMemberId: string, name: string) => ({ castVoiceId: `${castMemberId}-${name.toLowerCase()}`, name, sampleUri: `renku-direction://session/media/${castMemberId}-${name.toLowerCase()}` });
   return {
     sessionId: 'session',
@@ -60,24 +59,52 @@ function sessionBase(): Omit<DialogueDirectionSession, 'panel' | 'initial' | 'ro
   };
 }
 
-export function elevenV4SessionFixture(change: Partial<DialogueDirectionSession> = {}, initial: Partial<ElevenV4DirectionInitial> = {}): DialogueDirectionSession {
+const initialVoices = { 'cast-constantine': 'cast-constantine-tenor', 'cast-urban': 'cast-urban-baritone', 'cast-loukas': 'cast-loukas-clerk', 'cast-giustiniani': 'cast-giustiniani-captain' };
+
+const warmth = (pointer: string) => ({ groups: [{ label: 'Voice', fields: [
+  { key: pointer, label: 'Warmth', kind: 'number' as const, minimum: 0, maximum: 1, initialValue: 0.45 },
+] }] });
+
+/** A fictional Line Scripts route with Speaker Voices; the panel must render any described route. */
+export function lineScriptsRouteFixture(): DialogueDirectionRoute {
+  return {
+    provider: 'acme-audio', providerLabel: 'Acme Audio', label: 'Acme Voice One',
+    scriptLayout: 'line-scripts', voiceBinding: { kind: 'speaker-voices' }, maxVoices: 10, emphasis: 'bracket-tags',
+    operations: {
+      singleLine: { model: 'acme/voice-one', characterLimit: null, controls: warmth('/voice/warmth'), scriptLocation: { kind: 'text', pointer: '/script' } },
+      lineRange: { model: 'acme/voice-one/scene', characterLimit: 2000, controls: warmth('/tuning/warmth'), scriptLocation: { kind: 'line-list', listPointer: '/lines', textPointer: '/words' } },
+    },
+  };
+}
+
+/** A fictional Range Prompt route with Voice References and Voice Mentions. */
+export function rangePromptRouteFixture(): DialogueDirectionRoute {
+  return {
+    provider: 'acme-audio', providerLabel: 'Acme Audio', label: 'Acme Ensemble',
+    scriptLayout: 'range-prompt', voiceBinding: { kind: 'voice-references', mentions: ['<v1>', '<v2>', '<v3>'] }, maxVoices: 3, emphasis: 'quoted-spans',
+    operations: {
+      singleLine: { model: 'acme/ensemble', characterLimit: 2048, controls: { groups: [] }, scriptLocation: { kind: 'text', pointer: '/prompt' } },
+      lineRange: { model: 'acme/ensemble', characterLimit: 2048, controls: { groups: [] }, scriptLocation: { kind: 'text', pointer: '/prompt' } },
+    },
+  };
+}
+
+export function lineScriptsSessionFixture(change: Partial<DialogueDirectionSession> = {}, initial: Partial<DialogueDirectionSession['initial']> = {}): DialogueDirectionSession {
+  const scripts: Record<number, string> = {
+    4: '[quiet] What would you require?',
+    5: '[brisk] Bronze. Powder. Charcoal.',
+    6: '[flat] This is what the empire can breathe.',
+    7: '[cold, quiet] Then the empire is suffocating.',
+    8: '[exhales] Yes. But it is still my city.',
+    9: '[low] Then buy what may keep it yours.',
+  };
   return {
     ...sessionBase(),
-    panel: 'eleven-v4',
-    route: { provider: 'elevenlabs', speechModel: 'eleven_v4', rangeModel: 'eleven_v4/text-to-dialogue' },
+    route: lineScriptsRouteFixture(),
     initial: {
-      panel: 'eleven-v4',
       selection: { start: 5, end: 5 },
-      actingScripts: {
-        4: '[quiet] What would you require?',
-        5: '[brisk] Bronze. Powder. Charcoal.',
-        6: '[flat] This is what the empire can breathe.',
-        7: '[cold, quiet] Then the empire is suffocating.',
-        8: '[exhales] Yes. But it is still my city.',
-        9: '[low] Then buy what may keep it yours.',
-      },
-      voices: { 'cast-constantine': 'cast-constantine-tenor', 'cast-urban': 'cast-urban-baritone', 'cast-loukas': 'cast-loukas-clerk', 'cast-giustiniani': 'cast-giustiniani-captain' },
-      voiceSettings: { stability: 0.45, similarity: 0.75 },
+      scripts: Object.entries(scripts).map(([number, text]) => ({ turnRange: { start: Number(number), end: Number(number) }, text })),
+      voices: initialVoices,
       suggestedTags: ['[whispers]', '[short pause]'],
       ...initial,
     },
@@ -85,17 +112,15 @@ export function elevenV4SessionFixture(change: Partial<DialogueDirectionSession>
   };
 }
 
-export function seedAudioSessionFixture(change: Partial<DialogueDirectionSession> = {}, initial: Partial<SeedAudioDirectionInitial> = {}): DialogueDirectionSession {
+export function rangePromptSessionFixture(change: Partial<DialogueDirectionSession> = {}, initial: Partial<DialogueDirectionSession['initial']> = {}): DialogueDirectionSession {
   return {
     ...sessionBase(),
-    panel: 'seed-audio',
-    route: { provider: 'fal-ai', speechModel: 'bytedance/seed-audio-1.0', rangeModel: 'bytedance/seed-audio-1.0' },
+    route: rangePromptRouteFixture(),
     initial: {
-      panel: 'seed-audio',
       selection: { start: 7, end: 8 },
-      promptMentions: 'audio-tags',
-      prompts: [{ turnRange: { start: 7, end: 8 }, prompt: '@Audio1 is Urban, @Audio2 is Constantine. "Then the empire is suffocating."' }],
-      voices: { 'cast-constantine': 'cast-constantine-tenor', 'cast-urban': 'cast-urban-baritone', 'cast-loukas': 'cast-loukas-clerk', 'cast-giustiniani': 'cast-giustiniani-captain' },
+      scripts: [{ turnRange: { start: 7, end: 8 }, text: '<v1> is Urban, <v2> is Constantine. "Then the empire is suffocating."' }],
+      voices: initialVoices,
+      suggestedTags: [],
       ...initial,
     },
     ...change,

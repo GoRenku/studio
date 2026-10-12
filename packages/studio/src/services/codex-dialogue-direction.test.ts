@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DialogueDirectionGenerateReceipt } from '@gorenku/studio-codex/dialogue-direction';
-import { elevenV4SessionFixture } from '@/features/codex-dialogue-direction/testing/dialogue-direction-session-fixture';
+import { lineScriptsSessionFixture } from '@/features/codex-dialogue-direction/testing/dialogue-direction-session-fixture';
 import { connectDialogueDirectionApp, createDialogueDirectionApp, notifyDialogueDirectionGenerate, selectDialogueDirectionTake } from './codex-dialogue-direction';
 
 const integration = vi.hoisted(() => ({
@@ -47,7 +47,7 @@ describe('Codex dialogue direction bridge', () => {
     [{ start: 7, end: 7 }, 'Line 7'],
     [{ start: 7, end: 9 }, 'Lines 7–9'],
   ])('posts the exact Generate message for %o', async (turnRange, label) => {
-    const receipt: DialogueDirectionGenerateReceipt = { sessionId: 'session', actionId: 'action', turnRange, session: elevenV4SessionFixture() };
+    const receipt: DialogueDirectionGenerateReceipt = { sessionId: 'session', actionId: 'action', turnRange, session: lineScriptsSessionFixture() };
     await notifyDialogueDirectionGenerate(createDialogueDirectionApp('Direction'), receipt, 'I approve one paid run.');
     expect(integration.extensions.message!.send).toHaveBeenCalledWith({
       role: 'user',

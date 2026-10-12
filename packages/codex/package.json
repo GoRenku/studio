@@ -21,6 +21,10 @@
     "./image-edit": {
       "types": "./dist/image-edit/contracts.d.ts",
       "import": "./dist/image-edit/contracts.js"
+    },
+    "./native-request-controls": {
+      "types": "./dist/native-request-controls/contracts.d.ts",
+      "import": "./dist/native-request-controls/contracts.js"
     }
   },
   "files": [

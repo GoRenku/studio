@@ -12,7 +12,7 @@ import {
 import type { DialogueDirectionState } from './session-state.js';
 import { discardDirectionTake, selectDirectionTake } from './take-mutations.js';
 
-/** Registers the panel-only and agent-only tools shared by every dialogue direction panel. */
+/** Registers the panel-only and agent-only tools of the dialogue direction panel. */
 export function registerDirectionTools(server: McpServer, state: DialogueDirectionState, homeDir?: string): void {
   registerAppTool(server, 'dialogue.direction.generate', {
     title: 'Record a dialogue direction Generate action', inputSchema: dialogueDirectionGenerateSchema,
@@ -31,7 +31,7 @@ export function registerDirectionTools(server: McpServer, state: DialogueDirecti
   }, (input) => directionToolResult(async () => ({ content: [], structuredContent: { session: await discardDirectionTake(state, input, homeDir) } })));
   registerAppTool(server, 'dialogue.direction.consume', {
     title: 'Consume a dialogue direction Generate action', inputSchema: dialogueDirectionConsumeSchema,
-    description: 'Consume the exact panel Generate action once. It returns the route id to execute and the user draft. alreadyConsumed authorizes no repeated execution. Execute only through the provider Skill and CLI, import with --turns, then call dialogue.direction.report.',
+    description: 'Consume the exact panel Generate action once. It returns the operation route id to execute and the route-neutral user draft (Direction Scripts, voices in order of first appearance, native control values by JSON Pointer). alreadyConsumed authorizes no repeated execution. Execute only through the provider Skill and CLI, import with --turns, then call dialogue.direction.report.',
     _meta: { ui: { visibility: ['model'] } },
     annotations: { openWorldHint: false, destructiveHint: false },
   }, (input) => directionToolResult(async () => ({ content: [], structuredContent: { ...consumeDirectionAction(state, input) } })));

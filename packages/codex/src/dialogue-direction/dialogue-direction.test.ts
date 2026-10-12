@@ -12,18 +12,37 @@ import type { ShotPlanDialogueAudioTake } from '@gorenku/studio-core/client';
 import { createCodexServer } from '../server.js';
 import type {
   DialogueDirectionConsumeResult,
+  DialogueDirectionDraft,
   DialogueDirectionGenerateReceipt,
+  DialogueDirectionOpenInput,
+  DialogueDirectionOperation,
+  DialogueDirectionRoute,
   DialogueDirectionSession,
-  ElevenV4DialogueDirectionOpenInput,
-  ElevenV4DirectionDraft,
-  SeedAudioDialogueDirectionOpenInput,
-  SeedAudioDirectionDraft,
 } from './contracts.js';
-import { elevenV4TakeActingScripts } from './eleven-v4/draft.js';
+import { takeDirectionScripts } from './take-directions.js';
 
 const service = createProjectDataService();
-const elevenRoute = { provider: 'elevenlabs', speechModel: 'eleven_v4', rangeModel: 'eleven_v4/text-to-dialogue' };
-const seedRoute = { provider: 'fal-ai', speechModel: 'bytedance/seed-audio-1.0', rangeModel: 'bytedance/seed-audio-1.0' };
+const warmth = (pointer: string): DialogueDirectionOperation['controls'] => ({ groups: [{ label: 'Voice', fields: [
+  { key: pointer, label: 'Warmth', kind: 'number', minimum: 0, maximum: 1, initialValue: 0.5 },
+] }] });
+
+// Fictional routes: the runtime must direct any route the Skill describes, with no model knowledge.
+const lineRoute: DialogueDirectionRoute = {
+  provider: 'acme-audio', providerLabel: 'Acme Audio', label: 'Acme Voice One',
+  scriptLayout: 'line-scripts', voiceBinding: { kind: 'speaker-voices' }, maxVoices: 10, emphasis: 'bracket-tags',
+  operations: {
+    singleLine: { model: 'acme/voice-one', characterLimit: null, controls: warmth('/voice/warmth'), scriptLocation: { kind: 'text', pointer: '/script' } },
+    lineRange: { model: 'acme/voice-one/scene', characterLimit: 2000, controls: warmth('/tuning/warmth'), scriptLocation: { kind: 'line-list', listPointer: '/lines', textPointer: '/words' } },
+  },
+};
+const rangeRoute: DialogueDirectionRoute = {
+  provider: 'acme-audio', providerLabel: 'Acme Audio', label: 'Acme Ensemble',
+  scriptLayout: 'range-prompt', voiceBinding: { kind: 'voice-references', mentions: ['<v1>', '<v2>', '<v3>'] }, maxVoices: 3, emphasis: 'quoted-spans',
+  operations: {
+    singleLine: { model: 'acme/ensemble', characterLimit: 2048, controls: { groups: [] }, scriptLocation: { kind: 'text', pointer: '/prompt' } },
+    lineRange: { model: 'acme/ensemble', characterLimit: 2048, controls: { groups: [] }, scriptLocation: { kind: 'text', pointer: '/prompt' } },
+  },
+};
 const speakers = ['ana', 'ben', 'cy', 'dee'] as const;
 // Line 1 ana, 2 ben, 3 ana, 4 cy, 5 dee, 6 is spoken by an unlinked character.
 const screenplayLines = [['ana', 'First.'], ['ben', 'Second.'], ['ana', 'Third.'], ['cy', 'Fourth.'], ['dee', 'Fifth.'], [null, 'Sixth.']] as const;
@@ -38,7 +57,8 @@ let castIds: Record<(typeof speakers)[number], string>;
 let voiceIds: Record<(typeof speakers)[number], string>;
 let speechTake: ShotPlanDialogueAudioTake;
 let dialogueTake: ShotPlanDialogueAudioTake;
-let seedTake: ShotPlanDialogueAudioTake;
+let ensembleTake: ShotPlanDialogueAudioTake;
+let otherTake: ShotPlanDialogueAudioTake;
 let notifications: unknown[];
 let notificationServer: Server;
 
@@ -84,16 +104,17 @@ beforeAll(async () => {
   await service.attachGenerationMedia({
     homeDir, projectName: 'movie', purpose: 'cast.profile', target: { kind: 'castMember', id: castIds.ana },
     sourceProjectRelativePath: 'tmp/ana.png', select: true,
-    generationProvenance: { provider: 'fal-ai', model: 'image', mediaKind: 'image', prompt: 'Ana', request: {} },
+    generationProvenance: { provider: 'acme-images', model: 'image', mediaKind: 'image', prompt: 'Ana', request: {} },
   } as never);
   const sceneId = (await service.readScreenplayStructure({ homeDir, projectName: 'movie' })).screenplay.scenes[0]!.id;
   shotPlanId = (await service.createShotPlan({
     homeDir, projectName: 'movie', type: 'shot-list', sceneId, title: 'Hall exchange', coverage: null,
     shots: [{ title: 'Held exchange', description: 'Hold the exchange.', brief: {} }],
   } as never)).shotPlan.id;
-  speechTake = await attachTake('speech.mp3', { start: 1, end: 1 }, { provider: 'elevenlabs', model: 'eleven_v4', request: { text: '[warm] First.', voice: 'ana-id' } });
-  dialogueTake = await attachTake('dialogue.mp3', { start: 1, end: 3 }, { provider: 'elevenlabs', model: 'eleven_v4/text-to-dialogue', request: { inputs: [{ text: '[a] First.', voice: 'ana-id' }, { text: '[b] Second.', voice: 'ben-id' }, { text: '[c] Third.', voice: 'ana-id' }] } });
-  seedTake = await attachTake('seed.mp3', { start: 2, end: 2 }, { provider: 'fal-ai', model: 'bytedance/seed-audio-1.0', request: { prompt: 'Second.' } });
+  speechTake = await attachTake('speech.mp3', { start: 1, end: 1 }, { provider: 'acme-audio', model: 'acme/voice-one', request: { script: '[warm] First.', voice: 'ana-id' } });
+  dialogueTake = await attachTake('dialogue.mp3', { start: 1, end: 3 }, { provider: 'acme-audio', model: 'acme/voice-one/scene', request: { lines: [{ words: '[a] First.', voice: 'ana-id' }, { words: '[b] Second.', voice: 'ben-id' }, { words: '[c] Third.', voice: 'ana-id' }] } });
+  ensembleTake = await attachTake('ensemble.mp3', { start: 2, end: 3 }, { provider: 'acme-audio', model: 'acme/ensemble', request: { prompt: '<v1> "insists", <v2> answers.' } });
+  otherTake = await attachTake('other.mp3', { start: 2, end: 2 }, { provider: 'other-audio', model: 'acme/voice-one', request: { script: 'Second.' } });
 
   notifications = [];
   notificationServer = createServer(async (request: IncomingMessage, response) => {
@@ -108,7 +129,7 @@ beforeAll(async () => {
 
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
   client = await connectedClient(server, 'codex-mcp-client', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } });
 });
 
@@ -142,40 +163,54 @@ async function connectedClient(target: ReturnType<typeof createCodexServer>, nam
   return connected;
 }
 
-function elevenOpening(): ElevenV4DialogueDirectionOpenInput {
+function voicesFor(...handles: Array<(typeof speakers)[number]>) {
+  return handles.map((handle) => ({ castMemberId: castIds[handle], castVoiceId: voiceIds[handle] }));
+}
+
+function speakerInputs(...handles: Array<(typeof speakers)[number]>) {
+  return handles.map((handle) => ({ castMemberId: castIds[handle], castVoiceIds: [voiceIds[handle]], initialCastVoiceId: voiceIds[handle] }));
+}
+
+function lineOpening(route: DialogueDirectionRoute = lineRoute): DialogueDirectionOpenInput {
   return {
-    project: 'movie', shotPlanId, route: elevenRoute,
+    project: 'movie', shotPlanId, route,
     turnRange: { start: 1, end: 3 }, initialSelection: { start: 1, end: 1 },
-    lines: [1, 2, 3].map((number) => ({ number, actingScript: `[calm] Line ${number}` })),
-    speakers: [
-      { castMemberId: castIds.ana, castVoiceIds: [voiceIds.ana], initialCastVoiceId: voiceIds.ana },
-      { castMemberId: castIds.ben, castVoiceIds: [voiceIds.ben], initialCastVoiceId: voiceIds.ben },
-    ],
-    voiceSettings: { stability: 0.5, similarity: 0.75 },
+    speakers: speakerInputs('ana', 'ben'),
+    initialScripts: [1, 2, 3].map((number) => ({ turnRange: { start: number, end: number }, text: `[calm] Line ${number}` })),
     suggestedTags: ['[calm]', '[whispers]'],
   };
 }
 
-function seedOpening(): SeedAudioDialogueDirectionOpenInput {
+function rangeOpening(route: DialogueDirectionRoute = rangeRoute): DialogueDirectionOpenInput {
   return {
-    project: 'movie', shotPlanId, route: seedRoute, promptMentions: 'audio-tags',
+    project: 'movie', shotPlanId, route,
     turnRange: { start: 1, end: 5 }, initialSelection: { start: 2, end: 4 },
-    prompts: [{ turnRange: { start: 2, end: 4 }, prompt: '@Audio1 and @Audio2 argue, then @Audio3 interrupts.' }],
-    speakers: speakers.map((handle) => ({ castMemberId: castIds[handle], castVoiceIds: [voiceIds[handle]], initialCastVoiceId: voiceIds[handle] })),
+    speakers: speakerInputs(...speakers),
+    initialScripts: [{ turnRange: { start: 2, end: 4 }, text: '<v1> and <v2> argue, then <v3> interrupts.' }],
+    suggestedTags: [],
   };
 }
 
-function elevenDraft(): ElevenV4DirectionDraft {
+function lineDraft(): DialogueDirectionDraft {
   return {
-    panel: 'eleven-v4', turnRange: { start: 1, end: 3 },
-    lines: [1, 2, 3].map((number) => ({ number, actingScript: `[edited] Line ${number}` })),
-    voices: [{ castMemberId: castIds.ana, castVoiceId: voiceIds.ana }, { castMemberId: castIds.ben, castVoiceId: voiceIds.ben }],
-    voiceSettings: { stability: 0.4, similarity: 0.8 },
+    turnRange: { start: 1, end: 3 },
+    scripts: [1, 2, 3].map((number) => ({ turnRange: { start: number, end: number }, text: `[edited] Line ${number}` })),
+    voices: voicesFor('ana', 'ben'),
+    values: { '/tuning/warmth': 0.8 },
   };
 }
 
-async function open(name: 'eleven-v4' | 'seed-audio', input: object): Promise<DialogueDirectionSession> {
-  const result = await client.callTool({ name: `dialogue.direction.${name}.open`, arguments: input as Record<string, unknown> });
+function rangeDraft(): DialogueDirectionDraft {
+  return {
+    turnRange: { start: 2, end: 4 },
+    scripts: [{ turnRange: { start: 2, end: 4 }, text: '<v1> and <v2> argue.' }],
+    voices: voicesFor('ben', 'ana', 'cy'),
+    values: {},
+  };
+}
+
+async function open(input: DialogueDirectionOpenInput): Promise<DialogueDirectionSession> {
+  const result = await call('dialogue.direction.open', input);
   expect(result.isError, JSON.stringify(result.structuredContent)).not.toBe(true);
   return (result.structuredContent as { session: DialogueDirectionSession }).session;
 }
@@ -184,38 +219,47 @@ async function call(name: string, input: object) {
   return client.callTool({ name, arguments: input as Record<string, unknown> });
 }
 
+function issuePaths(result: Awaited<ReturnType<typeof call>>): string[] {
+  return (result.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'));
+}
+
+async function generate(sessionId: string, draft: DialogueDirectionDraft): Promise<DialogueDirectionGenerateReceipt> {
+  const generated = await call('dialogue.direction.generate', { sessionId, draft });
+  expect(generated.isError, JSON.stringify(generated.structuredContent)).not.toBe(true);
+  return generated.structuredContent as unknown as DialogueDirectionGenerateReceipt;
+}
+
+async function readSession(sessionId: string): Promise<DialogueDirectionSession> {
+  const resource = await client.readResource({ uri: `renku-direction://${sessionId}` });
+  return JSON.parse((resource.contents[0] as { text: string }).text) as DialogueDirectionSession;
+}
+
 describe('dialogue direction MCP registration', () => {
-  it('registers fullscreen-only panel resources and the seven tools with their visibilities', async () => {
+  it('registers one fullscreen-only panel resource and the six tools with their visibilities', async () => {
     const tools = (await client.listTools()).tools.filter((tool) => tool.name.startsWith('dialogue.direction.'));
     expect(Object.fromEntries(tools.map((tool) => [tool.name, (tool._meta?.ui as { visibility: string[] }).visibility]))).toEqual({
-      'dialogue.direction.eleven-v4.open': ['model'],
-      'dialogue.direction.seed-audio.open': ['model'],
+      'dialogue.direction.open': ['model'],
       'dialogue.direction.generate': ['app'],
       'dialogue.direction.take.select': ['app'],
       'dialogue.direction.take.discard': ['app'],
       'dialogue.direction.consume': ['model'],
       'dialogue.direction.report': ['model'],
     });
-    expect(tools.find((tool) => tool.name === 'dialogue.direction.eleven-v4.open')?._meta?.ui).toMatchObject({ resourceUri: 'ui://renku/dialogue-direction/eleven-v4' });
-    expect(tools.find((tool) => tool.name === 'dialogue.direction.seed-audio.open')?._meta?.ui).toMatchObject({ resourceUri: 'ui://renku/dialogue-direction/seed-audio' });
-    for (const uri of ['ui://renku/dialogue-direction/eleven-v4', 'ui://renku/dialogue-direction/seed-audio']) {
-      const resource = await client.readResource({ uri });
-      expect(resource.contents[0]).toMatchObject({
-        mimeType: RESOURCE_MIME_TYPE,
-        _meta: { 'openai/ui': { preferredDisplayMode: 'fullscreen', availableDisplayModes: ['fullscreen'] }, ui: { csp: { connectDomains: ['blob:'], resourceDomains: ['blob:'] } } },
-      });
-    }
+    expect(tools.find((tool) => tool.name === 'dialogue.direction.open')?._meta?.ui).toMatchObject({ resourceUri: 'ui://renku/dialogue-direction' });
+    const resource = await client.readResource({ uri: 'ui://renku/dialogue-direction' });
+    expect(resource.contents[0]).toMatchObject({
+      mimeType: RESOURCE_MIME_TYPE,
+      _meta: { 'openai/ui': { preferredDisplayMode: 'fullscreen', availableDisplayModes: ['fullscreen'] }, ui: { csp: { connectDomains: ['blob:'], resourceDomains: ['blob:'] } } },
+    });
   });
 
   it.each([['claude-code', {}], ['codex-mcp-client', {}]])('rejects opening for %s before reading the Project', async (name, capabilities) => {
     const html = path.join(root, 'app.html');
-    const isolated = createCodexServer({ version: 'test', generationReviewHtml: html, elevenV4DialogueDirectionHtml: html, seedAudioDialogueDirectionHtml: html, flux3ImageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
+    const isolated = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
     const isolatedClient = await connectedClient(isolated, name, capabilities);
     try {
-      for (const tool of ['eleven-v4', 'seed-audio']) {
-        const result = await isolatedClient.callTool({ name: `dialogue.direction.${tool}.open`, arguments: { ...(tool === 'eleven-v4' ? elevenOpening() : seedOpening()), project: 'missing' } as never });
-        expect(result).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_REVIEW_UNSUPPORTED' } } });
-      }
+      const result = await isolatedClient.callTool({ name: 'dialogue.direction.open', arguments: { ...lineOpening(), project: 'missing' } as never });
+      expect(result).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_REVIEW_UNSUPPORTED' } } });
     } finally {
       await isolatedClient.close();
       await isolated.close();
@@ -224,12 +268,12 @@ describe('dialogue direction MCP registration', () => {
 });
 
 describe('opening a session', () => {
-  it('projects lines, allowed voices, route Takes and agent drafts', async () => {
-    const session = await open('eleven-v4', elevenOpening());
+  it('projects the route, lines, allowed voices, route Takes and initial direction', async () => {
+    const session = await open(lineOpening());
     expect(session).toMatchObject({
-      revision: 1, panel: 'eleven-v4', route: elevenRoute, action: null,
+      revision: 1, route: lineRoute, action: null,
       shotPlan: { id: shotPlanId, title: 'Hall exchange', sceneHeading: 'INT. HALL - NIGHT' },
-      initial: { panel: 'eleven-v4', selection: { start: 1, end: 1 }, actingScripts: { 1: '[calm] Line 1' }, voices: { [castIds.ana]: voiceIds.ana }, suggestedTags: ['[calm]', '[whispers]'] },
+      initial: { selection: { start: 1, end: 1 }, scripts: lineOpening().initialScripts, voices: { [castIds.ana]: voiceIds.ana, [castIds.ben]: voiceIds.ben }, suggestedTags: ['[calm]', '[whispers]'] },
     });
     expect(session.lines.map(({ number, speakerName, castMemberId, plainText }) => ({ number, speakerName, castMemberId, plainText }))).toEqual([
       { number: 1, speakerName: 'ANA', castMemberId: castIds.ana, plainText: 'First.' },
@@ -239,27 +283,27 @@ describe('opening a session', () => {
     expect(session.lines[0]!.profileUri).toMatch(new RegExp(`^renku-direction://${session.sessionId}/media/`));
     expect(session.lines[1]!.profileUri).toBeNull();
     expect(session.voices[castIds.ana]).toEqual([{ castVoiceId: voiceIds.ana, name: 'ana-voice', sampleUri: expect.stringMatching(/^renku-direction:\/\//) }]);
-    expect(Object.fromEntries(session.takes.map((take) => [take.takeId, take.matchesRoute]))).toEqual({ [speechTake.id]: true, [dialogueTake.id]: true, [seedTake.id]: false });
-    expect(session.takes.find((take) => take.takeId === seedTake.id)).toMatchObject({ matchesRoute: false, actingScripts: null, turnRange: { start: 2, end: 2 } });
+    expect(Object.fromEntries(session.takes.map((take) => [take.takeId, take.matchesRoute]))).toEqual({
+      [speechTake.id]: true, [dialogueTake.id]: true, [ensembleTake.id]: false, [otherTake.id]: false,
+    });
+    expect(session.takes.find((take) => take.takeId === otherTake.id)).toMatchObject({ matchesRoute: false, scripts: null, turnRange: { start: 2, end: 2 } });
     expect(JSON.stringify(session)).not.toContain('.mp3');
   });
 
   it('collects every opening issue', async () => {
-    const input = elevenOpening();
-    const result = await call('dialogue.direction.eleven-v4.open', {
-      ...input,
+    const result = await call('dialogue.direction.open', {
+      ...lineOpening(),
       initialSelection: { start: 2, end: 4 },
-      lines: [{ number: 1, actingScript: 'a' }, { number: 1, actingScript: 'b' }, { number: 4, actingScript: 'c' }],
+      initialScripts: [{ turnRange: { start: 1, end: 2 }, text: 'a' }, { turnRange: { start: 3, end: 3 }, text: 'c' }],
       speakers: [
         { castMemberId: castIds.ana, castVoiceIds: [voiceIds.ana, voiceIds.ben], initialCastVoiceId: voiceIds.cy },
         { castMemberId: castIds.dee, castVoiceIds: [voiceIds.dee], initialCastVoiceId: voiceIds.dee },
       ],
     });
     expect(result).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' } } });
-    const issues = (result.structuredContent as { issues: Array<{ location: { path: string[] }; message: string }> }).issues;
-    expect(issues.map((issue) => issue.location.path.join('.')).sort()).toEqual([
+    expect(issuePaths(result).sort()).toEqual([
+      'initialScripts',
       'initialSelection',
-      'lines', 'lines', 'lines', 'lines',
       'speakers',
       'speakers.0.castVoiceIds',
       'speakers.0.initialCastVoiceId',
@@ -267,29 +311,50 @@ describe('opening a session', () => {
     ].sort());
   });
 
-  it('reports unknown Shot Plans, lines beyond the scene and unlinked speakers', async () => {
-    const missingPlan = await call('dialogue.direction.eleven-v4.open', { ...elevenOpening(), shotPlanId: 'shot_plan_missing' });
+  it('reports every Route Description inconsistency together, before reading the Project', async () => {
+    const route: DialogueDirectionRoute = {
+      ...lineRoute,
+      operations: {
+        singleLine: {
+          ...lineRoute.operations.singleLine,
+          scriptLocation: { kind: 'line-list', listPointer: '/lines', textPointer: '/words' },
+          controls: { groups: [{ label: 'Voice', fields: [{ key: '/notes', label: 'Notes', kind: 'multiline' }] }] },
+        },
+        lineRange: { ...lineRoute.operations.lineRange!, scriptLocation: { kind: 'line-list', listPointer: 'lines', textPointer: '/words' } },
+      },
+    };
+    const result = await call('dialogue.direction.open', { ...lineOpening(route), project: 'missing' });
+    expect(issuePaths(result)).toEqual([
+      'route.operations.singleLine.controls.groups.0.fields.0.kind',
+      'route.operations.singleLine.controls.groups.0.fields.0.initialValue',
+      'route.operations.singleLine.scriptLocation.kind',
+      'route.operations.lineRange.scriptLocation.listPointer',
+    ]);
+    const mentions = await call('dialogue.direction.open', { ...rangeOpening({ ...rangeRoute, voiceBinding: { kind: 'voice-references', mentions: ['<v1>', '<v1>'] }, operations: { ...rangeRoute.operations, lineRange: { ...rangeRoute.operations.lineRange!, scriptLocation: { kind: 'line-list', listPointer: '/a', textPointer: '/b' } } } }) });
+    expect(issuePaths(mentions)).toEqual(['route.voiceBinding.mentions', 'route.voiceBinding.mentions', 'route.operations.lineRange.scriptLocation.kind']);
+  });
+
+  it('reports unknown Shot Plans, lines beyond the scene, unlinked speakers and Range Prompt ranges', async () => {
+    const missingPlan = await call('dialogue.direction.open', { ...lineOpening(), shotPlanId: 'shot_plan_missing' });
     expect(missingPlan).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' }, issues: [{ location: { path: ['shotPlanId'] } }] } });
-    const missingProject = await call('dialogue.direction.eleven-v4.open', { ...elevenOpening(), project: 'missing' });
+    const missingProject = await call('dialogue.direction.open', { ...lineOpening(), project: 'missing' });
     expect(missingProject).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' }, issues: [{ location: { path: ['project'] } }] } });
-    const beyond = await call('dialogue.direction.seed-audio.open', { ...seedOpening(), turnRange: { start: 5, end: 9 }, initialSelection: { start: 5, end: 5 }, prompts: [] });
-    expect(beyond).toMatchObject({ isError: true, structuredContent: { issues: expect.arrayContaining([expect.objectContaining({ location: { path: ['turnRange'] } })]) } });
-    const unlinked = await call('dialogue.direction.seed-audio.open', { ...seedOpening(), turnRange: { start: 5, end: 6 }, initialSelection: { start: 5, end: 6 }, prompts: [], speakers: [seedOpening().speakers[3]] });
+    const beyond = await call('dialogue.direction.open', { ...rangeOpening(), turnRange: { start: 5, end: 9 }, initialSelection: { start: 5, end: 5 }, initialScripts: [] });
+    expect(issuePaths(beyond)).toContain('turnRange');
+    const unlinked = await call('dialogue.direction.open', { ...rangeOpening(), turnRange: { start: 5, end: 6 }, initialSelection: { start: 5, end: 6 }, initialScripts: [], speakers: speakerInputs('dee') });
     expect((unlinked.structuredContent as { issues: Array<{ message: string }> }).issues.map((issue) => issue.message)).toEqual([expect.stringContaining('Line 6 (STRANGER) has no Cast Member speaker')]);
-    const seedRouteMismatch = await call('dialogue.direction.seed-audio.open', { ...seedOpening(), route: elevenRoute, prompts: [{ turnRange: { start: 4, end: 7 }, prompt: '' }] });
-    expect((seedRouteMismatch.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'))).toEqual(['route', 'prompts.0.turnRange']);
+    const ranges = await call('dialogue.direction.open', { ...rangeOpening(), initialScripts: [{ turnRange: { start: 4, end: 7 }, text: '' }, { turnRange: { start: 2, end: 3 }, text: 'a' }, { turnRange: { start: 2, end: 3 }, text: 'b' }] });
+    expect(issuePaths(ranges)).toEqual(['initialScripts.0.turnRange', 'initialScripts']);
   });
 });
 
 describe('Generate lifecycle', () => {
-  it('records one action, rejects a second, consumes once with the route model and reports attached', async () => {
-    const session = await open('eleven-v4', elevenOpening());
-    const generated = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: elevenDraft() });
-    expect(generated.isError).not.toBe(true);
-    const receipt = generated.structuredContent as unknown as DialogueDirectionGenerateReceipt;
+  it('records one action, rejects a second, consumes once with the Line-Range model and reports attached', async () => {
+    const session = await open(lineOpening());
+    const receipt = await generate(session.sessionId, lineDraft());
     expect(receipt).toMatchObject({ sessionId: session.sessionId, turnRange: { start: 1, end: 3 }, session: { revision: 2, action: { status: 'pending', turnRange: { start: 1, end: 3 } } } });
 
-    const busy = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: elevenDraft() });
+    const busy = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: lineDraft() });
     expect(busy).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_BUSY' } } });
     const early = await call('dialogue.direction.report', { sessionId: session.sessionId, actionId: receipt.actionId, outcome: { status: 'attached', assetFileId: dialogueTake.assetFile.id } });
     expect(early).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' } } });
@@ -297,7 +362,7 @@ describe('Generate lifecycle', () => {
     const consumed = (await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent as DialogueDirectionConsumeResult;
     expect(consumed).toEqual({
       status: 'consumed', sessionId: session.sessionId, actionId: receipt.actionId, project: 'movie', shotPlanId,
-      provider: 'elevenlabs', model: 'eleven_v4/text-to-dialogue', draft: elevenDraft(),
+      provider: 'acme-audio', model: 'acme/voice-one/scene', draft: lineDraft(),
     });
     expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent).toEqual({ status: 'alreadyConsumed', sessionId: session.sessionId, actionId: receipt.actionId });
     expect(await readSession(session.sessionId)).toMatchObject({ action: { status: 'running' } });
@@ -314,24 +379,40 @@ describe('Generate lifecycle', () => {
     expect(await readSession(session.sessionId)).toMatchObject({ action: null, lastCompletedAction: completion });
     const again = await call('dialogue.direction.report', { sessionId: session.sessionId, actionId: receipt.actionId, outcome: { status: 'failed', message: 'late' } });
     expect(again).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' } } });
-    expect((await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: elevenDraft() })).isError).not.toBe(true);
+    await generate(session.sessionId, lineDraft());
     expect(await readSession(session.sessionId)).toMatchObject({ action: { status: 'pending' }, lastCompletedAction: completion });
   });
 
-  it('echoes the speech model for one line and re-enables Generate after a failure', async () => {
-    const session = await open('eleven-v4', elevenOpening());
-    const single: ElevenV4DirectionDraft = { ...elevenDraft(), turnRange: { start: 2, end: 2 }, lines: [{ number: 2, actingScript: '[sharp] Second.' }], voices: [{ castMemberId: castIds.ben, castVoiceId: voiceIds.ben }] };
-    const receipt = (await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: single })).structuredContent as unknown as DialogueDirectionGenerateReceipt;
-    expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent).toMatchObject({ model: 'eleven_v4' });
+  it('echoes the Single-Line model for one line and re-enables Generate after a failure', async () => {
+    const session = await open(lineOpening());
+    const single: DialogueDirectionDraft = { turnRange: { start: 2, end: 2 }, scripts: [{ turnRange: { start: 2, end: 2 }, text: '[sharp] Second.' }], voices: voicesFor('ben'), values: { '/voice/warmth': 0.3 } };
+    const receipt = await generate(session.sessionId, single);
+    expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent).toMatchObject({ model: 'acme/voice-one', draft: single });
     const failed = await call('dialogue.direction.report', { sessionId: session.sessionId, actionId: receipt.actionId, outcome: { status: 'failed', message: 'Provider quota exceeded.' } });
     expect((failed.structuredContent as { session: DialogueDirectionSession }).session.action).toEqual({ actionId: receipt.actionId, turnRange: { start: 2, end: 2 }, status: 'failed', message: 'Provider quota exceeded.' });
-    expect((await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: single })).isError).not.toBe(true);
+    await generate(session.sessionId, single);
+  });
+
+  it.each([
+    ['line-scripts', 'speaker-voices'],
+    ['line-scripts', 'voice-references'],
+    ['range-prompt', 'speaker-voices'],
+    ['range-prompt', 'voice-references'],
+  ] as const)('opens, generates, consumes and reports a %s route with %s', async (scriptLayout, bindingKind) => {
+    const base = scriptLayout === 'line-scripts' ? lineRoute : rangeRoute;
+    const route: DialogueDirectionRoute = { ...base, maxVoices: 3, voiceBinding: bindingKind === 'speaker-voices' ? { kind: 'speaker-voices' } : { kind: 'voice-references', mentions: null } };
+    const session = await open(scriptLayout === 'line-scripts' ? lineOpening(route) : { ...rangeOpening(route), turnRange: { start: 1, end: 3 }, initialSelection: { start: 1, end: 3 }, initialScripts: [], speakers: speakerInputs('ana', 'ben') });
+    const draft = scriptLayout === 'line-scripts' ? lineDraft() : { ...rangeDraft(), turnRange: { start: 1, end: 3 }, scripts: [{ turnRange: { start: 1, end: 3 }, text: 'Together.' }], voices: voicesFor('ana', 'ben') };
+    const receipt = await generate(session.sessionId, draft);
+    expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent).toMatchObject({ status: 'consumed', model: route.operations.lineRange!.model, draft });
+    const reported = await call('dialogue.direction.report', { sessionId: session.sessionId, actionId: receipt.actionId, outcome: { status: 'attached', assetFileId: dialogueTake.assetFile.id } });
+    expect((reported.structuredContent as { session: DialogueDirectionSession }).session).toMatchObject({ action: null, lastCompletedAction: { takeId: dialogueTake.id } });
   });
 
   it('fails NOT_FOUND for unknown sessions, actions and media', async () => {
-    const session = await open('eleven-v4', elevenOpening());
+    const session = await open(lineOpening());
     for (const [name, input] of [
-      ['dialogue.direction.generate', { sessionId: 'missing', draft: elevenDraft() }],
+      ['dialogue.direction.generate', { sessionId: 'missing', draft: lineDraft() }],
       ['dialogue.direction.consume', { sessionId: 'missing', actionId: 'missing' }],
       ['dialogue.direction.consume', { sessionId: session.sessionId, actionId: 'missing' }],
       ['dialogue.direction.take.select', { sessionId: 'missing', takeId: speechTake.id, selected: true }],
@@ -343,7 +424,7 @@ describe('Generate lifecycle', () => {
   });
 
   it('serves declared media as blobs', async () => {
-    const session = await open('eleven-v4', elevenOpening());
+    const session = await open(lineOpening());
     const take = session.takes.find((candidate) => candidate.takeId === speechTake.id)!;
     const audio = (await client.readResource({ uri: take.audioUri })).contents[0] as { mimeType: string; blob: string };
     expect(Buffer.from(audio.blob, 'base64').toString()).toBe('speech.mp3');
@@ -353,73 +434,73 @@ describe('Generate lifecycle', () => {
   });
 });
 
-async function readSession(sessionId: string): Promise<DialogueDirectionSession> {
-  const resource = await client.readResource({ uri: `renku-direction://${sessionId}` });
-  return JSON.parse((resource.contents[0] as { text: string }).text) as DialogueDirectionSession;
-}
-
 describe('draft validation', () => {
-  it('requires Eleven acting scripts for the range in order and one allowed voice per speaker', async () => {
-    const session = await open('eleven-v4', elevenOpening());
+  it('requires Line Scripts for the range in order and one offered voice per speaker in order of first appearance', async () => {
+    const session = await open(lineOpening());
     const result = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: {
-      ...elevenDraft(),
-      lines: [{ number: 2, actingScript: 'b' }, { number: 1, actingScript: 'a' }, { number: 3, actingScript: 'c' }],
-      voices: [{ castMemberId: castIds.ana, castVoiceId: voiceIds.ben }, { castMemberId: castIds.ana, castVoiceId: voiceIds.ana }, { castMemberId: castIds.cy, castVoiceId: voiceIds.cy }],
+      ...lineDraft(),
+      scripts: [2, 1, 3].map((number) => ({ turnRange: { start: number, end: number }, text: 'x' })),
+      voices: [{ castMemberId: castIds.ana, castVoiceId: voiceIds.ben }, { castMemberId: castIds.cy, castVoiceId: voiceIds.cy }, { castMemberId: castIds.ben, castVoiceId: voiceIds.ben }],
     } });
     expect(result).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' } } });
-    expect((result.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'))).toEqual([
-      'draft.lines', 'draft.voices', 'draft.voices', 'draft.voices.0', 'draft.voices.2',
+    expect(issuePaths(result)).toEqual([
+      'draft.scripts', 'draft.voices', 'draft.voices.0', 'draft.voices.1.castMemberId', 'draft.voices.1', 'draft.voices.2.castMemberId',
     ]);
-    const outside = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...elevenDraft(), turnRange: { start: 2, end: 4 }, voiceSettings: { stability: 2, similarity: 0.5 } } });
-    expect((outside.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'))).toEqual(['draft.voiceSettings.stability']);
-    const range = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...elevenDraft(), turnRange: { start: 2, end: 4 } } });
-    expect((range.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'))).toEqual(['draft.turnRange']);
-    const wrongPanel = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { panel: 'seed-audio' } });
-    expect(wrongPanel).toMatchObject({ isError: true, structuredContent: { error: { code: 'CODEX_DIALOGUE_DIRECTION_INVALID' } } });
+    const range = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...lineDraft(), turnRange: { start: 2, end: 4 } } });
+    expect(issuePaths(range)).toEqual(['draft.turnRange']);
   });
 
-  it('requires Seed voice references in order of first appearance, sequential and at most three', async () => {
-    const session = await open('seed-audio', seedOpening());
-    expect(session.takes.map((take) => take.actingScripts)).toEqual([null, null, null]);
-    expect(session.takes.filter((take) => take.matchesRoute).map((take) => take.takeId)).toEqual([seedTake.id]);
-    const valid: SeedAudioDirectionDraft = {
-      panel: 'seed-audio', turnRange: { start: 2, end: 4 }, prompt: '@Audio1 and @Audio2 argue.',
-      voiceReferences: [
-        { position: 1, castMemberId: castIds.ben, castVoiceId: voiceIds.ben },
-        { position: 2, castMemberId: castIds.ana, castVoiceId: voiceIds.ana },
-        { position: 3, castMemberId: castIds.cy, castVoiceId: voiceIds.cy },
-      ],
-    };
-    const generated = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: valid });
-    expect(generated.isError).not.toBe(true);
-    const receipt = generated.structuredContent as unknown as DialogueDirectionGenerateReceipt;
-    expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent).toMatchObject({ provider: 'fal-ai', model: 'bytedance/seed-audio-1.0', draft: valid });
-    await call('dialogue.direction.report', { sessionId: session.sessionId, actionId: receipt.actionId, outcome: { status: 'failed', message: 'retry' } });
+  it('requires exactly the active operation\'s control values', async () => {
+    const session = await open(lineOpening());
+    const wrongOperation = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...lineDraft(), values: { '/voice/warmth': 0.4 } } });
+    expect(issuePaths(wrongOperation)).toEqual(['draft.values./tuning/warmth', 'draft.values./voice/warmth']);
+    const outOfRange = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...lineDraft(), values: { '/tuning/warmth': 2 } } });
+    expect(issuePaths(outOfRange)).toEqual(['draft.values./tuning/warmth']);
+  });
 
-    const reordered = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: {
-      ...valid, voiceReferences: [valid.voiceReferences[1], { ...valid.voiceReferences[0], position: 3 }, { ...valid.voiceReferences[2], castVoiceId: voiceIds.dee }],
+  it('requires one Range Prompt script for exactly the selected range', async () => {
+    const session = await open(rangeOpening());
+    expect(session.takes.filter((take) => take.matchesRoute).map((take) => take.takeId)).toEqual([ensembleTake.id]);
+    const receipt = await generate(session.sessionId, rangeDraft());
+    expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: receipt.actionId })).structuredContent).toMatchObject({ provider: 'acme-audio', model: 'acme/ensemble', draft: rangeDraft() });
+    await call('dialogue.direction.report', { sessionId: session.sessionId, actionId: receipt.actionId, outcome: { status: 'failed', message: 'retry' } });
+    const split = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...rangeDraft(), scripts: [{ turnRange: { start: 2, end: 3 }, text: 'a' }] } });
+    expect(issuePaths(split)).toEqual(['draft.scripts']);
+    const reordered = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...rangeDraft(), voices: voicesFor('ana', 'ben', 'cy') } });
+    expect(issuePaths(reordered)).toEqual(['draft.voices.0.castMemberId', 'draft.voices.1.castMemberId']);
+  });
+
+  it.each(['speaker-voices', 'voice-references'] as const)('enforces maxVoices for %s', async (kind) => {
+    const route: DialogueDirectionRoute = { ...rangeRoute, voiceBinding: kind === 'speaker-voices' ? { kind } : { kind, mentions: null } };
+    const session = await open(rangeOpening(route));
+    const tooMany = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: {
+      ...rangeDraft(), turnRange: { start: 1, end: 5 }, scripts: [{ turnRange: { start: 1, end: 5 }, text: 'All.' }], voices: voicesFor('ana', 'ben', 'cy', 'dee'),
     } });
-    expect((reordered.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'))).toEqual([
-      'draft.voiceReferences.0.position', 'draft.voiceReferences.0.castMemberId',
-      'draft.voiceReferences.1.position', 'draft.voiceReferences.1.castMemberId',
-      'draft.voiceReferences.2',
-    ]);
-    const tooMany = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...valid, turnRange: { start: 1, end: 5 } } });
-    expect((tooMany.structuredContent as { issues: Array<{ message: string }> }).issues).toEqual([expect.objectContaining({ message: expect.stringContaining('up to 3 voices') })]);
-    const missing = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: { ...valid, voiceReferences: valid.voiceReferences.slice(0, 2) } });
-    expect((missing.structuredContent as { issues: Array<{ location: { path: string[] } }> }).issues.map((issue) => issue.location.path.join('.'))).toEqual(['draft.voiceReferences']);
+    expect((tooMany.structuredContent as { issues: Array<{ message: string }> }).issues).toEqual([expect.objectContaining({ message: 'Acme Ensemble takes up to 3 voices; the selected lines have 4 speakers.' })]);
+  });
+
+  it('keeps a single-line-only route to one line per Take', async () => {
+    const route: DialogueDirectionRoute = { ...lineRoute, maxVoices: 1, emphasis: null, operations: { singleLine: lineRoute.operations.singleLine, lineRange: null } };
+    const multi = await call('dialogue.direction.open', { ...lineOpening(route), initialSelection: { start: 1, end: 2 } });
+    expect(issuePaths(multi)).toEqual(['initialSelection']);
+    const session = await open(lineOpening(route));
+    const rejected = await call('dialogue.direction.generate', { sessionId: session.sessionId, draft: lineDraft() });
+    expect(issuePaths(rejected)).toEqual(['draft.turnRange']);
+    expect((rejected.structuredContent as { issues: Array<{ message: string }> }).issues[0]!.message).toContain('one line per Take');
+    const single = await generate(session.sessionId, { turnRange: { start: 3, end: 3 }, scripts: [{ turnRange: { start: 3, end: 3 }, text: 'Third.' }], voices: voicesFor('ana'), values: { '/voice/warmth': 0.5 } });
+    expect((await call('dialogue.direction.consume', { sessionId: session.sessionId, actionId: single.actionId })).structuredContent).toMatchObject({ model: 'acme/voice-one' });
   });
 });
 
 describe('Take mutations', () => {
   it('selects, clears and discards through Core and notifies Studio as the agent', async () => {
-    const session = await open('eleven-v4', elevenOpening());
+    const session = await open(lineOpening());
     const selected = await call('dialogue.direction.take.select', { sessionId: session.sessionId, takeId: speechTake.id, selected: true });
     const selectedTakes = (selected.structuredContent as { session: DialogueDirectionSession }).session.takes;
-    expect(Object.fromEntries(selectedTakes.map((take) => [take.takeId, take.selected]))).toEqual({ [speechTake.id]: true, [dialogueTake.id]: false, [seedTake.id]: true });
+    expect(selectedTakes.find((take) => take.takeId === speechTake.id)?.selected).toBe(true);
     const cleared = await call('dialogue.direction.take.select', { sessionId: session.sessionId, takeId: speechTake.id, selected: false });
     expect((cleared.structuredContent as { session: DialogueDirectionSession }).session.takes.find((take) => take.takeId === speechTake.id)?.selected).toBe(false);
-    const extra = await attachTake('extra.mp3', { start: 3, end: 3 }, { provider: 'elevenlabs', model: 'eleven_v4', request: { text: 'x' } });
+    const extra = await attachTake('extra.mp3', { start: 3, end: 3 }, { provider: 'acme-audio', model: 'acme/voice-one', request: { script: 'x' } });
     const discarded = await call('dialogue.direction.take.discard', { sessionId: session.sessionId, takeId: extra.id });
     expect((discarded.structuredContent as { session: DialogueDirectionSession }).session.takes.map((take) => take.takeId)).not.toContain(extra.id);
     expect(notifications).toHaveLength(3);
@@ -429,17 +510,28 @@ describe('Take mutations', () => {
   });
 });
 
-describe('Eleven v4 acting scripts from provenance', () => {
-  it('recovers speech and dialogue scripts and ignores other routes', async () => {
-    const session = await open('eleven-v4', elevenOpening());
-    expect(session.takes.find((take) => take.takeId === speechTake.id)?.actingScripts).toEqual({ 1: '[warm] First.' });
-    expect(session.takes.find((take) => take.takeId === dialogueTake.id)?.actingScripts).toEqual({ 1: '[a] First.', 2: '[b] Second.', 3: '[c] Third.' });
+describe('Direction Scripts from Take provenance', () => {
+  it('reopens Takes through text and line-list Script Locations', async () => {
+    const lineSession = await open(lineOpening());
+    expect(lineSession.takes.find((take) => take.takeId === speechTake.id)?.scripts).toEqual([{ turnRange: { start: 1, end: 1 }, text: '[warm] First.' }]);
+    expect(lineSession.takes.find((take) => take.takeId === dialogueTake.id)?.scripts).toEqual([
+      { turnRange: { start: 1, end: 1 }, text: '[a] First.' },
+      { turnRange: { start: 2, end: 2 }, text: '[b] Second.' },
+      { turnRange: { start: 3, end: 3 }, text: '[c] Third.' },
+    ]);
+    const rangeSession = await open(rangeOpening());
+    expect(rangeSession.takes.find((take) => take.takeId === ensembleTake.id)?.scripts).toEqual([{ turnRange: { start: 2, end: 3 }, text: '<v1> "insists", <v2> answers.' }]);
+  });
+
+  it('returns null when the location is absent, the list length differs or the Take is from another route', () => {
     const withProvenance = (provider: string, model: string, request: unknown, turnRange = { start: 1, end: 1 }) => ({
       ...speechTake, turnRange, assetFile: { ...speechTake.assetFile, generationProvenance: { provider, model, mediaKind: 'audio' as const, prompt: null, request: request as never } },
     });
-    expect(elevenV4TakeActingScripts(withProvenance('elevenlabs', 'eleven_v3', { text: 'x' }), elevenRoute)).toBeNull();
-    expect(elevenV4TakeActingScripts(withProvenance('fal-ai', 'eleven_v4', { text: 'x' }), elevenRoute)).toBeNull();
-    expect(elevenV4TakeActingScripts(withProvenance('elevenlabs', 'eleven_v4/text-to-dialogue', { inputs: [{ text: 'only one' }] }, { start: 1, end: 2 }), elevenRoute)).toBeNull();
-    expect(elevenV4TakeActingScripts({ ...speechTake, assetFile: { ...speechTake.assetFile, generationProvenance: null } }, elevenRoute)).toBeNull();
+    const noLocation: DialogueDirectionRoute = { ...lineRoute, operations: { ...lineRoute.operations, singleLine: { ...lineRoute.operations.singleLine, scriptLocation: null } } };
+    expect(takeDirectionScripts(withProvenance('acme-audio', 'acme/voice-one', { script: 'x' }), noLocation)).toBeNull();
+    expect(takeDirectionScripts(withProvenance('acme-audio', 'acme/voice-one/scene', { lines: [{ words: 'only one' }] }, { start: 1, end: 2 }), lineRoute)).toBeNull();
+    expect(takeDirectionScripts(withProvenance('other-audio', 'acme/voice-one', { script: 'x' }), lineRoute)).toBeNull();
+    expect(takeDirectionScripts(withProvenance('acme-audio', 'acme/voice-two', { script: 'x' }), lineRoute)).toBeNull();
+    expect(takeDirectionScripts({ ...speechTake, assetFile: { ...speechTake.assetFile, generationProvenance: null } }, lineRoute)).toBeNull();
   });
 });

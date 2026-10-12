@@ -135,31 +135,45 @@ MCP resource; no certificate/trust installation or embedded Studio is required.
 
 ## Codex dialogue direction panels
 
-For `shot-plan.dialogue-audio` requests on an Eleven v4 route
-(`eleven_v4` / `eleven_v4/text-to-dialogue`) or a Seed Audio 1.0 route, and
-only when the Codex panel probe advertises support, the Media Producer Skill
-opens a model-specific fullscreen panel instead of the conversational flow:
-`dialogue.direction.eleven-v4.open` or `dialogue.direction.seed-audio.open`.
+Codex panels are purpose-owned and model-neutral
+([ADR 0114](../decisions/0114-describe-models-as-skill-data-in-codex-panels.md)).
+For `shot-plan.dialogue-audio` requests, and only when the Codex panel probe
+advertises support and the selected route appears in a `## Codex panel` block
+of its model guide, the Media Producer Skill opens the one fullscreen dialogue
+direction panel instead of the conversational flow: `dialogue.direction.open`.
 The panels are not generation reviews: they never read `codexGenerationReview`
 or its display mode, and their UI resources declare fullscreen only.
 
-The agent pre-fills one consecutive line range with its direction (per-line
-acting scripts for Eleven v4, per-range performance prompts for Seed Audio) and
-the compatible Cast Voices per speaker, then ends its turn. `packages/codex`
+The Skill describes the selected route as data in the opening input's `route`:
+its labels, a Script Layout (`line-scripts`: one Direction Script per line, or
+`range-prompt`: one for the selected range), a Voice Binding (`speaker-voices`
+or `voice-references` with optional exact Voice Mentions), Max Voices, an
+optional emphasis syntax for presentation-only highlighting, and its
+Single-Line and optional Line-Range operations. Each operation carries the
+exact route id, an advisory character limit, the Native Request Controls for
+the few native settings the guide lists, and an optional Script Location that
+lets earlier Takes be reopened. `packages/codex` validates the description
+structurally and validates drafts against it; Studio renders it through the
+closed vocabulary. Neither reads or branches on a provider or model id.
+
+The agent pre-fills one consecutive line range with initial Direction Scripts
+and the compatible Cast Voices per speaker, then ends its turn. `packages/codex`
 keeps the session in the MCP connection's memory, projects lines, voices and
 the route's Takes from Core reads, and serves media through opaque
 `renku-direction://{sessionId}/media/{mediaId}` resources.
 
 Generate is a message handoff, not execution. The panel records one action
 through the app-only `dialogue.direction.generate` tool (validated against the
-panel's draft contract; at most one outstanding action) and posts a one-line
+session's Route Description; at most one outstanding action) and posts a one-line
 message to the conversation. That message is posted as the user and states the
 user's approval for what is sent to the provider and the paid run, matching
 the disclosure shown beside Generate; Codex's approval review accepts only
 consent the user gave, not Skill instructions. The image edit panel's message
 follows the same rule. The agent consumes the action once with
-`dialogue.direction.consume`, which returns the exact route id (speech model for
-one line, range model for a range) and the draft. Execution still runs through
+`dialogue.direction.consume`, which returns the exact route id of the operation
+the draft's range uses and the route-neutral draft: Direction Scripts, one voice
+per speaker in order of first appearance, and native control values keyed by
+JSON Pointer. Execution still runs through
 the provider Skill and CLI: the agent authors the native request, validates,
 executes, imports with `--turns`, and reports the imported Asset File or a
 failure message through `dialogue.direction.report`. No MCP tool executes
@@ -179,10 +193,10 @@ retryable independently of errors from other panel operations.
 
 FLUX 3 Image Edit (`blackforestlabs/flux-3/edit-image` on Fal.ai) is the
 default `image.edit` route whenever a Fal.ai key is saved and the user names no
-other model or provider. For that route, and only when the Codex panel probe
-advertises support, the Media Producer Skill uses two Codex apps instead of the
-conversational flow
-([plan 0227](../../plans/active/0227-codex-flux-3-image-edit-panel.md)):
+other model or provider; that default is a Skill rule. For a route that appears
+in a `## Codex panel` block, and only when the Codex panel probe advertises
+support, the Media Producer Skill uses two Codex apps instead of the
+conversational flow:
 
 - **Image Edit Target Chooser** (`image.edit.target.choose`, inline only). When
   the request matches several images, the agent passes 2–24 active image Asset
@@ -191,21 +205,27 @@ conversational flow
   discarded ones included) and selection state. The user answers once; the
   panel posts a message and the agent consumes the answer once with
   `image.edit.target.consume`.
-- **FLUX 3 Image Edit panel** (`image.edit.flux-3.open`, fullscreen only). The
-  user draws rectangular regions on the 0–1000 grid, gives each an Edit or
-  Remove instruction, adds an optional whole-image instruction and an optional
-  Production or Storyboard Lookbook sheet as style reference, and picks a
-  resolution.
+- **Image edit panel** (`image.edit.open`, fullscreen only). The user adds a
+  whole-image instruction and, when the route describes Region Modes, draws
+  rectangular regions on the 0–1000 grid with one of the route's modes and an
+  instruction each. When the route takes a style reference, the user may add a
+  Production or Storyboard Lookbook sheet. The route's Native Request Controls
+  render as output settings.
 
-Region geometry, modes, instruction presence and resolution are envelope data
-the runtime validates (`CODEX_IMAGE_EDIT_*`); instruction text stays opaque
-(ADR 0041). Generate follows the dialogue panels' handoff: one outstanding
-action, a conversation message, `image.edit.consume` once, then the agent
-writes the FLUX 3 prompt and box rows, resolves any project items the user
-named into ordered reference images, executes through the CLI, imports with
-`renku media import --purpose image.edit --target assetFile:<base>` and reports
-through `image.edit.report`. No Codex tool writes prompts, executes, imports,
-selects or deletes images.
+The Route Description carries the route's Region Modes in display order (the
+first is the default; `null` when the route takes no regions), whether it takes
+a style reference, and its controls. Region geometry, the route's mode ids,
+instruction presence, the style reference rule and control values are envelope
+data the runtime validates (`CODEX_IMAGE_EDIT_*`); the region and instruction
+length limits, the 50-region limit and the minimum region side are
+purpose-level bounds. Instruction text stays opaque (ADR 0041). Generate
+follows the dialogue panels' handoff: one outstanding action, a conversation
+message, `image.edit.consume` once, then the agent maps the route-neutral draft
+into the route's native request using its model guide, resolves any project
+items the user named into ordered reference images, executes through the CLI,
+imports with `renku media import --purpose image.edit --target assetFile:<base>`
+and reports through `image.edit.report`. No Codex tool writes prompts,
+executes, imports, selects or deletes images.
 
 Each import is a new version of the image beside its source. Under ADR 0113 it
 becomes the selection when its type has one, so the panel's edit base is the
@@ -229,8 +249,13 @@ Both panel families share `packages/codex/src/panel-sessions/` (the
 one-action session store, media registry, resource registration and result
 serialization) and, in Studio, `services/codex-panel.ts` and
 `features/codex-panels/` (connection, messaging, session polling, media and
-notices). Model-specific code lives in per-model folders; shared image edit
-components receive a model's region actions and output controls as props.
+notices). There is one panel per purpose and no per-model code: model
+knowledge lives only in Engines provider modules and Skills, and each panel's
+variation is limited to the closed purpose-level vocabulary above (script
+layout, voice binding, emphasis, region modes and control kind). Panel
+controls reuse the generation review's Native Request Controls
+(`packages/codex/src/native-request-controls/`) with a panel profile: scalar
+kinds only, each with an initial value, never nullable.
 
 ## Transient Visualize configuration
 
@@ -504,8 +529,10 @@ execution. No compatibility reader or alias recognizes those concepts.
 A normal provider addition changes the standalone Engines provider module, CLI
 registration, provider Skill guide/index, deterministic tests, and release
 metadata. It does not change Core, Studio, the database, Preview, or a shared
-request schema. Credentials and Project Settings choices require separate
-product decisions. See
+request schema. Codex panel support is Skill data: a `## Codex panel` block in
+the model's guide, with no code change, when the route fits the existing
+interaction vocabulary. Credentials and Project Settings choices require
+separate product decisions. See
 [`packages/engines/docs/adding-a-provider.md`](../../packages/engines/docs/adding-a-provider.md).
 
 ## Personal model discovery

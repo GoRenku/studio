@@ -44,6 +44,8 @@ export function RegionCanvas(input: {
   imageUrl?: string;
   comparison: RegionCanvasComparison | null;
   regions: ImageEditRegion[];
+  /** The route's first region mode; regions in other modes are drawn hatched. */
+  defaultModeId: string | null;
   selectedNumber: number | null;
   editable: boolean;
   nextNumber: number;
@@ -169,7 +171,7 @@ export function RegionCanvas(input: {
         ) : (
           <>
             {input.imageUrl ? <img alt='' src={input.imageUrl} className='pointer-events-none absolute inset-0 size-full object-cover' /> : null}
-            {input.editable ? input.regions.map((region) => <RegionBox key={region.number} region={region} selected={region.number === input.selectedNumber} />) : null}
+            {input.editable ? input.regions.map((region) => <RegionBox key={region.number} region={region} secondaryMode={region.mode !== input.defaultModeId} selected={region.number === input.selectedNumber} />) : null}
             {draft ? <span aria-hidden className='absolute border-2 border-dashed bg-white/10' style={{ ...boxStyle(draft), borderColor: regionColor(input.nextNumber).stroke }} /> : null}
           </>
         )}
@@ -178,18 +180,19 @@ export function RegionCanvas(input: {
   );
 }
 
-function RegionBox(input: { region: ImageEditRegion; selected: boolean }) {
+/** Regions in the route's default mode are solid; other modes are dashed and hatched. */
+function RegionBox(input: { region: ImageEditRegion; secondaryMode: boolean; selected: boolean }) {
   const color = regionColor(input.region.number);
-  const remove = input.region.mode === 'remove';
+  const secondary = input.secondaryMode;
   return (
     <div
       data-region={input.region.number}
       aria-label={`Region ${input.region.number}`}
-      className={cn('absolute cursor-move border-2', remove ? 'border-dashed' : 'border-solid', input.selected && 'shadow-[0_0_0_1px_hsl(0_0%_0%/0.5),0_0_0_9999px_hsl(0_0%_0%/0.18)]')}
+      className={cn('absolute cursor-move border-2', secondary ? 'border-dashed' : 'border-solid', input.selected && 'shadow-[0_0_0_1px_hsl(0_0%_0%/0.5),0_0_0_9999px_hsl(0_0%_0%/0.18)]')}
       style={{
         ...boxStyle(input.region.box),
         borderColor: color.stroke,
-        background: remove ? `repeating-linear-gradient(135deg, hsl(${color.hue} 80% 60% / 0.22) 0 6px, transparent 6px 12px)` : color.fill,
+        background: secondary ? `repeating-linear-gradient(135deg, hsl(${color.hue} 80% 60% / 0.22) 0 6px, transparent 6px 12px)` : color.fill,
       }}
     >
       <span className='absolute -left-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-[5px] px-1 font-mono text-[11px] font-bold text-white' style={{ background: color.stroke }}>{input.region.number}</span>

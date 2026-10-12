@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { z } from 'zod';
-import type { DialogueDirectionDraft, DialogueDirectionLine, DialogueDirectionVoice, DialogueLineRange } from './contracts.js';
+import type { DialogueDirectionVoice, DialogueLineRange } from './contracts.js';
 import { assertNoDirectionIssues, directionIssue } from './diagnostics.js';
 
 type Path = Array<string | number>;
@@ -18,6 +18,10 @@ export function lineRangeIssues(range: DialogueLineRange, bounds: DialogueLineRa
     return [directionIssue(path, `Line range ${range.start}–${range.end} must lie within lines ${bounds.start}–${bounds.end}.`)];
   }
   return [];
+}
+
+export function isSingleLine(range: DialogueLineRange): boolean {
+  return range.start === range.end;
 }
 
 export function linesInRange<TLine extends { number: number }>(lines: TLine[], range: DialogueLineRange): TLine[] {
@@ -46,34 +50,18 @@ export function duplicateIssues(values: string[], path: Path, label: string): Di
 
 export function voiceAllowedIssues(
   voice: { castMemberId: string; castVoiceId: string },
-  allowedVoiceIds: Record<string, string[]>,
+  voices: Record<string, DialogueDirectionVoice[]>,
   path: Path,
 ): DiagnosticIssue[] {
-  return allowedVoiceIds[voice.castMemberId]?.includes(voice.castVoiceId)
+  return voices[voice.castMemberId]?.some((offered) => offered.castVoiceId === voice.castVoiceId)
     ? []
     : [directionIssue(path, `Cast Voice ${voice.castVoiceId} is not offered for Cast Member ${voice.castMemberId} in this panel.`)];
 }
 
-export interface DraftValidationContext {
-  lines: DialogueDirectionLine[];
-  voices: Record<string, DialogueDirectionVoice[]>;
-}
-
-/** Validates one panel's Generate draft against its session, collecting every issue. */
-export type DraftValidator = (draft: unknown, context: DraftValidationContext) => DialogueDirectionDraft;
-
-export function parseDraft<TSchema extends z.ZodType>(schema: TSchema, draft: unknown): z.infer<TSchema> {
-  const parsed = schema.safeParse(draft);
+export function parseDirectionInput<TSchema extends z.ZodType>(schema: TSchema, value: unknown, path: Path): z.infer<TSchema> {
+  const parsed = schema.safeParse(value);
   if (!parsed.success) {
-    assertNoDirectionIssues(parsed.error.issues.map((issue) => directionIssue(['draft', ...issue.path.map(String)], issue.message)), 'The panel draft is invalid.');
+    assertNoDirectionIssues(parsed.error.issues.map((issue) => directionIssue([...path, ...issue.path.map(String)], issue.message)), 'The panel draft is invalid.');
   }
   return parsed.data as z.infer<TSchema>;
-}
-
-export function sessionLineBounds(lines: DialogueDirectionLine[]): DialogueLineRange {
-  return { start: lines[0]?.number ?? 1, end: lines.at(-1)?.number ?? 0 };
-}
-
-export function allowedVoiceIds(voices: Record<string, DialogueDirectionVoice[]>): Record<string, string[]> {
-  return Object.fromEntries(Object.entries(voices).map(([castMemberId, entries]) => [castMemberId, entries.map((voice) => voice.castVoiceId)]));
 }

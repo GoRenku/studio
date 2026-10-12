@@ -113,11 +113,15 @@ close events. It must not contain runtime API tokens.
 
 ## Dialogue Direction Panels
 
-The Eleven v4 and Seed Audio dialogue direction panels are served by the local
+The dialogue direction and image edit panels are served by the local
 `renku studio mcp` runtime from the packaged
-`@gorenku/studio/codex-apps/*-dialogue-direction.html` builds. Run
-`pnpm build` (or the Studio `build:codex` script) after changing panel code so
-the MCP runtime serves the current HTML, then restart the Codex MCP connection.
+`@gorenku/studio/codex-apps/dialogue-direction.html` and
+`@gorenku/studio/codex-apps/image-edit.html` builds (Vite modes
+`dialogue-direction` and `image-edit`). There is one panel per purpose; the
+selected route is described by the `## Codex panel` block of its model guide.
+Run `pnpm build` (or the Studio `build:codex` script) after changing panel code
+so the MCP runtime serves the current HTML, then restart the Codex MCP
+connection.
 
 To open each panel against Urban Basilica in Codex Desktop:
 
@@ -130,10 +134,10 @@ To open each panel against Urban Basilica in Codex Desktop:
    ```
 
 2. Ask the agent to direct dialogue for Scene 02, Shot Plan 02-01, lines 4–9,
-   naming the route: Eleven v4 for the Eleven panel, or Seed Audio 1.0 on
-   Fal.ai, WaveSpeed or Pika for the Seed Audio panel. The agent calls
-   `dialogue.direction.eleven-v4.open` or `dialogue.direction.seed-audio.open`
-   and ends its turn; the panel opens fullscreen in the right pane.
+   naming a route whose model guide has a `## Codex panel` block, such as
+   Eleven v4 (Line Scripts) or Seed Audio 1.0 on Fal.ai (Range Prompt). The
+   agent calls `dialogue.direction.open` with the Route Description and ends
+   its turn; the panel opens fullscreen in the right pane.
 3. Click Generate. Confirm the posted message, a single
    `dialogue.direction.consume` call, execution through the provider Skill and
    CLI, `renku media import --turns`, and `dialogue.direction.report`.
@@ -143,3 +147,13 @@ Codex client with MCP App UI support. Other failures use the
 `CODEX_DIALOGUE_DIRECTION_*` codes. Sessions live in the MCP connection's
 memory, so restarting the connection expires open panels
 (`CODEX_DIALOGUE_DIRECTION_NOT_FOUND`).
+
+To open the image edit panel, ask the agent to edit a project image with a
+route whose model guide has a `## Codex panel` block for `image-edit`, such as
+FLUX 3 Image Edit on Fal.ai (with Region Modes) or GPT Image 2.5 Flare Edit
+(region-free). When several images match, the agent first calls
+`image.edit.target.choose`; it then calls `image.edit.open` with the Route
+Description. Generate posts a message; confirm a single `image.edit.consume`,
+execution through the provider Skill and CLI, `renku media import --purpose
+image.edit --target assetFile:<base id>`, and `image.edit.report`. Failures
+use the `CODEX_IMAGE_EDIT_*` codes.
