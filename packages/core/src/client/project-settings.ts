@@ -1,7 +1,9 @@
+import type { GenerationLane } from './generation-lanes.js';
+
 export const STUDIO_PROJECT_SETTINGS_RESOURCE_KEY = 'project-settings' as const;
 
 export interface ProjectSettingsDocument {
-  version: 6;
+  version: 7;
   screenplayImport: {
     createContinuitySubjects: boolean;
     generateContinuityImages: boolean;
@@ -13,18 +15,37 @@ export interface ProjectSettingsDocument {
 }
 
 export interface ProjectGenerationSettings {
-  displayPreview: boolean;
   enableProviderPromptExpansion: boolean;
-  image: GenerationMediaSettings<string>;
-  video: GenerationMediaSettings<string>;
-  audio: GenerationMediaSettings<string>;
+  image: GenerationLaneSettings;
+  imageEdit: GenerationLaneSettings;
+  video: GenerationLaneSettings;
+  audio: GenerationLaneSettings;
 }
 
-export interface GenerationMediaSettings<Provider extends string> {
-  provider: Provider;
+export interface GenerationLaneSettings {
+  /** Opaque kebab-case provider id. */
+  provider: string;
+  /** Null means the Skill's recommendation for the provider. */
+  model: GenerationLaneModel | null;
+  chooseRouteBeforeGenerating: boolean;
   askBeforeGenerating: boolean;
   runGenerationsConcurrently: boolean;
   maxConcurrentGenerations: number;
+}
+
+export interface GenerationLaneModel {
+  /** Skill model guide key, such as a model family. */
+  key: string;
+  /** Display name from the Default Model List. */
+  name: string;
+}
+
+export interface UpdateGenerationLaneSettingsChange {
+  lane: GenerationLane;
+  provider?: string;
+  model?: GenerationLaneModel | null;
+  chooseRouteBeforeGenerating?: boolean;
+  askBeforeGenerating?: boolean;
 }
 
 export interface ProjectSettingsResource {
@@ -40,16 +61,16 @@ export interface ProjectSettingsMutationReport {
   resourceKeys: string[];
 }
 
-export type CodexGenerationReview = 'auto' | 'panel' | 'visualize';
 export type CodexGenerationReviewDisplayMode = 'inline' | 'fullscreen';
 
 export interface GenerationWorkflowPolicy {
   codexPluginInstalled: boolean;
-  codexGenerationReview: CodexGenerationReview;
   codexGenerationReviewDisplayMode: CodexGenerationReviewDisplayMode;
-  displayPreview: boolean;
   enableProviderPromptExpansion: boolean;
+  lane: GenerationLane;
   provider: string;
+  model: GenerationLaneModel | null;
+  chooseRouteBeforeGenerating: boolean;
   askBeforeGenerating: boolean;
   concurrencyLimit: number;
 }

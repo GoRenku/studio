@@ -1,13 +1,10 @@
 import type { ImageEditRoute } from '@gorenku/studio-codex/image-edit';
 
-type RouteLabels = Pick<ImageEditRoute, 'label' | 'providerLabel'>;
+type RouteLabels = Pick<ImageEditRoute, 'label' | 'providerLabel' | 'billing'>;
 
-/** What one Generate click authorizes, shown beside Generate. */
+/** What Generate leads to, shown beside Generate as information; it is not an approval. */
 export function imageEditGenerateDisclosure(route: RouteLabels): string {
-  return `Generate uploads this image and any references it needs to ${route.providerLabel} and runs one paid ${route.label} with your saved ${route.providerLabel} key.`;
-}
-
-/** The first-person approval posted into the conversation as the user. */
-export function imageEditGenerateApproval(route: RouteLabels): string {
-  return `I approve uploading this image and any references it needs to ${route.providerLabel} and running one paid ${route.label} with my saved ${route.providerLabel} key.`;
+  return route.billing === 'hostPlanUsage'
+    ? `Generate edits this image with ${route.label} using your ChatGPT plan's Codex usage.`
+    : `Generate uploads this image and any references it needs to ${route.providerLabel} and runs one paid ${route.label} with your saved ${route.providerLabel} key.`;
 }

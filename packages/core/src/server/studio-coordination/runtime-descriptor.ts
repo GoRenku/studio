@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { resolveRenkuConfigDir, type RenkuConfigPathOptions } from '../config/index.js';
+import { resolveRenkuStateDir, type RenkuConfigPathOptions } from '../config/index.js';
 import { StudioCoordinationError } from './errors.js';
 
 export const STUDIO_RUNTIME_DESCRIPTOR_FILE_NAME = 'studio-runtime.json' as const;
@@ -44,7 +44,7 @@ export function createStudioCliNotificationToken(): string {
 export function resolveStudioRuntimeDescriptorPath(
   options: RenkuConfigPathOptions = {}
 ): string {
-  return path.join(resolveRenkuConfigDir(options), STUDIO_RUNTIME_DESCRIPTOR_FILE_NAME);
+  return path.join(resolveRenkuStateDir(options), STUDIO_RUNTIME_DESCRIPTOR_FILE_NAME);
 }
 
 export async function readStudioRuntimeDescriptor(

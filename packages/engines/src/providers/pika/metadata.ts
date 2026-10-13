@@ -2,6 +2,7 @@ import type { JsonValue, ProviderContext } from '../../media/contracts.js';
 import { assertValidJsonSchema } from '../../shared/json-schema-validation.js';
 import { retrieveProviderMetadata } from '../../shared/metadata-retrieval.js';
 import { EngineError } from '../../shared/errors.js';
+import { API_PRICE_DEFAULT_MAX_AGE_MS } from '../../pricing/price-cache.js';
 
 export const PIKA_ORIGIN = 'https://api.dev.pika.art';
 
@@ -25,12 +26,7 @@ export async function loadPikaOperationMetadata(
       { provider: 'pika', model },
     );
   }
-  const url = `${PIKA_ORIGIN}/catalog/apis/${model}?expand=inputs`;
-  const metadata = await retrieveProviderMetadata({
-    key: { provider: 'pika', model, url },
-    context,
-  });
-  const body = metadata.body;
+  const body = (await loadPikaCatalogRecord(model, context)).body;
   if (!isRecord(body)) {
     throw invalidMetadata(model);
   }
@@ -61,6 +57,15 @@ export async function loadPikaOperationMetadata(
     path,
     inputSchema: body.input_schema,
   };
+}
+
+/** The catalog record of one operation; its input schema and display pricing share one cached read. */
+export function loadPikaCatalogRecord(model: string, context: ProviderContext) {
+  return retrieveProviderMetadata({
+    key: { provider: 'pika', model, url: `${PIKA_ORIGIN}/catalog/apis/${model}?expand=inputs` },
+    context,
+    defaultMaxAgeMs: API_PRICE_DEFAULT_MAX_AGE_MS,
+  });
 }
 
 function isSafeMediaPath(path: string): boolean {

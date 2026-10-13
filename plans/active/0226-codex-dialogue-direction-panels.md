@@ -1,5 +1,7 @@
 # 0226 Codex Dialogue Direction Panels
 
+> Superseded in part by plan 0229: Generate messages are neutral notices, not approvals, and panel generations go through the lane route choice and review (ADR 0118).
+
 Status: proposed
 Date: 2026-10-09
 Model-specific panel parts superseded by plan 0228.

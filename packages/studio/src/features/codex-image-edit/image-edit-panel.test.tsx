@@ -93,7 +93,7 @@ describe('image edit panel', () => {
       ],
     });
     expect(integration.notify.mock.calls[0]![2]).toBe('Constantine XI Palaiologos · Profile image Take 3');
-    expect(integration.notify.mock.calls[0]![3]).toBe('I approve uploading this image and any references it needs to Acme Images and running one paid Acme Retouch with my saved Acme Images key.');
+    expect(integration.notify.mock.calls[0]).toHaveLength(3);
     expect(screen.getByText('Generate uploads this image and any references it needs to Acme Images and runs one paid Acme Retouch with your saved Acme Images key.')).toBeTruthy();
     expect(screen.getByText('Generating Take 4…', { selector: '[role="status"] *, [role="status"]' })).toBeTruthy();
   });
@@ -152,6 +152,17 @@ describe('image edit panel', () => {
     expect(screen.queryByRole('textbox', { name: 'Region 1 instruction' })).toBeNull();
     await act(async () => { fireEvent.click(generateButton()); });
     expect(integration.generate.mock.calls[0]![1].draft).toEqual({ baseAssetFileId: 'profile-3', wholeImageInstruction: 'Warmer dusk.', styleReferenceAssetFileId: null, regions: [], values: {} });
+  });
+
+  it('renders a host plan route with no regions, a style reference and no controls', async () => {
+    await openPanel(imageEditSessionFixture({ route: imageEditRouteFixture({ regionModes: null, styleReference: true, billing: 'hostPlanUsage', controls: { groups: [] } }), initialWholeImageInstruction: 'Warmer dusk.' }));
+    expect(screen.queryByRole('heading', { name: 'Regions' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Output' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'From visual language' })).toBeTruthy();
+    expect(screen.getByText('Generate edits this image with Acme Retouch using your ChatGPT plan\'s Codex usage.')).toBeTruthy();
+    expect(screen.queryByText(/saved .* key/)).toBeNull();
+    await act(async () => { fireEvent.click(generateButton()); });
+    expect(integration.generate.mock.calls[0]![1].draft).toMatchObject({ wholeImageInstruction: 'Warmer dusk.', regions: [], values: {} });
   });
 
   it('asks only for a change when the route takes no regions', async () => {

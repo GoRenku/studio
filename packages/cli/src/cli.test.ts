@@ -106,25 +106,6 @@ describe('Renku CLI command surfaces', () => {
     }));
   });
 
-  it('passes generation visualization cache artifacts to the focused command', async () => {
-    const { io } = createIo();
-    await expect(runRenkuCli([
-      'generation', 'configuration-visualization', 'store',
-      '--file', 'descriptor.json',
-      '--schema', 'schema.json',
-      '--template', 'template.html',
-      '--json',
-    ], { io })).resolves.toBe(0);
-    expect(runGenerationCommand).toHaveBeenCalledWith(expect.objectContaining({
-      input: ['configuration-visualization', 'store'],
-      flags: expect.objectContaining({
-        file: 'descriptor.json',
-        schema: 'schema.json',
-        template: 'template.html',
-      }),
-    }));
-  });
-
   it('passes Asset pagination flags to the focused command', async () => {
     const { io } = createIo();
     await expect(runRenkuCli([
@@ -148,7 +129,7 @@ describe('Renku CLI command surfaces', () => {
     const { io, stdout } = createIo();
     await expect(runRenkuCli(['--help'], { io })).resolves.toBe(0);
     const help = stdout.mock.calls.flat().join('\n');
-    expect(help).toContain('generation           Discover models, read context/schema, cache visuals, validate, preview, execute, or recover');
+    expect(help).toContain('generation           Discover models, sync default models, read context/schema, price, estimate, validate, preview, execute, or recover');
     expect(help).toContain('--route-index');
     expect(help).toContain('--if-revision');
   });

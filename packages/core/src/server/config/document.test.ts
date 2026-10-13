@@ -25,7 +25,6 @@ describe('Renku config document', () => {
     await expect(readRenkuConfig({ homeDir })).resolves.toEqual({
       version: '0.1.0',
       storageRoot,
-      codexGenerationReview: 'auto',
       codexGenerationReviewDisplayMode: 'inline',
     });
     const configYaml = await fs.readFile(resolveRenkuConfigPath({ homeDir }), 'utf8');
@@ -45,27 +44,20 @@ describe('Renku config document', () => {
     ).resolves.toBe(path.join(homeDir, 'other'));
   });
 
-  it.each(['auto', 'panel', 'visualize'] as const)('reads an explicit %s review preference', async (preference) => {
-    await initRenkuConfig(path.join(homeDir, 'projects'), { homeDir });
-    const configPath = resolveRenkuConfigPath({ homeDir });
-    await fs.writeFile(configPath, `version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReview: ${preference}\n`);
-    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReview: preference });
-  });
-
-  it('defaults an omitted review preference without rewriting the config', async () => {
+  it('defaults an omitted review display preference without rewriting the config', async () => {
     await initRenkuConfig(path.join(homeDir, 'projects'), { homeDir });
     const configPath = resolveRenkuConfigPath({ homeDir });
     const contents = 'version: 0.1.0\nstorageRoot: /tmp/movies\n';
     await fs.writeFile(configPath, contents);
-    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReview: 'auto', codexGenerationReviewDisplayMode: 'inline' });
+    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReviewDisplayMode: 'inline' });
     await expect(fs.readFile(configPath, 'utf8')).resolves.toBe(contents);
   });
 
-  it.each(['inline', 'fullscreen'] as const)('reads an explicit %s review display preference independently of the renderer', async (displayMode) => {
+  it.each(['inline', 'fullscreen'] as const)('reads an explicit %s review display preference', async (displayMode) => {
     await initRenkuConfig(path.join(homeDir, 'projects'), { homeDir });
     const configPath = resolveRenkuConfigPath({ homeDir });
-    await fs.writeFile(configPath, `version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReview: visualize\ncodexGenerationReviewDisplayMode: ${displayMode}\n`);
-    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReview: 'visualize', codexGenerationReviewDisplayMode: displayMode });
+    await fs.writeFile(configPath, `version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReviewDisplayMode: ${displayMode}\n`);
+    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReviewDisplayMode: displayMode });
   });
 
   it('reports an existing config without rewriting it', async () => {
@@ -92,9 +84,6 @@ describe('Renku config document', () => {
     ['version: 0.2.0\nstorageRoot: /tmp/movies\n', 'CONFIG006'],
     ['version: 0.1.0\n', 'CONFIG007'],
     ['version: 0.1.0\nstorageRoot: 123\n', 'CONFIG007'],
-    ['version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReview: browser\n', 'CONFIG015'],
-    ['version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReview: null\n', 'CONFIG015'],
-    ['version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReview: false\n', 'CONFIG015'],
     ['version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReviewDisplayMode: pip\n', 'CONFIG016'],
     ['version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReviewDisplayMode: null\n', 'CONFIG016'],
     ['version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReviewDisplayMode: false\n', 'CONFIG016'],

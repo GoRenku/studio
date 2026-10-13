@@ -1,4 +1,4 @@
-import type { JsonValue, MediaGenerationPreviewResource, MediaGenerationReferenceView } from '@gorenku/studio-core/client';
+import type { GenerationLane, GenerationRouteBilling, JsonValue, MediaGenerationPreviewResource, MediaGenerationReferenceView } from '@gorenku/studio-core/client';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { NativeRequestControls } from './native-request-controls/contracts.js';
 
@@ -16,6 +16,8 @@ export interface GenerationReviewRoute {
   model: string;
   label: string;
   mediaKind: 'image' | 'video' | 'audio';
+  /** From the Skill's Route Description; host plan usage is never sent to the estimator. */
+  billing: GenerationRouteBilling;
 }
 
 export type GenerationReviewReference = Omit<MediaGenerationReferenceView, 'projectRelativePath' | 'browserUrl'> & {
@@ -27,6 +29,7 @@ export type GenerationReviewReference = Omit<MediaGenerationReferenceView, 'proj
 export interface GenerationReviewRequest {
   requestId: string;
   requestSha256: string;
+  /** `preview.estimate` is the server-computed estimate of the prepared request. */
   preview: Omit<MediaGenerationPreviewResource, 'documentPath' | 'references'> & { references: GenerationReviewReference[] };
   routes: GenerationReviewRoute[];
   controls: NativeRequestControls;
@@ -41,6 +44,7 @@ export interface GenerationReviewDraft {
 export interface GenerationReview {
   reviewId: string;
   revision: number;
+  lane: GenerationLane;
   phase: 'ready' | 'preparing' | 'preparationFailed' | 'submitted' | 'cancelled';
   requests: GenerationReviewRequest[];
   drafts: GenerationReviewDraft[];
@@ -55,6 +59,14 @@ export interface GenerationReviewResponse {
   action: 'reconfigure' | 'submit' | 'cancel';
   drafts: GenerationReviewDraft[];
   selectedRoute?: { requestId: string; route: GenerationReviewRoute };
+  /** Applied to the lane's "Ask Before Generating" only with a submit action. */
+  askBeforeGeneratingNextTime?: boolean;
+}
+
+export interface GenerationReviewEstimateInput {
+  reviewId: string;
+  requestId: string;
+  values: Record<string, JsonValue>;
 }
 
 export interface GenerationReviewReceipt {

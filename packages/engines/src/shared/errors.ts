@@ -20,7 +20,8 @@ export type EngineErrorCode =
   | 'ENGINE_RECOVERY_UNSUPPORTED'
   | 'ENGINE_RECOVERY_FAILED'
   | 'ENGINE_OUTPUT_INVALID'
-  | 'ENGINE_DOWNLOAD_FAILED';
+  | 'ENGINE_DOWNLOAD_FAILED'
+  | 'ENGINE_PRICE_INVALID';
 
 export interface EngineErrorOptions {
   provider: string;

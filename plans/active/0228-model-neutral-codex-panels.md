@@ -1,5 +1,7 @@
 # 0228 Model-Neutral Codex Panels
 
+> Superseded in part by plan 0229: Generate messages are neutral notices, not approvals, and panel generations go through the lane route choice and review (ADR 0118).
+
 Status: implemented (native Codex Desktop verification pending)
 Date: 2026-10-11
 

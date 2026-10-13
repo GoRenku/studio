@@ -41,14 +41,11 @@ export function readImageEditSession(bridge: CodexApp, sessionId: string): Promi
   return readCodexPanelResource<ImageEditSession>(bridge, `renku-image-edit://${sessionId}`, IMAGE_EDIT);
 }
 
-/**
- * The Generate message is posted as the user. It names the exact base version and states the user's
- * approval for the upload and paid run, which the host's approval review reads before execution.
- */
-export function notifyImageEditGenerate(bridge: CodexApp, receipt: ImageEditGenerateReceipt, subject: string, approval: string): Promise<void> {
+/** A neutral notice naming the exact base version; it starts the agent's turn and carries no approval. */
+export function notifyImageEditGenerate(bridge: CodexApp, receipt: ImageEditGenerateReceipt, subject: string): Promise<void> {
   return sendCodexPanelMessage(
     bridge,
-    `Generate image edit · ${subject}. ${approval} Session ${receipt.sessionId}, action ${receipt.actionId}. Consume it with image.edit.consume once.`,
+    `Generate image edit · ${subject}. Session ${receipt.sessionId}, action ${receipt.actionId}. Consume it with image.edit.consume once.`,
     IMAGE_EDIT,
   );
 }

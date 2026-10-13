@@ -2,6 +2,7 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GenerationReview, GenerationReviewReceipt, GenerationReviewResponse } from '@gorenku/studio-codex/client';
+import type { GenerationCostEstimate } from '@gorenku/studio-core/client';
 import { useCodexGenerationReview } from './use-codex-generation-review';
 
 const integration = vi.hoisted(() => ({
@@ -34,20 +35,150 @@ beforeEach(() => {
   });
 });
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+function estimateResult(amountUsd: number) {
+  const estimate: GenerationCostEstimate = { state: 'computed', amountUsd, basis: 'Fixture price', observedAt: null, sourceUrl: null, notes: [], requestSha256: 'a'.repeat(64) };
+  return { content: [], structuredContent: { estimate } };
+}
 
 function reviewFixture(): GenerationReview {
   return {
-    reviewId: 'review', revision: 1, phase: 'ready', diagnostics: [],
+    reviewId: 'review', revision: 1, lane: 'image', phase: 'ready', diagnostics: [],
     requests: [{
       requestId: 'request', requestSha256: 'a'.repeat(64),
-      preview: { kind: 'mediaGenerationPreview', provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Café', editable: true, references: [], configuration: {}, diagnostics: [] },
-      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' }],
+      preview: { kind: 'mediaGenerationPreview', provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Café', editable: true, references: [], configuration: {}, diagnostics: [], requestSha256: 'a'.repeat(64), estimate: null },
+      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image', billing: 'providerCharge' }],
       controls: { groups: [] },
     }],
     drafts: [{ requestId: 'request', prompt: 'Café', values: {} }],
   };
 }
+
+describe('generation review estimates and settings', () => {
+  it('re-estimates edited values through the app-only tool', async () => {
+    const estimate = { state: 'computed', amountUsd: 0.08, basis: '2 images × $0.04', observedAt: null, sourceUrl: null, notes: [], requestSha256: 'a'.repeat(64) };
+    integration.bridge.app.callServerTool.mockResolvedValue({ content: [], structuredContent: { estimate } });
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    expect(result.current.estimateFor('request')).toBeNull();
+    act(() => result.current.editValue('request', '/num_images', 2));
+    await waitFor(() => expect(result.current.estimateFor('request')).toEqual(estimate));
+    expect(integration.bridge.app.callServerTool).toHaveBeenCalledWith({ name: 'generation.review.estimate', arguments: { reviewId: 'review', requestId: 'request', values: { '/num_images': 2 } } });
+  });
+
+  it('sends Generate without asking next time only with Submit', async () => {
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    act(() => result.current.setGenerateWithoutAsking(true));
+    await act(async () => { await result.current.respond('submit'); });
+    expect(integration.bridge.app.callServerTool.mock.calls[0]![0].arguments).toMatchObject({ action: 'submit', askBeforeGeneratingNextTime: false });
+  });
+
+  it('never sends the toggle with Cancel', async () => {
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    act(() => result.current.setGenerateWithoutAsking(true));
+    await act(async () => { await result.current.respond('cancel'); });
+    expect(integration.bridge.app.callServerTool.mock.calls[0]![0].arguments).not.toHaveProperty('askBeforeGeneratingNextTime');
+  });
+
+  it('keeps the latest estimate when an older request finishes afterward', async () => {
+    const pending: Array<(result: ReturnType<typeof estimateResult>) => void> = [];
+    integration.bridge.app.callServerTool.mockImplementation(() => new Promise((resolve) => { pending.push(resolve); }));
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    vi.useFakeTimers();
+    act(() => result.current.editValue('request', '/duration', 5));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    act(() => result.current.editValue('request', '/duration', 10));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    await act(async () => { pending[1]!(estimateResult(1)); });
+    expect(result.current.estimateFor('request')?.amountUsd).toBe(1);
+    expect(result.current.estimateOutdated('request')).toBe(false);
+    await act(async () => { pending[0]!(estimateResult(0.5)); });
+    expect(result.current.estimateFor('request')?.amountUsd).toBe(1);
+  });
+
+  it('invalidates a running estimate as soon as another edit starts its debounce', async () => {
+    const pending: Array<(result: ReturnType<typeof estimateResult>) => void> = [];
+    integration.bridge.app.callServerTool.mockImplementation(() => new Promise((resolve) => { pending.push(resolve); }));
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    vi.useFakeTimers();
+    act(() => result.current.editValue('request', '/duration', 5));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    act(() => result.current.editValue('request', '/duration', 10));
+    expect(result.current.estimateOutdated('request')).toBe(true);
+    await act(async () => { pending[0]!(estimateResult(0.5)); });
+    expect(result.current.estimateFor('request')).toBeNull();
+    expect(result.current.estimateRefreshing('request')).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    await act(async () => { pending[1]!(estimateResult(1)); });
+    expect(result.current.estimateOutdated('request')).toBe(false);
+    expect(result.current.estimateRefreshing('request')).toBe(false);
+  });
+
+  it('keeps a failed refresh outdated and ignores errors from superseded requests', async () => {
+    let rejectPrevious!: (failure: Error) => void;
+    integration.bridge.app.callServerTool
+      .mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectPrevious = reject; }))
+      .mockResolvedValueOnce({ isError: true, content: [{ type: 'text', text: 'Current estimate unavailable.' }] });
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    vi.useFakeTimers();
+    act(() => result.current.editValue('request', '/duration', 5));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    act(() => result.current.editValue('request', '/duration', 10));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(result.current.estimateOutdated('request')).toBe(true);
+    expect(result.current.estimateRefreshing('request')).toBe(false);
+    await act(async () => { rejectPrevious(new Error('Obsolete estimate failure.')); });
+    expect(result.current.error).toBe('Current estimate unavailable.');
+  });
+
+  it('marks prompt edits outdated through both running and subsequent settings estimates', async () => {
+    const initial = reviewFixture();
+    initial.requests[0]!.preview.estimate = estimateResult(0.04).structuredContent.estimate;
+    integration.connect.mockImplementation(async () => {
+      integration.bridge.app.ontoolresult!({ content: [], structuredContent: { review: initial } });
+      return 'inline';
+    });
+    let finishPrevious!: (result: ReturnType<typeof estimateResult>) => void;
+    integration.bridge.app.callServerTool
+      .mockImplementationOnce(() => new Promise((resolve) => { finishPrevious = resolve; }))
+      .mockResolvedValueOnce(estimateResult(0.08));
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    vi.useFakeTimers();
+    act(() => result.current.editValue('request', '/duration', 5));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    act(() => result.current.editPrompt('request', 'A much longer narration.'));
+    expect(result.current.estimateOutdated('request')).toBe(true);
+    expect(result.current.estimateRefreshing('request')).toBe(false);
+    await act(async () => { finishPrevious(estimateResult(0.06)); });
+    expect(result.current.estimateFor('request')?.amountUsd).toBe(0.04);
+    act(() => result.current.editValue('request', '/duration', 10));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(result.current.estimateFor('request')?.amountUsd).toBe(0.08);
+    expect(result.current.estimateOutdated('request')).toBe(true);
+  });
+
+  it('discards a late estimate when a different review has the same revision', async () => {
+    let finishPrevious!: (result: ReturnType<typeof estimateResult>) => void;
+    integration.bridge.app.callServerTool.mockImplementation(() => new Promise((resolve) => { finishPrevious = resolve; }));
+    const { result } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    vi.useFakeTimers();
+    act(() => result.current.editValue('request', '/duration', 5));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    act(() => integration.bridge.app.ontoolresult!({ content: [], structuredContent: { review: { ...reviewFixture(), reviewId: 'another-review' } } }));
+    await act(async () => { finishPrevious(estimateResult(0.5)); });
+    expect(result.current.estimateFor('request')).toBeNull();
+    expect(result.current.estimateOutdated('request')).toBe(false);
+    expect(result.current.estimateRefreshing('request')).toBe(false);
+  });
+});
 
 describe('generation review conversation handoff', () => {
   it('projects the initial host mode and subsequent host switches without replacing edited drafts', async () => {

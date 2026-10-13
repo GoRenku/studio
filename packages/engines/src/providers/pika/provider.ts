@@ -16,10 +16,13 @@ import {
   type PikaOperationMetadata,
 } from './metadata.js';
 import { preflightPikaLocalMedia, uploadPikaLocalMedia } from './uploads.js';
+import { quotePikaCost, readPikaPrice } from './pricing.js';
 
 export function createPikaMediaProvider(): MediaProvider {
   return {
     id: 'pika',
+    readPrice: readPikaPrice,
+    quoteCost: quotePikaCost,
     async readInputSchema(model, context) {
       requireCredential(model, context);
       return (await loadPikaOperationMetadata(model, context)).inputSchema;

@@ -50,11 +50,11 @@ export function readDialogueDirectionSession(bridge: CodexApp, sessionId: string
   return readCodexPanelResource<DialogueDirectionSession>(bridge, `renku-direction://${sessionId}`, DIALOGUE_DIRECTION);
 }
 
-/** Posted as the user: it states the user's approval for the paid run, which the host's approval review reads. */
-export function notifyDialogueDirectionGenerate(bridge: CodexApp, receipt: DialogueDirectionGenerateReceipt, approval: string): Promise<void> {
+/** A neutral notice naming the lines; it starts the agent's turn and carries no approval. */
+export function notifyDialogueDirectionGenerate(bridge: CodexApp, receipt: DialogueDirectionGenerateReceipt): Promise<void> {
   return sendCodexPanelMessage(
     bridge,
-    `Generate dialogue Take · ${receipt.session.shotPlan.title} · ${dialogueLineRangeLabel(receipt.turnRange)}. ${approval} Session ${receipt.sessionId}, action ${receipt.actionId}. Consume it with dialogue.direction.consume once.`,
+    `Generate dialogue Take · ${receipt.session.shotPlan.title} · ${dialogueLineRangeLabel(receipt.turnRange)}. Session ${receipt.sessionId}, action ${receipt.actionId}. Consume it with dialogue.direction.consume once.`,
     DIALOGUE_DIRECTION,
   );
 }

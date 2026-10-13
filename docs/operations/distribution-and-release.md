@@ -141,7 +141,7 @@ Both `renku update` and `renku update skills` repeat the plugin step.
 Before shipping the runtime, publish the sister plugin with matching strict
 SemVer manifest versions, its `codex.mcp.json` declaration and the beta branch.
 Run native Mac/Windows Desktop acceptance with and without Codex CLI, reopen
-Desktop, exercise panel/Visualize reviews and update an installed plugin.
+Desktop, exercise the Route Chooser and review panel and update an installed plugin.
 
 ### Claude plugin setup
 
@@ -585,7 +585,8 @@ installation root; it is not inside a versioned runtime directory.
   `~/.local/bin/renku` launcher. Remove the marked Renku PATH block from the shell
   profile only if that PATH entry is no longer needed by other programs.
   `~/.config/renku` holds settings and credentials; retain it unless intentionally
-  resetting those too.
+  resetting those too. `~/.local/state/renku` holds only rebuildable state and
+  caches.
 - Windows: stop Studio; remove `versions`, `bin`, `tools`, and `current.txt` from
   `%LOCALAPPDATA%\Renku`. Remove `%LOCALAPPDATA%\Renku\bin` from the user's PATH.
   Preserve `%LOCALAPPDATA%\Renku\Studio` to retain settings and credentials.

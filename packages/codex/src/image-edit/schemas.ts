@@ -21,6 +21,7 @@ export const imageEditRouteSchema = z.object({
     placeholder: z.string().max(200),
   }).strict()).nullable().describe('Region actions in display order, the first being the default; null when the route takes no regions.'),
   styleReference: z.boolean().describe('Whether the route takes a style reference image.'),
+  billing: z.enum(['providerCharge', 'hostPlanUsage']).describe('hostPlanUsage for a route the agent runs with its host\'s built-in image tool; providerCharge otherwise.'),
   controls: nativeRequestControlsSchema.describe('Native Request Controls for the native settings the model guide lists, built from the live schema.'),
 }).strict();
 

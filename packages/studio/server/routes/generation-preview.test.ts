@@ -13,6 +13,8 @@ const preview = {
   configuration: {},
   editable: true,
   diagnostics: [],
+  requestSha256: 'a'.repeat(64),
+  estimate: null,
 };
 
 describe('media generation Preview route', () => {

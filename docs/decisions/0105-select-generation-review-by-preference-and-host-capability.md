@@ -1,5 +1,10 @@
 # 0105 Select Generation Review By Preference And Host Capability
 
+> **Decision 0118 update:** The `codexGenerationReview` preference and the
+> Visualize path are removed. Every generation reviews through the combined
+> panel in Codex or Studio Preview elsewhere when "Ask Before Generating" is
+> on.
+
 Date: 2026-10-02
 
 Status: accepted

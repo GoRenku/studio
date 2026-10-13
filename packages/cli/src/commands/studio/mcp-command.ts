@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { startCodexServer } from '@gorenku/studio-codex';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { StudioCommandOptions } from './contracts.js';
+import { createGenerationCostEstimator } from '../generation/cost-estimator.js';
 
 const require = createRequire(import.meta.url);
 
@@ -14,6 +15,7 @@ export async function runStudioMcpCommand(options: StudioCommandOptions): Promis
   await startCodexServer({
     version: manifest.version,
     ...assetFiles,
+    costEstimator: createGenerationCostEstimator(),
     homeDir: options.homeDir,
   });
   return 0;
@@ -26,6 +28,7 @@ function resolveCodexAppAssetFiles() {
       dialogueDirectionHtml: require.resolve('@gorenku/studio/codex-apps/dialogue-direction.html'),
       imageEditHtml: require.resolve('@gorenku/studio/codex-apps/image-edit.html'),
       imageEditTargetChooserHtml: require.resolve('@gorenku/studio/codex-apps/image-edit-target-chooser.html'),
+      routeChooserHtml: require.resolve('@gorenku/studio/codex-apps/route-chooser.html'),
     };
   } catch {
     throw new StructuredError({ code: 'CODEX_REVIEW_UNSUPPORTED', message: 'The packaged Codex app resources are unavailable.', suggestion: 'Build or reinstall the complete Renku Studio runtime before connecting its MCP server.' });

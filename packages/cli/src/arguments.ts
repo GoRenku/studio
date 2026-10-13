@@ -21,9 +21,12 @@ Commands
   info language        Add, update, remove, or set base languages
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
+  settings generation show  Show generation lane defaults; optional --lane
+  settings generation set   Change one lane: --lane plus --provider, --model/--model-name,
+                            --clear-model, --choose-route on|off, --ask-before-generating on|off
   credentials status   Show which provider API keys are saved
   inspiration          Manage Inspiration folders and analysis
-  generation           Discover models, read context/schema, cache visuals, validate, preview, execute, or recover
+  generation           Discover models, sync default models, read context/schema, price, estimate, validate, preview, execute, or recover
   lookbook             Manage Lookbooks and Lookbook images
   media                Import media files for a purpose
   project current      Show the current authoring project
@@ -53,7 +56,7 @@ Commands
   trash                List, restore, preview, and empty Trash
 
 Options
-  --file               Input document or generation visualization cache descriptor
+  --file               Input document
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
   --owner              Asset owner for Asset listing
@@ -71,17 +74,20 @@ Options
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
   --media-kind         Asset media kind
-  --output             Provider output directory, schema snapshot, or visualization HTML path
+  --output             Provider output directory or schema snapshot path
   --request-id         Provider request id for generation recovery
   --expected-request-sha256  Request digest returned by generation prepare or validate
   --provider           Provider id for generation schema or model discovery
-  --model              Exact provider-native model id
+  --model              Exact provider-native model id, or a Skill model key for settings generation set
+  --model-name         Display name of the Skill model key for settings generation set
+  --clear-model        Return a generation lane to the Skill recommendation
+  --lane               Generation lane: image, image-edit, video or audio
+  --choose-route       Choose provider and model before each generation: on or off
+  --ask-before-generating
+                       Ask before generating: on or off
   --route-index        Bundled route index for generation models (repeatable)
   --query              Match generation model identities and display names
   --if-revision        Personal library SHA-256 revision, or absent
-  --schema             Provider schema JSON for generation visualization cache updates
-  --template           HTML fragment for generation visualization cache updates
-  --payload            Fresh request payload JSON for generation visualization preparation
   --provenance         Media Generation Provenance JSON file
   --locale             Project locale id
   --cast               Cast member id for cast commands
@@ -201,6 +207,11 @@ function createCliFlags() {
       type: 'boolean',
       default: false,
     },
+    lane: { type: 'string' },
+    modelName: { type: 'string' },
+    clearModel: { type: 'boolean', default: false },
+    chooseRoute: { type: 'string' },
+    askBeforeGenerating: { type: 'string' },
     source: {
       type: 'string',
     },
@@ -236,15 +247,6 @@ function createCliFlags() {
       type: 'string',
     },
     model: {
-      type: 'string',
-    },
-    schema: {
-      type: 'string',
-    },
-    template: {
-      type: 'string',
-    },
-    payload: {
       type: 'string',
     },
     routeIndex: {

@@ -6,6 +6,8 @@ import {
   resolveRenkuConfigDir,
   resolveRenkuConfigDirForPlatform,
   resolveRenkuConfigPath,
+  resolveRenkuStateDir,
+  resolveRenkuStateDirForPlatform,
 } from './paths.js';
 
 describe('Renku config paths', () => {
@@ -102,5 +104,54 @@ describe('Renku config paths', () => {
         homeDir: '/home/alex',
       })
     ).toBe('/home/alex/Videos/Renku');
+  });
+
+  it('keeps explicit test homes isolated under .local/state/renku', () => {
+    const homeDir = path.join(path.parse(process.cwd()).root, 'tmp', 'renku-home');
+    expect(resolveRenkuStateDir({ homeDir })).toBe(
+      path.join(homeDir, '.local', 'state', 'renku')
+    );
+  });
+
+  it('keeps Renku state under .local/state/renku on macOS', () => {
+    expect(
+      resolveRenkuStateDirForPlatform({
+        platform: 'darwin',
+        homeDir: '/Users/alex',
+      })
+    ).toBe('/Users/alex/.local/state/renku');
+  });
+
+  it('honors an absolute XDG state home', () => {
+    expect(
+      resolveRenkuStateDirForPlatform({
+        platform: 'linux',
+        homeDir: '/home/alex',
+        xdgStateHome: '/mnt/state',
+      })
+    ).toBe('/mnt/state/renku');
+  });
+
+  it.each([undefined, '', 'relative-state'])(
+    'uses the Unix state fallback for an unusable XDG value: %s',
+    (xdgStateHome) => {
+      expect(
+        resolveRenkuStateDirForPlatform({
+          platform: 'linux',
+          homeDir: '/home/alex',
+          xdgStateHome,
+        })
+      ).toBe('/home/alex/.local/state/renku');
+    }
+  );
+
+  it('keeps Windows state under the native LocalAppData Studio folder', () => {
+    expect(
+      resolveRenkuStateDirForPlatform({
+        platform: 'win32',
+        homeDir: 'C:\\Users\\Alex',
+        localAppData: 'C:\\Users\\Alex\\AppData\\Local',
+      })
+    ).toBe('C:\\Users\\Alex\\AppData\\Local\\Renku\\Studio\\State');
   });
 });

@@ -95,6 +95,7 @@ import type {
   ProjectInformationResource,
   ProjectInformationPatch,
   ProjectSettingsMutationReport,
+  UpdateGenerationLaneSettingsChange,
   ProjectSettingsResource,
   MediaGenerationContextReport,
   ReadMediaGenerationContextInput,
@@ -199,6 +200,9 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   ): Promise<MediaGenerationContextReport>;
   replaceProjectSettings(
     input: ReadProjectInput & { settings: unknown }
+  ): Promise<ProjectSettingsMutationReport>;
+  updateGenerationLaneSettings(
+    input: ReadProjectInput & UpdateGenerationLaneSettingsChange
   ): Promise<ProjectSettingsMutationReport>;
   listCastNavigation(input: ListNavigationInput): Promise<PageResponse<CastNavigationRow>>;
   listLocationNavigation(

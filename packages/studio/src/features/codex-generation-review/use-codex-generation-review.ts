@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CodexGenerationReviewDisplayMode, JsonValue } from '@gorenku/studio-core/client';
+import type { CodexGenerationReviewDisplayMode, GenerationCostEstimate, JsonValue } from '@gorenku/studio-core/client';
 import type { GenerationReview, GenerationReviewReceipt, GenerationReviewDraft, GenerationReviewResponse } from '@gorenku/studio-codex/client';
 import { connectCodexApp, createCodexApp, notifyGenerationReviewAction, type CodexApp } from '@/services/codex-app';
 
@@ -13,6 +13,12 @@ export function useCodexGenerationReview() {
   const [error, setError] = useState<string>();
   const [notification, setNotification] = useState<GenerationReviewReceipt>();
   const [pendingResponse, setPendingResponse] = useState<GenerationReviewResponse>();
+  const [generateWithoutAsking, setGenerateWithoutAsking] = useState(false);
+  const [editedEstimates, setEditedEstimates] = useState<Record<string, GenerationCostEstimate>>({});
+  const [refreshingEstimates, setRefreshingEstimates] = useState<string[]>([]);
+  const [outdatedEstimates, setOutdatedEstimates] = useState<string[]>([]);
+  const estimateTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const estimateSequences = useRef(new Map<string, number>());
   const latestReview = useRef<GenerationReview | undefined>(undefined);
   const applyReview = useCallback((next: GenerationReview) => {
     const previous = latestReview.current;
@@ -20,6 +26,12 @@ export function useCodexGenerationReview() {
     latestReview.current = next;
     setReview(next);
     setDrafts(next.drafts);
+    setEditedEstimates({});
+    estimateTimers.current.forEach((timer) => clearTimeout(timer));
+    estimateTimers.current.clear();
+    estimateSequences.current.clear();
+    setRefreshingEstimates([]);
+    setOutdatedEstimates([]);
   }, []);
 
   useEffect(() => {
@@ -80,8 +92,50 @@ export function useCodexGenerationReview() {
 
   const respond = async (action: GenerationReviewResponse['action'], selectedRoute?: GenerationReviewResponse['selectedRoute']) => {
     if (!review || pendingResponse) return;
-    await sendResponse({ reviewId: review.reviewId, expectedRevision: review.revision, responseId: crypto.randomUUID(), action, drafts, ...(selectedRoute ? { selectedRoute } : {}) });
+    await sendResponse({
+      reviewId: review.reviewId, expectedRevision: review.revision, responseId: crypto.randomUUID(), action, drafts,
+      ...(selectedRoute ? { selectedRoute } : {}),
+      ...(action === 'submit' && generateWithoutAsking ? { askBeforeGeneratingNextTime: false } : {}),
+    });
   };
+
+  const invalidateEstimate = (requestId: string) => {
+    const sequence = (estimateSequences.current.get(requestId) ?? 0) + 1;
+    estimateSequences.current.set(requestId, sequence);
+    clearTimeout(estimateTimers.current.get(requestId));
+    estimateTimers.current.delete(requestId);
+    setOutdatedEstimates((ids) => [...new Set([...ids, requestId])]);
+    setRefreshingEstimates((ids) => ids.filter((id) => id !== requestId));
+    return sequence;
+  };
+
+  /** Re-estimates edited control values after a short pause; only the latest local edit may update the display. */
+  const scheduleEstimate = (requestId: string, values: Record<string, JsonValue>) => {
+    const sequence = invalidateEstimate(requestId);
+    const current = latestReview.current;
+    if (!bridge || !connected || !current) return;
+    const isCurrent = () => latestReview.current === current && estimateSequences.current.get(requestId) === sequence;
+    setRefreshingEstimates((ids) => [...new Set([...ids, requestId])]);
+    estimateTimers.current.set(requestId, setTimeout(() => {
+      estimateTimers.current.delete(requestId);
+      void bridge.app.callServerTool({ name: 'generation.review.estimate', arguments: { reviewId: current.reviewId, requestId, values } }).then((result) => {
+        if (!isCurrent()) return;
+        if (result.isError) { setError(resultError(result)); return; }
+        const estimate = (result.structuredContent as { estimate?: GenerationCostEstimate } | undefined)?.estimate;
+        if (estimate) {
+          setEditedEstimates((estimates) => ({ ...estimates, [requestId]: estimate }));
+          setOutdatedEstimates((ids) => ids.filter((id) => id !== requestId));
+        }
+      }).catch((failure) => { if (isCurrent()) setError(errorMessage(failure)); }).finally(() => {
+        if (isCurrent()) setRefreshingEstimates((ids) => ids.filter((id) => id !== requestId));
+      });
+    }, 400));
+  };
+
+  useEffect(() => () => {
+    estimateTimers.current.forEach((timer) => clearTimeout(timer));
+    estimateSequences.current.clear();
+  }, []);
 
   const retryResponse = async () => {
     if (pendingResponse) await sendResponse(pendingResponse);
@@ -97,7 +151,19 @@ export function useCodexGenerationReview() {
 
   return {
     bridge, review, drafts, connected, displayMode, busy, error, notification, pendingResponse, respond, retryResponse, retryNotification,
-    editPrompt: (requestId: string, prompt: string) => editDraft(requestId, { prompt }),
+    generateWithoutAsking, setGenerateWithoutAsking,
+    estimateFor: (requestId: string) => editedEstimates[requestId] ?? review?.requests.find((request) => request.requestId === requestId)?.preview.estimate ?? null,
+    estimateRefreshing: (requestId: string) => refreshingEstimates.includes(requestId),
+    estimateOutdated: (requestId: string) => {
+      const request = review?.requests.find((request) => request.requestId === requestId);
+      const draft = drafts.find((draft) => draft.requestId === requestId);
+      return Boolean(request && draft && request.preview.estimate?.state !== 'hostPlanUsage'
+        && (outdatedEstimates.includes(requestId) || draft.prompt !== request.preview.prompt));
+    },
+    editPrompt: (requestId: string, prompt: string) => {
+      invalidateEstimate(requestId);
+      editDraft(requestId, { prompt });
+    },
     editValue: (requestId: string, key: string, value: JsonValue | undefined) => {
       const draft = drafts.find((draft) => draft.requestId === requestId);
       if (!draft) return;
@@ -105,6 +171,7 @@ export function useCodexGenerationReview() {
       if (value === undefined) delete values[key];
       else values[key] = value;
       editDraft(requestId, { values });
+      scheduleEstimate(requestId, values);
     },
   };
 }

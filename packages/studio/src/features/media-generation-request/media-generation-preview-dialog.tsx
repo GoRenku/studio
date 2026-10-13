@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { updateMediaGenerationPreview } from './media-generation-preview-api';
 import { MediaGenerationRequestDialog } from './media-generation-request-dialog';
+import { GenerationCostEstimateView } from './generation-cost-estimate-view';
 import type { MediaGenerationRequestTab } from './media-generation-request-view';
 
 export interface MediaGenerationPreviewSession {
@@ -25,6 +26,8 @@ export function MediaGenerationPreviewDialog({
   const [activeIndex, setActiveIndex] = useState(0);
   const [tab, setTab] = useState<MediaGenerationRequestTab>('prompt');
   const [prompts, setPrompts] = useState(() => session.previews.map((entry) => entry.prompt));
+  // The estimate arrives with the agent's preview; an edited request keeps it, marked outdated.
+  const [estimates] = useState(() => session.previews.map((entry) => entry.estimate));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const preview = previews[activeIndex];
@@ -32,6 +35,8 @@ export function MediaGenerationPreviewDialog({
   if (!preview) return null;
   const prompt = prompts[activeIndex] ?? preview.prompt;
   const dirty = prompt !== preview.prompt;
+  const estimate = estimates[activeIndex] ?? null;
+  const estimateOutdated = Boolean(estimate && (dirty || preview.requestSha256 !== estimate.requestSha256));
   const navigate = (nextIndex: number) => {
     setActiveIndex(nextIndex);
     setError(null);
@@ -78,6 +83,7 @@ export function MediaGenerationPreviewDialog({
       onTabChange={setTab}
       footerError={error}
       tabTrailing={navigation}
+      footerLeading={<GenerationCostEstimateView estimate={estimate} outdated={estimateOutdated} />}
       updateAction={preview.editable ? {
         disabled: !dirty,
         pending,

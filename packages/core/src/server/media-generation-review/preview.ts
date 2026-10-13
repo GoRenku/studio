@@ -9,13 +9,19 @@ import { assertSafeMediaGenerationRequest } from './safety.js';
 import { projectLocalMediaReferences } from './local-media.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { MediaGenerationReviewDocument } from '../../client/media-generation-review.js';
+import type { GenerationCostEstimate } from '../../client/generation-cost-estimate.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export async function readMediaGenerationPreview(
   input: RenkuConfigPathOptions & { projectName?: string; documentPath: string },
 ): Promise<MediaGenerationPreviewResource> {
   const review = await readMediaGenerationReview(input);
-  return projectMediaGenerationPreview({ ...input, projectName: review.projectRef.name, document: review.document });
+  return projectMediaGenerationPreview({
+    ...input,
+    projectName: review.projectRef.name,
+    document: review.document,
+    requestSha256: review.requestSha256,
+  });
 }
 
 export async function projectMediaGenerationPreview(
@@ -23,19 +29,25 @@ export async function projectMediaGenerationPreview(
     projectName?: string;
     documentPath: string;
     document: MediaGenerationReviewDocument;
+    requestSha256: string;
+    estimate?: GenerationCostEstimate | null;
   },
 ): Promise<MediaGenerationPreviewResource> {
   return withProject(input, ({ session, projectFolder }) => projectPreview({
     document: parseMediaGenerationReviewDocument(input.document),
     documentPath: normalizeReviewDocumentPath(input.documentPath),
+    requestSha256: input.requestSha256,
+    estimate: input.estimate ?? null,
     session,
     projectFolder,
   }));
 }
 
-async function projectPreview({ document, documentPath, session, projectFolder }: {
+async function projectPreview({ document, documentPath, requestSha256, estimate, session, projectFolder }: {
   document: MediaGenerationReviewDocument;
   documentPath: ReturnType<typeof normalizeReviewDocumentPath>;
+  requestSha256: string;
+  estimate: GenerationCostEstimate | null;
   session: DatabaseSession;
   projectFolder: string;
 }): Promise<MediaGenerationPreviewResource> {
@@ -61,6 +73,8 @@ async function projectPreview({ document, documentPath, session, projectFolder }
     configuration: projectConfiguration(document.request),
     editable: document.prompt !== null,
     diagnostics: projected.diagnostics,
+    requestSha256,
+    estimate,
   };
 }
 

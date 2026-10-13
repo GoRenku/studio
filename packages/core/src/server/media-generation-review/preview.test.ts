@@ -251,6 +251,7 @@ describe('media generation Preview and Inspection', () => {
     await fs.writeFile(file, '{}');
     expect(await projectMediaGenerationPreview({
       homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath: fixture.documentPath, document,
+      requestSha256: original.requestSha256!,
     })).toEqual(original);
   });
   it('projects recursive local references without Asset ids and updates only top-level prompt', async () => {

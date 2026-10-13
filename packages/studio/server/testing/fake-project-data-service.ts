@@ -813,6 +813,8 @@ function generationPreviewResource(): MediaGenerationPreviewResource {
     configuration: {},
     editable: true,
     diagnostics: [],
+    requestSha256: 'a'.repeat(64),
+    estimate: null,
   };
 }
 function makeRecoverableMutationReport(input: {

@@ -231,7 +231,7 @@ describe('studio-projects-api', () => {
 
 function projectSettings() {
   return {
-    version: 6 as const,
+    version: 7 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -240,22 +240,35 @@ function projectSettings() {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      displayPreview: true,
       enableProviderPromptExpansion: true,
       image: {
-        provider: 'codex' as const,
+        provider: 'codex',
+        model: null,
+        chooseRouteBeforeGenerating: true,
         askBeforeGenerating: false,
         runGenerationsConcurrently: true,
         maxConcurrentGenerations: 5,
       },
+      imageEdit: {
+        provider: 'fal-ai',
+        model: null,
+        chooseRouteBeforeGenerating: true,
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
+        maxConcurrentGenerations: 1,
+      },
       video: {
-        provider: 'fal-ai' as const,
+        provider: 'fal-ai',
+        model: null,
+        chooseRouteBeforeGenerating: true,
         askBeforeGenerating: true,
         runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,
       },
       audio: {
-        provider: 'elevenlabs' as const,
+        provider: 'elevenlabs',
+        model: null,
+        chooseRouteBeforeGenerating: true,
         askBeforeGenerating: true,
         runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,

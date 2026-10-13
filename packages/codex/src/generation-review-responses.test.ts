@@ -17,12 +17,12 @@ beforeEach(() => {
 
 function fixture() {
   const state = new GenerationReviewState();
-  const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' as const };
+  const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' as const, billing: 'providerCharge' as const };
   const request: GenerationReviewRequest = {
     requestId: 'request', requestSha256: 'a'.repeat(64), routes: [route], controls: { groups: [] },
-    preview: { kind: 'mediaGenerationPreview', ...route, prompt: 'Café\n@Image1', editable: true, references: [], configuration: {}, diagnostics: [] },
+    preview: { kind: 'mediaGenerationPreview', ...route, prompt: 'Café\n@Image1', editable: true, references: [], configuration: {}, diagnostics: [], requestSha256: 'a'.repeat(64), estimate: null },
   };
-  const review = state.create('review', 'movie', 'project-id', [request], [{ requestId: request.requestId, reviewFile: 'tmp/operations/media-generation/review.json', requestSha256: request.requestSha256, references: new Map() }]);
+  const review = state.create('review', 'movie', 'project-id', 'image', [request], [{ requestId: request.requestId, reviewFile: 'tmp/operations/media-generation/review.json', requestSha256: request.requestSha256, references: new Map() }]);
   const response: GenerationReviewResponse = { reviewId: review.reviewId, expectedRevision: 1, responseId: 'response', action: 'submit', drafts: review.drafts };
   return { state, response };
 }

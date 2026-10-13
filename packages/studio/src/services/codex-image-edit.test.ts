@@ -50,8 +50,8 @@ describe('Codex image edit bridge', () => {
 
   it('posts the exact Generate and choice messages the agent consumes', async () => {
     const bridge = createImageEditApp('Edit');
-    await notifyImageEditGenerate(bridge, { sessionId: 'session', actionId: 'action', session: imageEditSessionFixture() }, 'Constantine XI Palaiologos · Profile image Take 3', 'I approve one paid run.');
-    expect(sentText()).toBe('Generate image edit · Constantine XI Palaiologos · Profile image Take 3. I approve one paid run. Session session, action action. Consume it with image.edit.consume once.');
+    await notifyImageEditGenerate(bridge, { sessionId: 'session', actionId: 'action', session: imageEditSessionFixture() }, 'Constantine XI Palaiologos · Profile image Take 3');
+    expect(sentText()).toBe('Generate image edit · Constantine XI Palaiologos · Profile image Take 3. Session session, action action. Consume it with image.edit.consume once.');
     expect(integration.extensions.message!.send.mock.calls[0]![0]._meta).toEqual({ 'openai/message': { target: 'active', send: true } });
 
     integration.extensions.message!.send.mockClear();

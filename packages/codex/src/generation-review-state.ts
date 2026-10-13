@@ -1,3 +1,4 @@
+import type { GenerationLane } from '@gorenku/studio-core/client';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { GenerationReview, GenerationReviewAction, GenerationReviewRequest, GenerationReviewResponse } from './client.js';
 import { initialReviewDraft, validateReviewDraftIdentities, validateReviewDrafts } from './generation-review-contracts.js';
@@ -22,9 +23,9 @@ interface ReviewSession {
 export class GenerationReviewState {
   private readonly sessions = new Map<string, ReviewSession>();
 
-  create(reviewId: string, project: string, projectId: string, requests: GenerationReviewRequest[], sources: GenerationReviewSource[]): GenerationReview {
+  create(reviewId: string, project: string, projectId: string, lane: GenerationLane, requests: GenerationReviewRequest[], sources: GenerationReviewSource[]): GenerationReview {
     const review: GenerationReview = {
-      reviewId, revision: 1, phase: 'ready', requests,
+      reviewId, revision: 1, lane, phase: 'ready', requests,
       drafts: requests.map(initialReviewDraft), diagnostics: [],
     };
     this.sessions.set(review.reviewId, { project, projectId, review, sources, responses: new Map() });
@@ -35,9 +36,9 @@ export class GenerationReviewState {
     return structuredClone(this.session(reviewId).review);
   }
 
-  binding(reviewId: string): { project: string; projectId: string; sources: GenerationReviewSource[] } {
+  binding(reviewId: string): { project: string; projectId: string; lane: GenerationLane; sources: GenerationReviewSource[] } {
     const session = this.session(reviewId);
-    return { project: session.project, projectId: session.projectId, sources: structuredClone(session.sources) };
+    return { project: session.project, projectId: session.projectId, lane: session.review.lane, sources: structuredClone(session.sources) };
   }
 
   assertRevision(reviewId: string, expectedRevision: number): void {
@@ -155,6 +156,9 @@ export class GenerationReviewState {
 
   private assertResponse(session: ReviewSession, response: GenerationReviewResponse): void {
     if (['submitted', 'cancelled'].includes(session.review.phase)) throw reviewError('CODEX_REVIEW_STALE', 'This review is already closed.');
+    if (response.askBeforeGeneratingNextTime !== undefined && response.action !== 'submit') {
+      throw reviewError('CODEX_REVIEW_INVALID', 'Only Submit can change whether to ask before generating.');
+    }
     if (response.action === 'cancel') {
       if (response.selectedRoute) throw reviewError('CODEX_REVIEW_INVALID', 'Cancellation cannot select a route.');
       return;

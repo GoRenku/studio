@@ -22,12 +22,17 @@ import { withProviderRetries } from '../../shared/retry.js';
 import { createRequestTimeoutFetch } from '../../shared/request-timeout.js';
 import { loadFalInputSchema } from './metadata.js';
 import { normalizeFalOutput } from './outputs.js';
+import { readFalPrice } from './pricing.js';
 
 const performanceChannel = channel('renku.performance');
 
 export function createFalMediaProvider(): MediaProvider {
   return {
     id: 'fal-ai',
+    async readPrice(model, context) {
+      requireCredential(model, context);
+      return readFalPrice(model, context);
+    },
     async readInputSchema(model, context) {
       requireCredential(model, context);
       return loadFalInputSchema(model, context);

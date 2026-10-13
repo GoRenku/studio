@@ -17,6 +17,8 @@ export async function retrieveProviderMetadata(input: {
   key: ProviderMetadataCacheKey;
   context: ProviderContext;
   headers?: ConstructorParameters<typeof Headers>[0];
+  /** Freshness to apply when the provider response carries no expiry headers. */
+  defaultMaxAgeMs?: number;
 }): Promise<CachedProviderMetadata> {
   const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
   let outcome = 'success';
@@ -43,6 +45,7 @@ async function retrieve(input: {
   key: ProviderMetadataCacheKey;
   context: ProviderContext;
   headers?: ConstructorParameters<typeof Headers>[0];
+  defaultMaxAgeMs?: number;
 }): Promise<CachedProviderMetadata> {
   const cached = await input.context.metadataCache.read(input.key);
   const now = (input.context.clock ?? (() => new Date()))();
@@ -112,7 +115,7 @@ async function retrieve(input: {
     const refreshed = {
       ...cached,
       fetchedAt: now.toISOString(),
-      ...readCacheHeaders(response, now),
+      ...readCacheHeaders(response, now, input.defaultMaxAgeMs),
     };
     await input.context.metadataCache.write(input.key, refreshed);
     return refreshed;
@@ -126,7 +129,7 @@ async function retrieve(input: {
     etag: response.headers.get('etag') ?? undefined,
     lastModified: response.headers.get('last-modified') ?? undefined,
     cacheControl: response.headers.get('cache-control') ?? undefined,
-    ...readCacheHeaders(response, now),
+    ...readCacheHeaders(response, now, input.defaultMaxAgeMs),
   };
   if (!hasNoStore(entry.cacheControl)) {
     await input.context.metadataCache.write(input.key, entry);
@@ -153,14 +156,17 @@ async function readBody(
   return value;
 }
 
-function readCacheHeaders(response: Response, now: Date): { expiresAt?: string } {
+function readCacheHeaders(response: Response, now: Date, defaultMaxAgeMs?: number): { expiresAt?: string } {
   const cacheControl = response.headers.get('cache-control');
   const maxAge = cacheControl?.match(/(?:^|,)\s*max-age=(\d+)/i)?.[1];
   if (maxAge) {
     return { expiresAt: new Date(now.getTime() + Number(maxAge) * 1000).toISOString() };
   }
   const expires = response.headers.get('expires');
-  return expires && Number.isFinite(Date.parse(expires)) ? { expiresAt: expires } : {};
+  if (expires && Number.isFinite(Date.parse(expires))) {
+    return { expiresAt: expires };
+  }
+  return defaultMaxAgeMs === undefined ? {} : { expiresAt: new Date(now.getTime() + defaultMaxAgeMs).toISOString() };
 }
 
 function readRetryAfter(response: Response, now: Date): number | undefined {

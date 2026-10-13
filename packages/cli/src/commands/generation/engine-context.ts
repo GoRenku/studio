@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {
   findProviderCredentialDescriptor,
-  resolveRenkuConfigDir,
+  resolveRenkuStateDir,
   resolveRenkuProviderCredential,
   type ProviderCredentialId,
 } from '@gorenku/studio-core/server';
@@ -41,7 +41,7 @@ export async function createEngineContext(input: {
   return {
     credential,
     metadataCache: createFileSystemProviderMetadataCache(
-      path.join(resolveRenkuConfigDir({ homeDir: input.homeDir }), 'cache', 'provider-metadata'),
+      path.join(resolveRenkuStateDir({ homeDir: input.homeDir }), 'cache', 'provider-metadata'),
     ),
     fetch: globalThis.fetch,
     signal: input.signal,

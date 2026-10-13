@@ -7,7 +7,7 @@ describe('Asset media generation request route', () => {
     const readAssetFileMediaGenerationRequest = vi.fn(async () => ({
       kind: 'mediaGenerationPreview' as const,
       provider: 'codex', model: 'gpt-image-2', mediaKind: 'image' as const, prompt: 'Stone arch',
-      references: [], configuration: {}, editable: false, diagnostics: [],
+      references: [], configuration: {}, editable: false, diagnostics: [], requestSha256: null, estimate: null,
     }));
     const app = new Hono().route('/:projectName', createGenerationRequestsRoute({
       projectData: { readAssetFileMediaGenerationRequest },

@@ -41,7 +41,7 @@ Media Producer / provider Skill
         |
         | transient authored prompt + route schemas + exact references
         v
-Codex panel / Visualize / conversational configuration
+Route Chooser + purpose desk / conversational authoring
         |
         | editable prompt + exact request-scoped settings
         v
@@ -63,16 +63,47 @@ focused Core attachment ---> Asset.generationProvenance
                            Studio read-only Inspection
 ```
 
-## Review preference and host capabilities
+## Generation lanes and stages
 
-Global Renku config owns `codexGenerationReview: auto | panel | visualize`, defaulting
-to `auto` when omitted. Core validates it and includes it in the existing
-generation context's `workflowPolicy`; it is not stored in Project Settings.
-Skills read that CLI projection instead of reading the global YAML directly.
+Project Settings are the single source of truth for generation defaults and
+interruptions ([ADR 0115](../decisions/0115-use-project-generation-lanes-as-agent-defaults.md)).
+A generation lane groups the defaults for generating new or editing existing
+media: Image Generation, Image Editing, Video Generation and Audio Generation.
+Core maps each purpose to its lane (`image.edit` to Image Editing; every other
+purpose by output media kind) and projects the lane's `provider`, `model`,
+`chooseRouteBeforeGenerating`, `askBeforeGenerating` and concurrency limit
+through `generation context` `workflowPolicy`.
 
-The independent global `codexGenerationReviewDisplayMode: inline | fullscreen`
-setting defaults to `inline` and is also projected through `workflowPolicy`.
-It applies to the packaged review, not Visualize or Studio Preview. The HTML
+Every generation goes through the same stages:
+
+1. **Target**: the image target chooser resolves an ambiguous image edit.
+2. **Route choice**: when "Choose Provider and Model Each Time" is on, Codex
+   shows the inline Route Chooser (`generation.route.choose`) preselected from
+   the lane default; other harnesses ask one short question. A missing default
+   opens the chooser even when the setting is off. The chooser lists the Skill's
+   Default Model List copy
+   ([ADR 0116](../decisions/0116-publish-the-skill-default-model-list-to-the-renku-state-directory.md)),
+   marks providers without a key, and applies "Save as Project default" and
+   "Don't ask again" only on Continue, through Core's focused lane command.
+3. **Authoring**: the purpose desk (image edit or dialogue direction) when the
+   route has a `## Codex panel` block; otherwise conversational authoring.
+   Generate here is an authoring step, never approval.
+4. **Review**: when "Ask Before Generating" is on, Codex opens the combined
+   review panel; other harnesses use Studio Generation Preview, or text when
+   Studio is not running. Both show the estimated cost.
+5. **Execute, import, report**: always the agent, through the CLI.
+
+Renku's confirmation is a consumed review Submit, or Ask off. Host approval is a
+separate layer Renku does not control
+([ADR 0118](../decisions/0118-separate-renku-generation-confirmation-from-host-approval.md)):
+under the recommended Codex permission profile the CLI stays inside the sandbox
+and no approval is requested.
+
+## Review display and host capabilities
+
+The global `codexGenerationReviewDisplayMode: inline | fullscreen`
+setting defaults to `inline` and is projected through `workflowPolicy`.
+It applies to the packaged review, not Studio Preview. The HTML
 resource reads current validated Core config and advertises both modes through
 `openai/ui`, with the configured `preferredDisplayMode`. This is an initial host
 hint, not a forced transition; the host controls the actual mode as specified in
@@ -96,7 +127,7 @@ The opening tool rejects unsupported connections before request reads. The
 HTML app then verifies inline/fullscreen display and active-conversation messaging. Neither
 tool registration nor a capability advertisement proves that a panel rendered.
 
-In trusted Codex Desktop, `auto` and `panel` probe the current Renku connection
+In trusted Codex Desktop, the Skill probes the current Renku connection
 when available. Advertised support selects the panel even when
 `workflowPolicy.codexPluginInstalled` is false, as on a development machine
 without an installer record. The panel combines prompt, exact reference
@@ -116,11 +147,9 @@ path safety and envelope validation remain Core-owned; Codex owns the transient
 review binding and revision checks.
 Failures stop that review rather than silently swapping presentation surfaces.
 
-Without a probe or installation record, Desktop uses Visualize even for a saved panel
-preference. The explicit Visualize desktop choice retains the workflow below and Project
-`displayPreview`. Codex CLI, Claude and unidentified interfaces use conversational
-configuration and always deliver Studio Preview, even when that Project preference
-is false. An unavailable Studio stops the mandatory Preview path. Presentation
+Codex CLI, Claude and unidentified interfaces use conversational
+configuration and deliver Studio Preview when "Ask Before Generating" is on, or a
+text summary when Studio is not running. Presentation
 selection belongs to Skills using trusted host context and the current connection
 probe. The installation flag records installer verification; it does not veto a
 working connection. A missing probe with installation recorded or an unavailable
@@ -141,8 +170,8 @@ For `shot-plan.dialogue-audio` requests, and only when the Codex panel probe
 advertises support and the selected route appears in a `## Codex panel` block
 of its model guide, the Media Producer Skill opens the one fullscreen dialogue
 direction panel instead of the conversational flow: `dialogue.direction.open`.
-The panels are not generation reviews: they never read `codexGenerationReview`
-or its display mode, and their UI resources declare fullscreen only.
+The panels are not generation reviews: they never read the review display
+mode, and their UI resources declare fullscreen only.
 
 The Skill describes the selected route as data in the opening input's `route`:
 its labels, a Script Layout (`line-scripts`: one Direction Script per line, or
@@ -164,18 +193,16 @@ the route's Takes from Core reads, and serves media through opaque
 
 Generate is a message handoff, not execution. The panel records one action
 through the app-only `dialogue.direction.generate` tool (validated against the
-session's Route Description; at most one outstanding action) and posts a one-line
-message to the conversation. That message is posted as the user and states the
-user's approval for what is sent to the provider and the paid run, matching
-the disclosure shown beside Generate; Codex's approval review accepts only
-consent the user gave, not Skill instructions. The image edit panel's message
-follows the same rule. The agent consumes the action once with
+session's Route Description; at most one outstanding action) and posts a
+neutral one-line notice naming the session and action. The notice carries no
+approval; the disclosure beside Generate is information only. The image edit
+panel's message follows the same rule. The agent consumes the action once with
 `dialogue.direction.consume`, which returns the exact route id of the operation
 the draft's range uses and the route-neutral draft: Direction Scripts, one voice
 per speaker in order of first appearance, and native control values keyed by
 JSON Pointer. Execution still runs through
-the provider Skill and CLI: the agent authors the native request, validates,
-executes, imports with `--turns`, and reports the imported Asset File or a
+the provider Skill and CLI: the agent authors the native request, opens the
+generation review when Ask is on, validates, executes, imports with `--turns`, and reports the imported Asset File or a
 failure message through `dialogue.direction.report`. No MCP tool executes
 generation. Panel select and discard call Core Take commands and notify Studio
 with the `agent` event source. Every generated Take keeps its exact request in
@@ -191,9 +218,11 @@ retryable independently of errors from other panel operations.
 
 ## Codex image edit panels
 
-FLUX 3 Image Edit (`blackforestlabs/flux-3/edit-image` on Fal.ai) is the
-default `image.edit` route whenever a Fal.ai key is saved and the user names no
-other model or provider; that default is a Skill rule. For a route that appears
+The Image Editing lane decides the default `image.edit` route; an unset model
+uses the Skill's recommendation for the lane provider. The Codex built-in image
+tool is one route option (`billing: 'hostPlanUsage'`, no regions, a style
+reference): the agent runs it with the built-in tool and imports the result with
+`codex` provenance. For a route that appears
 in a `## Codex panel` block, and only when the Codex panel probe advertises
 support, the Media Producer Skill uses two Codex apps instead of the
 conversational flow:
@@ -256,56 +285,6 @@ layout, voice binding, emphasis, region modes and control kind). Panel
 controls reuse the generation review's Native Request Controls
 (`packages/codex/src/native-request-controls/`) with a panel profile: scalar
 kinds only, each with an initial value, never nullable.
-
-## Transient Visualize configuration
-
-When the Media Producer Skill selects `visualize` in Codex desktop, it
-shows one transient inline configuration before authoring each image, video, or
-audio review document. The component starts from explicit user direction or the
-matching Project Setting, but that value only preselects the control. The
-component lists effective bundled and personal choices, including advanced
-providers. Personal routes need no capability metadata to appear. Choosing one
-is an explicit one-request override and never changes Project Settings.
-Selector choices come from `generation models list`; the agent does not read
-alternative provider guides or schemas merely to populate them. Actual input
-compatibility is established while preparing the selected request.
-
-The component is one tab-free Configuration surface. It does not render exact
-references, thumbnails, paths, labels, or marker objects; those remain available
-in the existing Generation Preview. A purpose may retain a bounded reference
-choice, such as a Cast Voice sample, as a configuration control. Configuration
-uses the exact live schemas inspected by the agent for the currently prepared
-provider/model only: finite choices use selects, truthful bounded numbers use
-sliders with visible values, and unsupported or non-user-facing
-transport/runtime fields are omitted. No schema or provider request is fetched
-from the component itself.
-
-Changing Provider or Model is a staged reconfiguration, not an in-browser model
-catalog. The component hides the old route's controls, explains that the new
-selection must prepare settings and may recreate the prompt, and sends a
-follow-up. The agent then reads only the selected route's Skill, guide, adapter,
-and live schema, verifies required references, and updates the same
-request-scoped visualization source path with the newly prepared controls. No
-alternative schemas are prefetched and no global or cross-task component cache
-is introduced.
-
-The continuation action returns the editable authored prompt followed by
-pretty-printed JSON containing exact purpose, target, provider, model,
-references, and provider-native raw values. This is temporary conversation
-state. It is not a Core contract, saved request, Project Setting, provider
-schema, or generation-resume event. A provider/model reconfiguration follow-up
-updates the same pending component and does not author the review document. Only
-**Continue with these settings** for the prepared selection advances to the
-normal review document and existing validation and Preview behavior. A
-canonical model change causes the agent to re-author the prompt using the
-selected model and operation guides while preserving the user's creative
-intent. A provider-only change that keeps the canonical model retains the prompt
-and applies only adapter-required native notation.
-
-This rich component does not change Studio's Configuration tab. Studio still
-receives only the saved opaque request and renders it schema-free and read-only,
-as described below. Generation Preview remains the larger prompt editor and
-exact request review surface.
 
 ## Review document and provenance
 
@@ -416,15 +395,6 @@ Inspector retain stored provenance for deliberate inspection, reuse, revision,
 or debugging. No storage or attachment contract changes follow from this read
 projection.
 
-For requested Codex configuration or external-provider configuration, the
-workflow inspects the Core-owned generation
-configuration visualization cache. A fresh entry supplies its schema snapshot
-and route template. A missing or expired entry performs one `renku generation
-schema show --provider <provider> --model <model> --output <path> --json` and
-stores or refreshes the cache. The fixed 24-hour freshness policy applies only
-to pre-review configuration; final provider validation and execution remain
-live boundaries.
-
 For `scene.storyboard-sheet`, `--revision` chooses the exact Scene Beats
 revision and repeatable `--beat` narrows the report to a reviewed Beat batch.
 Core validates only target identity and requested scope. Missing Lookbooks,
@@ -519,7 +489,7 @@ native request facts come from the selected provider operation.
 
 ## Removed concepts
 
-There is no production Generation Spec, Generation Run, estimate, pricing,
+There is no production Generation Spec, Generation Run,
 approval token, freeze lifecycle, simulation, generic model catalog, persisted
 reference selection, file-level generation identity, or Core-owned provider
 execution. No compatibility reader or alias recognizes those concepts.
@@ -543,8 +513,7 @@ names by exact provider/API identity. Engines remains a provider protocol regist
 execution is independent of discovery membership. Skills use selected live/cached
 schemas and optional bundled/personal guidance, without a separate capability audit.
 Missing guides are ordinary absence. Current bundled defaults and explicit personal
-preferences apply independently of label precedence. Effective route hashes feed
-existing configuration caches; guide changes do not invalidate schemas or templates.
+preferences apply independently of label precedence.
 
 ## Execution-local Fal schema reuse
 
@@ -560,6 +529,26 @@ SDK-independent.
 For a single Engines request in a Studio Preview path, `generation prepare` validates
 and delivers the Core-owned Preview projection from the same loaded document.
 Its digest is the Execute precondition. Standalone validation remains available
-in the panel path or when Preview is disabled in the Visualize desktop path;
+in the panel path or when "Ask Before Generating" is off;
 Codex built-in and ordered multi-request Studio Preview use
 `generation preview show`. Provider schemas and validation remain in Engines.
+
+## Cost estimates
+
+Prices are cached provider metadata owned by Engines
+([ADR 0117](../decisions/0117-cache-provider-prices-with-schemas-and-estimate-before-review.md)).
+`estimateCost` tries a live provider quote, then a fresh agent-recorded price,
+then the provider's API price, and evaluates prices with a closed unit and
+quantity vocabulary. The CLI composes the result into Core's
+`GenerationCostEstimate` display envelope: `generation prepare` and
+`generation preview show` attach it to Studio Preview, `generation estimate`
+prints it, and `renku studio mcp` injects the estimator into the Codex review,
+which also re-estimates edited controls through the app-only
+`generation.review.estimate`. Routes with `billing: 'hostPlanUsage'` are never
+estimated and show plan usage. A missing price is never shown as zero.
+
+Draft estimates omit cleared optional controls and preserve unrepresented native
+fields. Control edits mark the displayed estimate outdated until the latest
+draft's estimate returns. Prompt edits also mark it outdated; control-only
+refreshes cannot clear that indication because native prompt fields remain
+Skill-owned and are not bound by the estimate tool.

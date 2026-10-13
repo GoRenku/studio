@@ -142,35 +142,22 @@ operational companions that teach agents how to use those contracts.
 - Treats the returned current facts and relationship-derived references as
   advisory evidence. It may ignore, supplement, or replace suggestions and
   never interprets their order or display selection as a creative choice.
-- Reads the per-media Project generation policy from that report, including
-  Preview, conversational confirmation, concurrency, and maximum concurrency.
-- In Codex, uses current direction/defaults without generation consent;
-  configuration is optional unless requested and automatic Preview is
-  informational. Explicit review requests still pause execution. Generation
-  authorizes focused attachment across providers unless the user requests
-  review-only or leave-unattached behavior. External spending approval remains.
-- The inline configuration uses explicit direction or the matching Project
-  provider only as its initial selection. It lists effective bundled and personal
-  choices, including advanced providers as explicit one-request choices.
-  Personal routes need no capability metadata. Only the selected provider/model's
-  Skill, available advice, and live/cached schema are read for preparation.
-- It renders one tab-free Configuration surface. Exact references are not shown
-  inline; they remain available in the existing Generation Preview. Bounded
-  purpose-owned reference choices, such as a Cast Voice selection, may appear
-  as configuration controls. It returns the editable prompt followed by
-  pretty-printed exact settings to the ordinary conversation.
-- A canonical model change makes the agent re-author the prompt from the newly
-  selected schema and available model/operation advice before Preview. A provider-only change
-  for the same canonical model retains the prompt and applies the destination
-  adapter's native notation.
-- A provider/model selector change first shows that reconfiguration is required,
-  hides the old route's controls, and sends a non-accepting follow-up. The agent
-  reads only that selected route and updates the same request-scoped Visualize
-  source path with its controls. It prefetches no alternative schemas and
-  creates no global or cross-task cache.
-- Keeps the component browser-local and request-scoped: it calls no Renku or
-  provider API, persists no Project Setting or request state, and does not
-  replace the existing Generation Preview.
+- Reads the purpose's generation lane from that report: provider, model,
+  "Choose Provider and Model Each Time", "Ask Before Generating" and the
+  concurrency limit. An unset model uses the Default Model List recommendation
+  for the lane provider; Settings change only at the user's direct request
+  through `renku settings generation set`.
+- Publishes `references/default-models.json` with `renku generation
+  default-models sync` beside its credentials check.
+- When the lane asks for a route, opens the Codex Route Chooser (or asks once
+  in other harnesses) after the target and before authoring; a missing default
+  opens it even when the setting is off.
+- When "Ask Before Generating" is on, opens the combined review panel in Codex,
+  or Studio Generation Preview elsewhere (text when Studio is not running), with
+  the estimated cost; a consumed Submit, or Ask off, is Renku's confirmation.
+  Host approval is separate: it asks once honestly, and once in chat if refused.
+- Researches and records a price with `renku generation price record` only when
+  a review estimate is missing or expired for a route without API pricing.
 - Uses the Codex image lane only when the active harness exposes the built-in
   image-generation capability; otherwise it reports unavailability and asks
   before choosing Fal.ai or Pika.

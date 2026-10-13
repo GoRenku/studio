@@ -90,7 +90,7 @@ describe('dialogue direction panel: Line Scripts', () => {
     expect(directionEditorView('Direction for line 5').state.doc.toString()).toBe('[brisk] Bronze. Powder. Charcoal.');
   });
 
-  it('generates a multi-line draft with the Line-Range values and posts the approval from route labels', async () => {
+  it('generates a multi-line draft with the Line-Range values and posts a neutral notice', async () => {
     await openPanel(lineScriptsSessionFixture({}, { selection: { start: 5, end: 7 } }));
     expect(screen.getAllByRole('combobox').map((select) => select.getAttribute('aria-label'))).toEqual(['Voice for Urban', 'Voice for Loukas']);
     fireEvent.keyDown(screen.getByRole('combobox', { name: 'Voice for Urban' }), { key: 'Enter' });
@@ -108,7 +108,7 @@ describe('dialogue direction panel: Line Scripts', () => {
       voices: [{ castMemberId: 'cast-urban', castVoiceId: 'cast-urban-hoarse' }, { castMemberId: 'cast-loukas', castVoiceId: 'cast-loukas-clerk' }],
       values: { '/tuning/warmth': 0.46 },
     });
-    expect(integration.notify.mock.calls[0]![2]).toBe('I approve sending this direction and the chosen voices to Acme Audio and running one paid Acme Voice One generation with my saved Acme Audio key.');
+    expect(integration.notify.mock.calls[0]).toHaveLength(2);
     expect(screen.getByText('Generate sends this direction and the chosen voices to Acme Audio and runs one paid Acme Voice One generation with your saved Acme Audio key.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Generating…' })).toHaveProperty('disabled', true);
   });
@@ -176,7 +176,7 @@ describe('dialogue direction panel: Range Prompt', () => {
       voices: [{ castMemberId: 'cast-urban', castVoiceId: 'cast-urban-baritone' }, { castMemberId: 'cast-constantine', castVoiceId: 'cast-constantine-tenor' }],
       values: {},
     });
-    expect(integration.notify.mock.calls[0]![2]).toBe('I approve sending this direction and the chosen voices to Acme Audio and running one paid Acme Ensemble generation with my saved Acme Audio key.');
+    expect(integration.notify.mock.calls[0]).toHaveLength(2);
   });
 
   it('shows the voice-limit notice and disables Generate past the route\'s voices', async () => {

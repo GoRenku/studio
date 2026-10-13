@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GenerationReviewRequest, GenerationReviewResponse } from './client.js';
 import { GenerationReviewState, type GenerationReviewSource } from './generation-review-state.js';
 
-const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-route', label: 'Image model', mediaKind: 'image' as const };
+const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-route', label: 'Image model', mediaKind: 'image' as const, billing: 'providerCharge' as const };
 const alternative = { ...route, model: 'other-image-route', label: 'Other image model' };
 
 function fixture(project = 'movie', reviewId = 'review', requestId = 'request') {
@@ -10,10 +10,10 @@ function fixture(project = 'movie', reviewId = 'review', requestId = 'request') 
   const request: GenerationReviewRequest = {
     requestId, requestSha256: 'a'.repeat(64), routes: [route, alternative],
     controls: { groups: [{ label: 'Image', fields: [{ key: '/resolution', label: 'Resolution', kind: 'enum', initialValue: '2K', required: true, options: [{ label: '2K', value: '2K' }, { label: '4K', value: '4K', description: 'Larger output' }] }] }] },
-    preview: { kind: 'mediaGenerationPreview', ...route, prompt: 'Café\nα and @Image1', editable: true, references: [], configuration: { resolution: '2K' }, diagnostics: [] },
+    preview: { kind: 'mediaGenerationPreview', ...route, prompt: 'Café\nα and @Image1', editable: true, references: [], configuration: { resolution: '2K' }, diagnostics: [], requestSha256: 'a'.repeat(64), estimate: null },
   };
   const source: GenerationReviewSource = { requestId, reviewFile: 'tmp/operations/media-generation/review.json', requestSha256: request.requestSha256, references: new Map() };
-  const review = state.create(reviewId, project, `${project}-id`, [request], [source]);
+  const review = state.create(reviewId, project, `${project}-id`, 'image', [request], [source]);
   const response: GenerationReviewResponse = { reviewId, expectedRevision: 1, responseId: 'response', action: 'submit', drafts: review.drafts };
   return { state, review, request, source, response };
 }
@@ -74,7 +74,7 @@ describe('connection-scoped generation review', () => {
     const { state, request, source } = fixture();
     const other = { ...request, requestId: 'other-request' };
     const otherSource = { ...source, requestId: other.requestId, reviewFile: 'tmp/operations/media-generation/other.json' };
-    const review = state.create('batch', 'movie', 'movie-id', [request, other], [source, otherSource]);
+    const review = state.create('batch', 'movie', 'movie-id', 'image', [request, other], [source, otherSource]);
     state.respond({ reviewId: 'batch', expectedRevision: 1, responseId: 'switch', action: 'reconfigure', drafts: review.drafts, selectedRoute: { requestId: request.requestId, route: alternative } });
     state.consume('batch', 'switch', 2);
     const replacement = { ...request, requestSha256: 'b'.repeat(64), preview: { ...request.preview, ...alternative } };
@@ -124,7 +124,7 @@ describe('connection-scoped generation review', () => {
 
   it('keeps separate reviews and Projects isolated and expires them with the connection', () => {
     const { state, request, source } = fixture();
-    state.create('other-review', 'other-movie', 'other-id', [{ ...request, requestId: 'other-request' }], [{ ...source, requestId: 'other-request' }]);
+    state.create('other-review', 'other-movie', 'other-id', 'image', [{ ...request, requestId: 'other-request' }], [{ ...source, requestId: 'other-request' }]);
     expect(state.binding('review').project).toBe('movie');
     expect(state.binding('other-review').project).toBe('other-movie');
     const exposed = state.read('review');

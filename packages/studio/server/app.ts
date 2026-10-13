@@ -3,6 +3,7 @@ import { getRequestListener } from '@hono/node-server';
 import type { Connect } from 'vite';
 import health from './routes/health.js';
 import { createStudioBootstrapRoute } from './routes/bootstrap.js';
+import { createDefaultModelsRoute } from './routes/default-models.js';
 import { createProjectsRoute } from './routes/projects.js';
 import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
 import { createSetupRoute } from './routes/setup.js';
@@ -40,6 +41,10 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
     .route(
       '/studio-api/provider-credentials',
       createProviderCredentialsRoute({ token, homeDir: options.homeDir })
+    )
+    .route(
+      '/studio-api/default-models',
+      createDefaultModelsRoute({ token, homeDir: options.homeDir })
     )
     .route(
       '/studio-api/studio/events',

@@ -3,11 +3,14 @@ import { createProjectDataService } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import { readJsonInput } from './command-io.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
+import {
+  runGenerationLaneCommand,
+  type GenerationLaneCommandFlags,
+} from './project-settings/generation-lane-command.js';
 
 export interface RunProjectSettingsCommandOptions {
   input: string[];
-  flags: {
-    project?: string;
+  flags: GenerationLaneCommandFlags & {
     file?: string;
   };
   json: boolean;
@@ -25,15 +28,18 @@ export async function runProjectSettingsCommand(
   if (subcommand === 'set') {
     return await setProjectSettings(options);
   }
+  if (subcommand === 'generation') {
+    return await runGenerationLaneCommand({ ...options, input: options.input.slice(1) });
+  }
   throw new StructuredError({
     code: 'CLI020',
-    message: 'Unknown settings command. Usage: renku settings show|set ...',
+    message: 'Unknown settings command. Usage: renku settings show|set|generation ...',
     issues: [
       createDiagnosticError(
         'CLI020',
         'Unknown settings command.',
         { path: ['settings'], context: 'renku CLI arguments' },
-        'Run renku settings show or renku settings set --file <project-settings.json>.'
+        'Run renku settings show, renku settings set --file <project-settings.json>, or renku settings generation show|set.'
       ),
     ],
   });

@@ -5,7 +5,8 @@ import { ErrorCode, McpError, type ReadResourceResult } from '@modelcontextproto
 import { RESOURCE_MIME_TYPE, registerAppResource, registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { OpenAIExtensions, type OpenAIUiResourceMetadata } from '@openai/mcp-extensions/server';
 import { readRenkuConfig } from '@gorenku/studio-core/server';
-import { generationReviewConsumeSchema, generationReviewInputSchema, generationReviewResponseSchema } from './generation-review-schemas.js';
+import { generationReviewConsumeSchema, generationReviewEstimateSchema, generationReviewInputSchema, generationReviewResponseSchema } from './generation-review-schemas.js';
+import { estimateReviewDraft, type GenerationCostEstimator } from './generation-review-estimate.js';
 import { generationReviewResult, openGenerationReview } from './generation-review.js';
 import { GenerationReviewState } from './generation-review-state.js';
 import { consumeGenerationReview, respondToGenerationReview } from './generation-review-responses.js';
@@ -14,6 +15,7 @@ import { integrationErrorResult } from './diagnostics.js';
 import { assertGenerationReviewCapability, readGenerationReviewCapabilities } from './generation-review-capabilities.js';
 import { registerDialogueDirection } from './dialogue-direction/index.js';
 import { registerImageEdit } from './image-edit/index.js';
+import { registerRouteChoice } from './route-choice/index.js';
 
 export interface CodexServerOptions {
   version: string;
@@ -21,6 +23,9 @@ export interface CodexServerOptions {
   dialogueDirectionHtml: string;
   imageEditHtml: string;
   imageEditTargetChooserHtml: string;
+  routeChooserHtml: string;
+  /** Injected by the CLI composition root; Codex never imports Engines. */
+  costEstimator: GenerationCostEstimator;
   homeDir?: string;
 }
 
@@ -31,11 +36,12 @@ export function createCodexServer(options: CodexServerOptions): McpServer {
   new OpenAIExtensions(server);
   const state = new GenerationReviewState();
   registerHtmlResource(server, REVIEW_URI, 'Generation review', options.generationReviewHtml, { connectDomains: ['blob:'], resourceDomains: ['blob:'] }, options.homeDir);
-  registerReviewTools(server, state, options.homeDir);
+  registerReviewTools(server, state, options.costEstimator, options.homeDir);
   registerReviewResources(server, state, options.homeDir);
   server.server.onclose = () => state.expire();
   registerDialogueDirection(server, { html: options.dialogueDirectionHtml, homeDir: options.homeDir });
   registerImageEdit(server, { editHtml: options.imageEditHtml, targetChooserHtml: options.imageEditTargetChooserHtml, homeDir: options.homeDir });
+  registerRouteChoice(server, { html: options.routeChooserHtml, homeDir: options.homeDir });
   return server;
 }
 
@@ -43,7 +49,7 @@ export async function startCodexServer(options: CodexServerOptions): Promise<voi
   await createCodexServer(options).connect(new StdioServerTransport());
 }
 
-function registerReviewTools(server: McpServer, state: GenerationReviewState, homeDir?: string): void {
+function registerReviewTools(server: McpServer, state: GenerationReviewState, estimator: GenerationCostEstimator, homeDir?: string): void {
   server.registerTool('generation.review.capabilities', {
     title: 'Generation review capabilities', inputSchema: {},
     description: 'Read this connection\'s initialized MCP client identity and advertised Codex review support. Advertisement is not confirmation that a review rendered; the app must still verify inline/fullscreen display and conversation messaging. Use Studio Preview for unsupported or non-Codex hosts.',
@@ -59,13 +65,18 @@ function registerReviewTools(server: McpServer, state: GenerationReviewState, ho
     _meta: { ui: { resourceUri: REVIEW_URI, visibility: ['model'] } },
   }, (input) => guardedResult(async () => {
     assertGenerationReviewCapability(server);
-    return generationReviewResult(await openGenerationReview(state, input, homeDir));
+    return generationReviewResult(await openGenerationReview(state, input, estimator, homeDir));
   }));
   registerAppTool(server, 'generation.review.respond', {
     title: 'Respond to generation review', inputSchema: generationReviewResponseSchema,
     _meta: { ui: { resourceUri: REVIEW_URI, visibility: ['app'] } },
     annotations: { openWorldHint: false, destructiveHint: false },
   }, (input) => guardedResult(async () => ({ content: [], structuredContent: { ...(await respondToGenerationReview(state, input, homeDir)) } })));
+  registerAppTool(server, 'generation.review.estimate', {
+    title: 'Estimate edited generation settings', inputSchema: generationReviewEstimateSchema,
+    _meta: { ui: { resourceUri: REVIEW_URI, visibility: ['app'] } },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, (input) => guardedResult(async () => ({ content: [], structuredContent: { estimate: await estimateReviewDraft(state, input, estimator, homeDir) } })));
   registerAppTool(server, 'generation.review.consume', {
     title: 'Consume generation review action', inputSchema: generationReviewConsumeSchema,
     description: 'Consume the exact panel action once. alreadyConsumed authorizes no repeated execution. Continue generation through the existing Skill and CLI only after consuming a submit action.',

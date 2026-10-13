@@ -25,6 +25,9 @@ export type {
 export type * from './media-generation-review.js';
 export type * from './json.js';
 export * from './media-attachments.js';
+export * from './generation-lanes.js';
+export type * from './default-models.js';
+export type * from './generation-cost-estimate.js';
 export type * from './media-generation-context.js';
 export type {
   CastMember,

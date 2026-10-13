@@ -39,6 +39,8 @@ export async function readAssetFileMediaGenerationRequest(
       configuration: projectConfiguration(provenance.request),
       editable: false,
       diagnostics: projected.diagnostics,
+      requestSha256: null,
+      estimate: null,
     };
   });
 }

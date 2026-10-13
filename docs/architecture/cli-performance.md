@@ -289,13 +289,10 @@ file edit cannot change what was validated and previewed. Execute still checks
 the prepared hash before provider work. Standalone Validate and multi-document
 Preview retain their independent uses.
 
-The inline visualization workflow uses one Skill script invocation to create a
-dependency descriptor and call `generation configuration-visualization prepare`.
-Core owns cache inspection, payload escaping, and atomic task-local output.
-A fresh hit requires no schema fetch or HTML authoring. Only the separate
-`generation-configuration-template.md` requirements are fingerprinted alongside
-the existing catalog and Visualize dependencies; general workflow edits no
-longer invalidate unchanged HTML.
+`generation prepare` also attaches a cost estimate. A live quote is one fast
+provider call; recorded and API prices come from the provider metadata cache in
+the Renku state directory, so repeated estimates add no network work until an
+entry expires.
 
 ## Selection liveness and model discovery
 
@@ -304,9 +301,7 @@ explicit engagement among live sessions, independently of later passive visible
 or hidden activity. Inactive sessions still expire after two minutes.
 
 The Media Producer discovery script presents Core query matches with optional
-bundled guide/adapter paths without writing a catalog. Core visualization
-preparation resolves the complete bundled/personal list and its digest directly;
-non-fresh results return selector choices for template authoring. CLI adapters
+bundled guide/adapter paths without writing a catalog. CLI adapters
 only forward query text, route-index paths, and opaque request documents.
 Guide routing and schema-derived native defaults remain in Skills. Enabling
 prompt expansion alone does not select a slower mode.

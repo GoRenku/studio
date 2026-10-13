@@ -2,7 +2,7 @@
 
 Date: 2026-09-03
 
-Status: accepted
+Status: superseded by [ADR 0118](0118-separate-renku-generation-confirmation-from-host-approval.md)
 
 ## Context
 

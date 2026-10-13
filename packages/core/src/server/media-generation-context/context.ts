@@ -71,7 +71,7 @@ export async function readMediaGenerationContext(
         codexPluginInstalled,
         config,
         settings: readProjectSettingsFromSession(session).settings,
-        outputMediaKind,
+        purpose: input.purpose,
       }),
       outputGuidance: mediaGenerationOutputGuidance(input.purpose, project.aspectRatio),
       ...purposeContext,

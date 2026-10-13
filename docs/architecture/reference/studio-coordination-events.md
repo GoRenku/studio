@@ -298,12 +298,12 @@ Do not keep aliases or shims for obsolete event names.
 
 ## Location
 
-The event store lives under the Core-resolved Renku config directory:
+The event store lives under the Core-resolved Renku state directory:
 
 ```text
-macOS:   $HOME/.config/renku/studio-events.jsonl
-Windows: %LOCALAPPDATA%\Renku\Studio\studio-events.jsonl
-Linux:   ${XDG_CONFIG_HOME:-$HOME/.config}/renku/studio-events.jsonl
+macOS:   $HOME/.local/state/renku/studio-events.jsonl
+Windows: %LOCALAPPDATA%\Renku\Studio\State\studio-events.jsonl
+Linux:   ${XDG_STATE_HOME:-$HOME/.local/state}/renku/studio-events.jsonl
 ```
 
 Each line is one JSON event.

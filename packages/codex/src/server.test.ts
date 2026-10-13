@@ -8,6 +8,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { createProjectDataService, initRenkuConfig } from '@gorenku/studio-core/server';
 import type { GenerationReview, GenerationReviewReceipt } from './client.js';
+import { createFakeCostEstimator } from './testing/fake-cost-estimator.js';
 import { createCodexServer } from './server.js';
 
 let root: string;
@@ -26,7 +27,7 @@ beforeAll(async () => {
   await fs.writeFile(reviewFile, JSON.stringify({ provider: 'acme-images', model: 'image-model', mediaKind: 'image', prompt: 'Café\nα', request: { prompt: 'Café\nα', resolution: '2K' } }));
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Protocol resource fixture</body></html>');
-  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
+  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0', title: 'Codex' }, {
     capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } },
   });
@@ -43,9 +44,10 @@ afterAll(async () => {
 
 const opening = {
   project: 'movie',
+  lane: 'image',
   requests: [{
     reviewFile: 'tmp/operations/media-generation/request.json',
-    routes: [{ provider: 'acme-images', providerLabel: 'Acme Images', model: 'image-model', label: 'Image model', mediaKind: 'image' }],
+    routes: [{ provider: 'acme-images', providerLabel: 'Acme Images', model: 'image-model', label: 'Image model', mediaKind: 'image', billing: 'providerCharge' }],
     controls: { groups: [{ label: 'Image settings', fields: [{ key: '/resolution', label: 'Resolution', kind: 'enum', required: true, initialValue: '2K', options: [{ label: '2K', value: '2K' }, { label: '4K', value: '4K' }] }] }] },
   }],
 };
@@ -53,7 +55,8 @@ const opening = {
 describe('official MCP registration and transport', () => {
   it('discovers the capability probe, review tools and an inline-preferred review resource supporting both modes', async () => {
     const tools = (await client.listTools()).tools.filter((tool) => tool.name.startsWith('generation.review'));
-    expect(tools.map((tool) => tool.name).sort()).toEqual(['generation.review', 'generation.review.capabilities', 'generation.review.consume', 'generation.review.respond']);
+    expect(tools.map((tool) => tool.name).sort()).toEqual(['generation.review', 'generation.review.capabilities', 'generation.review.consume', 'generation.review.estimate', 'generation.review.respond']);
+    expect(tools.find((tool) => tool.name === 'generation.review.estimate')?._meta?.ui).toMatchObject({ visibility: ['app'] });
     expect(tools.find((tool) => tool.name === 'generation.review.respond')?._meta?.ui).toMatchObject({ visibility: ['app'] });
     expect(tools.every((tool) => !(tool._meta?.['openai/ui'] as { entrypoints?: unknown[] } | undefined)?.entrypoints?.length)).toBe(true);
     const resource = await client.readResource({ uri: 'ui://renku/generation-review' });
@@ -65,7 +68,7 @@ describe('official MCP registration and transport', () => {
     const tools = (await client.listTools()).tools.map((tool) => tool.name);
     expect(tools.filter((name) => name.endsWith('.open')).sort()).toEqual(['dialogue.direction.open', 'image.edit.open']);
     expect((await client.listResources()).resources.map((resource) => resource.uri).filter((uri) => uri.startsWith('ui://')).sort()).toEqual([
-      'ui://renku/dialogue-direction', 'ui://renku/generation-review', 'ui://renku/image-edit', 'ui://renku/image-edit/target-chooser',
+      'ui://renku/dialogue-direction', 'ui://renku/generation-review', 'ui://renku/image-edit', 'ui://renku/image-edit/target-chooser', 'ui://renku/route-chooser',
     ]);
   });
 
@@ -161,7 +164,7 @@ describe('host capability negotiation', () => {
     ['claude-desktop', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } }, 'non-codex-client'],
     ['unknown-agent', {}, 'non-codex-client'],
   ])('requires Studio Preview for %s with capabilities %j', async (name, capabilities, reason) => {
-    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), dialogueDirectionHtml: path.join(root, 'app.html'), imageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html') });
+    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), dialogueDirectionHtml: path.join(root, 'app.html'), imageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html'), routeChooserHtml: path.join(root, 'app.html'), costEstimator: createFakeCostEstimator() });
     const isolatedClient = new Client({ name, version: 'test' }, { capabilities });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {

@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import type { ImageEditDraft, ImageEditGenerateReceipt, ImageEditSession } from '@gorenku/studio-codex/image-edit';
 import { useCodexPanelSession } from '@/features/codex-panels/use-codex-panel-session';
 import type { CodexApp } from '@/services/codex-app';
@@ -15,19 +14,16 @@ export function imageEditSubject(session: ImageEditSession, assetFileId: string 
 }
 
 export function useImageEditSession(appName: string) {
-  // The approval shown beside Generate when it was clicked; a retried notification repeats it.
-  const approval = useRef('');
   const panel = useCodexPanelSession<ImageEditSession, ImageEditGenerateReceipt>({
     appName,
     create: createImageEditApp,
     connect: connectImageEditApp,
     read: readImageEditSession,
-    notify: (bridge: CodexApp, receipt: ImageEditGenerateReceipt) => notifyImageEditGenerate(bridge, receipt, imageEditSubject(receipt.session, receipt.session.action?.baseAssetFileId ?? null), approval.current),
+    notify: (bridge: CodexApp, receipt: ImageEditGenerateReceipt) => notifyImageEditGenerate(bridge, receipt, imageEditSubject(receipt.session, receipt.session.action?.baseAssetFileId ?? null)),
     failures: FAILURES,
   });
 
-  const generate = (draft: ImageEditDraft, approvalText: string) => {
-    approval.current = approvalText;
+  const generate = (draft: ImageEditDraft) => {
     return panel.generate((connected, current) => generateImageEdit(connected, { sessionId: current.sessionId, draft }));
   };
 

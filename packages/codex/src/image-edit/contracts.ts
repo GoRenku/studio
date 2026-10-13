@@ -2,7 +2,7 @@
  * Type-only contracts shared by the Codex image edit runtime and the Studio image edit apps.
  * This file is the `@gorenku/studio-codex/image-edit` package export; keep it free of runtime code.
  */
-import type { JsonValue } from '@gorenku/studio-core/client';
+import type { GenerationRouteBilling, JsonValue } from '@gorenku/studio-core/client';
 import type { NativeRequestControls } from '../native-request-controls/contracts.js';
 
 /** A region action the route accepts, from the Skill's Route Description. */
@@ -38,6 +38,8 @@ export interface ImageEditRoute {
   /** Region actions in display order, the first being the default; null when the route takes no regions. */
   regionModes: ImageEditRegionMode[] | null;
   styleReference: boolean;
+  /** How the route is paid for; host plan usage routes run with the agent host's built-in tool. */
+  billing: GenerationRouteBilling;
   controls: NativeRequestControls;
 }
 

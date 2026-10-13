@@ -3,23 +3,25 @@ import { createProjectDataService, normalizeReviewDocumentPath, projectMediaGene
 import type { GenerationReview, GenerationReviewRequest } from './client.js';
 import { validateReviewControls } from './generation-review-contracts.js';
 import type { GenerationReviewInput } from './generation-review-schemas.js';
-import { GenerationReviewState, preparedRoute, type GenerationReviewSource } from './generation-review-state.js';
+import { GenerationReviewState, preparedRoute, sameRoute, type GenerationReviewSource } from './generation-review-state.js';
 import { assertReviewSources } from './generation-review-sources.js';
 import { reviewError } from './diagnostics.js';
+import { hostPlanUsageEstimate, type GenerationCostEstimator } from './generation-review-estimate.js';
 
-export async function openGenerationReview(state: GenerationReviewState, input: GenerationReviewInput, homeDir?: string): Promise<GenerationReview> {
+export async function openGenerationReview(state: GenerationReviewState, input: GenerationReviewInput, estimator: GenerationCostEstimator, homeDir?: string): Promise<GenerationReview> {
   validateOpeningInput(input);
   const projectRef = await createProjectDataService().resolveStudioProjectRef({ projectName: input.project, homeDir });
   if (input.reviewId) {
     state.assertRevision(input.reviewId, input.expectedRevision!);
     const binding = state.binding(input.reviewId);
     if (binding.project !== projectRef.name || binding.projectId !== projectRef.id) throw reviewError('CODEX_REVIEW_INVALID', 'This review belongs to another Project.');
+    if (input.lane && input.lane !== binding.lane) throw reviewError('CODEX_REVIEW_INVALID', 'A review cannot change its generation lane.');
     await assertReviewSources(binding, homeDir);
   }
   if (input.preparationFailure) return state.preparationFailure(input.reviewId!, input.expectedRevision!, input.preparationFailure);
   const reviewId = input.reviewId ?? randomUUID();
   const previous = input.reviewId ? state.binding(input.reviewId).sources : [];
-  const prepared = await Promise.all(input.requests!.map((request, index) => prepareRequest({ reviewId, project: projectRef.name, projectId: projectRef.id, homeDir, request, previous: previous[index] })));
+  const prepared = await Promise.all(input.requests!.map((request, index) => prepareRequest({ reviewId, project: projectRef.name, projectId: projectRef.id, homeDir, request, previous: previous[index], estimator })));
   const requests = prepared.map((prepared) => prepared.request);
   const sources = prepared.map((prepared) => prepared.source);
   if (new Set(sources.map((source) => source.reviewFile)).size !== sources.length) throw reviewError('CODEX_REVIEW_INVALID', 'Review files must be distinct in an ordered review set.');
@@ -28,13 +30,14 @@ export async function openGenerationReview(state: GenerationReviewState, input: 
     await assertReviewSources(state.binding(reviewId), homeDir);
     return state.update(reviewId, input.expectedRevision!, projectRef.name, projectRef.id, requests, sources);
   }
-  return state.create(reviewId, projectRef.name, projectRef.id, requests, sources);
+  return state.create(reviewId, projectRef.name, projectRef.id, input.lane!, requests, sources);
 }
 
 function validateOpeningInput(input: GenerationReviewInput): void {
   if ((input.requests !== undefined) === (input.preparationFailure !== undefined)) throw reviewError('CODEX_REVIEW_INVALID', 'Supply requests or a preparation failure, exclusively.');
   if (Boolean(input.reviewId) !== (input.expectedRevision !== undefined)) throw reviewError('CODEX_REVIEW_INVALID', 'Existing reviews require their expected revision.');
   if (input.preparationFailure && !input.reviewId) throw reviewError('CODEX_REVIEW_INVALID', 'Preparation failures require an existing review.');
+  if (!input.reviewId && !input.lane) throw reviewError('CODEX_REVIEW_INVALID', 'A new review requires the generation lane from generation context.');
 }
 
 async function prepareRequest(input: {
@@ -44,12 +47,18 @@ async function prepareRequest(input: {
   homeDir?: string;
   request: NonNullable<GenerationReviewInput['requests']>[number];
   previous?: GenerationReviewSource;
+  estimator: GenerationCostEstimator;
 }): Promise<{ request: GenerationReviewRequest; source: GenerationReviewSource }> {
   validateReviewControls(input.request.controls);
   const read = await readMediaGenerationReview({ projectName: input.project, homeDir: input.homeDir, documentPath: input.request.reviewFile });
   if (read.projectRef.id !== input.projectId) throw reviewError('CODEX_REVIEW_STALE', 'The Project changed while preparing the review. Open a fresh review.');
   if (input.request.expectedRequestSha256 && read.requestSha256 !== input.request.expectedRequestSha256) throw reviewError('CODEX_REVIEW_STALE', 'The request changed after validation. Validate the current bytes before opening a review.');
-  const preview = await projectMediaGenerationPreview({ projectName: read.projectRef.name, homeDir: input.homeDir, documentPath: input.request.reviewFile, document: read.document });
+  const route = input.request.routes.find((candidate) => sameRoute(candidate, read.document));
+  if (!route) throw reviewError('CODEX_REVIEW_INVALID', 'The prepared route is missing from the declared choices.');
+  const estimate = route.billing === 'hostPlanUsage'
+    ? hostPlanUsageEstimate(read.requestSha256)
+    : await input.estimator.estimate({ homeDir: input.homeDir, provider: read.document.provider, model: read.document.model, request: read.document.request, requestSha256: read.requestSha256 });
+  const preview = await projectMediaGenerationPreview({ projectName: read.projectRef.name, homeDir: input.homeDir, documentPath: input.request.reviewFile, document: read.document, requestSha256: read.requestSha256, estimate });
   const references = new Map<string, string>();
   const { documentPath: _documentPath, references: localReferences, ...safePreview } = preview;
   const request: GenerationReviewRequest = {

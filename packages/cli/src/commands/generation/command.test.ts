@@ -6,7 +6,6 @@ describe('generation command registry', () => {
   it.each([
     ['model', 'list'],
     ['spec', 'show'],
-    ['estimate'],
     ['run'],
   ])('has no obsolete generation command: %s', async (...input) => {
     const io: RenkuCliIo = {

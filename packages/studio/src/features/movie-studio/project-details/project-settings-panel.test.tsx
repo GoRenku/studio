@@ -14,6 +14,9 @@ vi.mock('@/services/studio-projects-api', () => ({
   readProjectSettings: vi.fn(),
   replaceProjectSettings: vi.fn(),
 }));
+vi.mock('@/services/studio-default-models-api', () => ({
+  readDefaultModelList: vi.fn(async () => ({ state: 'notSynced' })),
+}));
 vi.mock('@/services/studio-provider-credentials-api', () => ({
   readProviderCredentials: vi.fn(),
   updateProviderCredentials: vi.fn(),
@@ -56,7 +59,7 @@ describe('ProjectSettingsPanel', () => {
     expect(replaceProjectSettings).toHaveBeenCalledWith(
       'constantinople',
       expect.objectContaining({
-        version: 6,
+        version: 7,
         screenplayImport: expect.objectContaining({
           createContinuitySubjects: true,
           runScreenplayAnalysis: true,
@@ -81,7 +84,7 @@ describe('ProjectSettingsPanel', () => {
       { provider: 'elevenlabs', label: 'ElevenLabs', configured: true },
     ] });
     const providerSelects = await screen.findAllByRole('combobox', { name: 'Provider' });
-    fireEvent.click(providerSelects[1]!);
+    fireEvent.click(providerSelects[2]!);
     await waitFor(() => expect(readProviderCredentials).toHaveBeenCalledTimes(2));
     expect(await screen.findByRole('option', { name: 'Replicate' })).toBeTruthy();
     expect(replaceProjectSettings).not.toHaveBeenCalled();
@@ -129,9 +132,9 @@ describe('ProjectSettingsPanel', () => {
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Provider API key setup' })).toBeNull());
     const selects = screen.getAllByRole('combobox', { name: 'Provider' });
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Image Generation' })));
-    expect(selects[1]).toHaveProperty('disabled', false);
-    expect(selects[1]!.textContent).toContain('Fal.ai');
-    expect(selects[2]!.textContent).toContain('ElevenLabs');
+    expect(selects[2]).toHaveProperty('disabled', false);
+    expect(selects[2]!.textContent).toContain('Fal.ai');
+    expect(selects[3]!.textContent).toContain('ElevenLabs');
     expect(replaceProjectSettings).not.toHaveBeenCalled();
   });
 
@@ -147,9 +150,9 @@ describe('ProjectSettingsPanel', () => {
     expect(screen.getByRole('switch', { name: 'Analyze the screenplay' })).toBeTruthy();
     const providerSelects = screen.getAllByRole('combobox', { name: 'Provider' });
     expect(providerSelects[0]!.hasAttribute('disabled')).toBe(false);
-    expect(providerSelects[1]!.hasAttribute('disabled')).toBe(true);
+    expect(providerSelects[2]!.hasAttribute('disabled')).toBe(true);
     fireEvent.click(providerSelects[0]!);
-    expect(screen.getByRole('option', { name: 'ChatGPT Images 2.5 (Codex)' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Codex (built-in)' })).toBeTruthy();
     await waitFor(() => expect(readProviderCredentials).toHaveBeenCalledTimes(2));
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(1));
@@ -222,7 +225,7 @@ function resource(value: ReturnType<typeof settings>) {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 6 as const,
+    version: 7 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -231,22 +234,35 @@ function settings(): ProjectSettingsDocument {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      displayPreview: true,
       enableProviderPromptExpansion: true,
       image: {
         provider: 'codex',
+        model: null,
+        chooseRouteBeforeGenerating: true,
         askBeforeGenerating: false,
         runGenerationsConcurrently: true,
         maxConcurrentGenerations: 5,
       },
+      imageEdit: {
+        provider: 'fal-ai',
+        model: null,
+        chooseRouteBeforeGenerating: true,
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
+        maxConcurrentGenerations: 1,
+      },
       video: {
         provider: 'fal-ai',
+        model: null,
+        chooseRouteBeforeGenerating: true,
         askBeforeGenerating: true,
         runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,
       },
       audio: {
         provider: 'elevenlabs',
+        model: null,
+        chooseRouteBeforeGenerating: true,
         askBeforeGenerating: true,
         runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,

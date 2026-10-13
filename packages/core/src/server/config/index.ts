@@ -15,6 +15,7 @@ export {
   resolveRecommendedRenkuStorageRoot,
   resolveRenkuConfigDir,
   resolveRenkuConfigPath,
+  resolveRenkuStateDir,
   type RenkuConfigPathOptions,
 } from './paths.js';
 export {

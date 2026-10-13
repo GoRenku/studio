@@ -159,5 +159,7 @@ function preview(): MediaGenerationPreviewResource {
     configuration: { nested: [null, true, 3], emptyArray: [], emptyObject: {} },
     editable: true,
     diagnostics: [],
+    requestSha256: 'a'.repeat(64),
+    estimate: null,
   };
 }

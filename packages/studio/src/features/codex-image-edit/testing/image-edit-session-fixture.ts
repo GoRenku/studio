@@ -20,6 +20,7 @@ export function imageEditRouteFixture(change: Partial<ImageEditRoute> = {}): Ima
       { id: 'erase', label: 'Erase', instructionRequired: false, placeholder: 'Optional fill' },
     ],
     styleReference: true,
+    billing: 'providerCharge',
     controls: { groups: [{ label: 'Output', fields: [{
       key: '/detail', label: 'Detail', kind: 'enum', initialValue: 'medium',
       options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }],

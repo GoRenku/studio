@@ -40,9 +40,10 @@ async function fixture(mediaKind = 'video') {
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, bytes);
   const validate = vi.fn(async () => undefined);
+  const estimateCost = vi.fn(async () => ({ state: 'computed', amountUsd: 0.5, basis: '5 seconds × $0.1', observedAt: '2026-10-12T00:00:00.000Z', notes: [] }));
   const input = { flags: { file: documentPath }, runtime: {
     projectDataService, homeDir, projectName: 'movie',
-    mediaEngine: { validate }, createProviderContext: async () => ({}),
+    mediaEngine: { validate, estimateCost }, createProviderContext: async () => ({}),
   } };
   return { input, validate, file, document, bytes };
 }
@@ -55,7 +56,10 @@ describe('generation prepare', () => {
     expect(report).toMatchObject({ valid: true, mediaKind: kind,
       requestSha256: createHash('sha256').update(bytes).digest('hex'), studio: { delivery: 'delivered' } });
     expect(validate).toHaveBeenCalledOnce();
-    expect(projectMediaGenerationPreview).toHaveBeenCalledWith(expect.objectContaining({ document }));
+    const requestSha256 = createHash('sha256').update(bytes).digest('hex');
+    const estimate = { state: 'computed', amountUsd: 0.5, basis: '5 seconds × $0.1', observedAt: '2026-10-12T00:00:00.000Z', sourceUrl: null, notes: [], requestSha256 };
+    expect(report).toMatchObject({ estimate });
+    expect(projectMediaGenerationPreview).toHaveBeenCalledWith(expect.objectContaining({ document, requestSha256, estimate }));
     expect(notifyStudioGenerationPreviews).toHaveBeenCalledOnce();
     expect(vi.mocked(notifyStudioGenerationPreviews).mock.calls[0]![0].notification.previews[0]!.prompt).toBe('Authored');
   });

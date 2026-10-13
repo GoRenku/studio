@@ -1,5 +1,11 @@
 # 0074 Use Core-Owned Project Workflow Settings
 
+> **Decision 0115 update:** Project Settings version 7 replaces the per-media
+> settings with generation lanes (Image Generation, Image Editing, Video
+> Generation, Audio Generation), each with a provider, a model, "Choose
+> Provider and Model Each Time" and "Ask Before Generating". `displayPreview`
+> is removed.
+
 > **Decision 0103 update:** Image, Video, and Audio offer keyed general media
 > providers; ElevenLabs appears only in Audio, World Labs in none of these
 > menus, and keyless Codex in Image. The preference remains opaque and does not

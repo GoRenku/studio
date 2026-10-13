@@ -11,6 +11,7 @@ import { readProjectShell } from '../resources/project-shell.js';
 import {
   readProjectSettings,
   replaceProjectSettings,
+  updateGenerationLaneSettings,
 } from '../project-settings/index.js';
 import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
@@ -28,6 +29,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'readProjectInformationResource'
   | 'readProjectSettings'
   | 'replaceProjectSettings'
+  | 'updateGenerationLaneSettings'
   | 'patchProjectInformation'
   | 'resolveStudioProjectRef'
 > {
@@ -43,6 +45,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
     readProjectInformationResource: readProjectInformationResourceForProject,
     readProjectSettings,
     replaceProjectSettings,
+    updateGenerationLaneSettings,
     patchProjectInformation,
     resolveStudioProjectRef,
   };

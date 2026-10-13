@@ -25,6 +25,10 @@
     "./native-request-controls": {
       "types": "./dist/native-request-controls/contracts.d.ts",
       "import": "./dist/native-request-controls/contracts.js"
+    },
+    "./route-choice": {
+      "types": "./dist/route-choice/contracts.d.ts",
+      "import": "./dist/route-choice/contracts.js"
     }
   },
   "files": [

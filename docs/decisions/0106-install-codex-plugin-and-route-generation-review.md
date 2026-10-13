@@ -1,5 +1,9 @@
 # Install Codex Plugin And Route Generation Review
 
+> **Decision 0118 update:** Purpose desk Generate messages are neutral
+> notices, not approvals; confirmation is the consumed review Submit or Ask
+> off, separate from host approval.
+
 Installer scope updated by [ADR 0111](0111-plugin-only-agent-installation.md): automatic Claude/Codex plugins; other harnesses use separate instructions.
 
 Date: 2026-10-03

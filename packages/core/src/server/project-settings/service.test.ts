@@ -48,13 +48,72 @@ describe('Project Settings service', () => {
     ).resolves.toMatchObject({ settings });
   });
 
+  it('updates one generation lane and clears its model when the provider changes', async () => {
+    const fixture = await createFixture();
+    const target = { projectName: fixture.projectName, homeDir: fixture.homeDir };
+    const modelled = await fixture.service.updateGenerationLaneSettings({
+      ...target,
+      lane: 'imageEdit',
+      model: { key: 'fictional-edit', name: 'Fictional Edit' },
+      chooseRouteBeforeGenerating: false,
+    });
+    expect(modelled.resourceKeys).toEqual(['project-settings']);
+    expect(modelled.resource.settings.generation.imageEdit).toEqual({
+      ...DEFAULT_PROJECT_SETTINGS.generation.imageEdit,
+      model: { key: 'fictional-edit', name: 'Fictional Edit' },
+      chooseRouteBeforeGenerating: false,
+    });
+    expect(modelled.resource.settings.generation.image).toEqual(DEFAULT_PROJECT_SETTINGS.generation.image);
+
+    const switched = await fixture.service.updateGenerationLaneSettings({
+      ...target,
+      lane: 'imageEdit',
+      provider: 'fictional-provider',
+    });
+    expect(switched.resource.settings.generation.imageEdit).toMatchObject({
+      provider: 'fictional-provider',
+      model: null,
+      chooseRouteBeforeGenerating: false,
+    });
+
+    const named = await fixture.service.updateGenerationLaneSettings({
+      ...target,
+      lane: 'imageEdit',
+      provider: 'fal-ai',
+      model: { key: 'fictional-edit', name: 'Fictional Edit' },
+    });
+    expect(named.resource.settings.generation.imageEdit.model).toEqual({ key: 'fictional-edit', name: 'Fictional Edit' });
+  });
+
+  it.each([
+    ['an unknown lane', { lane: 'imageEditing' as 'imageEdit', askBeforeGenerating: false }],
+    ['an empty change', { lane: 'video' as const }],
+  ])('rejects %s without writing', async (_name, change) => {
+    const fixture = await createFixture();
+    const target = { projectName: fixture.projectName, homeDir: fixture.homeDir };
+    await expect(fixture.service.updateGenerationLaneSettings({ ...target, ...change }))
+      .rejects.toMatchObject({ code: 'PROJECT_SETTINGS003' });
+    await expect(fixture.service.readProjectSettings(target))
+      .resolves.toMatchObject({ settings: DEFAULT_PROJECT_SETTINGS });
+  });
+
+  it('rejects an invalid lane value through the document contract', async () => {
+    const fixture = await createFixture();
+    await expect(fixture.service.updateGenerationLaneSettings({
+      projectName: fixture.projectName,
+      homeDir: fixture.homeDir,
+      lane: 'audio',
+      provider: 'Not Kebab',
+    })).rejects.toMatchObject({ code: 'PROJECT_SETTINGS002' });
+  });
+
   it('rejects invalid replacement before changing the stored document', async () => {
     const fixture = await createFixture();
     await expect(
       fixture.service.replaceProjectSettings({
         projectName: fixture.projectName,
         homeDir: fixture.homeDir,
-        settings: { ...DEFAULT_PROJECT_SETTINGS, version: 7 as 6 },
+        settings: { ...DEFAULT_PROJECT_SETTINGS, version: 8 as 7 },
       })
     ).rejects.toMatchObject({ code: 'PROJECT_SETTINGS002' });
     await expect(

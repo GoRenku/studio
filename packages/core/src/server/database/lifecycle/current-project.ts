@@ -5,7 +5,7 @@ import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { resolveProjectFolder } from '../../files/project-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import {
-  resolveRenkuConfigDir,
+  resolveRenkuStateDir,
   resolveRenkuStorageRoot,
   type RenkuConfigPathOptions,
 } from '../../config/index.js';
@@ -205,7 +205,7 @@ async function writeCurrentProjectDescriptor(
 }
 
 function resolveCurrentProjectPath(input: RenkuConfigPathOptions = {}): string {
-  return path.join(resolveRenkuConfigDir(input), CURRENT_PROJECT_FILE);
+  return path.join(resolveRenkuStateDir(input), CURRENT_PROJECT_FILE);
 }
 
 function isNodeError(error: unknown): error is Error & { code: string } {

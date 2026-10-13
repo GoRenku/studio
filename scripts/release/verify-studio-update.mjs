@@ -7,7 +7,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { coreRoot, fixtureForProduct, releaseIdentity, verifyExtractedArchive } from './upgrades/fixtures.mjs';
+import { coreRoot, fixtureForProduct, releaseIdentity, resolveProductRuntimeDescriptorPath, verifyExtractedArchive } from './upgrades/fixtures.mjs';
 import { assertJournalComplete, assertPreserved, observeProject } from './upgrades/preservation.mjs';
 import { launchDesktopTerminal, retainWindowsUserPath, runInstalledLauncher } from './upgrades/desktop-terminal.mjs';
 import { isolatedEnvironment } from './verify-project-upgrade.mjs';
@@ -83,6 +83,7 @@ const environment = {
   HOME: home,
   ZDOTDIR: home,
   XDG_CONFIG_HOME: path.join(home, '.config'),
+  XDG_STATE_HOME: path.join(home, '.local', 'state'),
   FLATPAK_XDG_CONFIG_HOME: path.join(home, '.config'),
   USERPROFILE: home,
   APPDATA: path.join(home, 'AppData', 'Roaming'),
@@ -100,7 +101,10 @@ const environment = {
   RENKU_BIN_ROOT: binRoot,
 };
 const launcher = path.join(binRoot, process.platform === 'win32' ? 'renku.cmd' : 'renku');
-const descriptorPath = process.platform === 'win32' ? path.join(environment.LOCALAPPDATA, 'Renku/Studio/studio-runtime.json') : path.join(home, '.config/renku/studio-runtime.json');
+const sourceNode = path.join(sourceProduct, 'runtime/node', process.platform === 'win32' ? 'node.exe' : 'bin/node');
+const targetNode = path.join(targetProduct, 'runtime/node', process.platform === 'win32' ? 'node.exe' : 'bin/node');
+const sourceDescriptorPath = resolveProductRuntimeDescriptorPath(sourceNode, sourceProduct, environment);
+const candidateDescriptorPath = resolveProductRuntimeDescriptorPath(targetNode, targetProduct, environment);
 const installedProduct = () => process.platform === 'win32' ? readFileSync(path.join(installRoot, 'current.txt'), 'utf8').trim() : path.join(installRoot, 'current');
 const prompt = createInterface({ input: process.stdin, output: process.stdout });
 const restoreUserPath = retainWindowsUserPath(binRoot);
@@ -116,7 +120,6 @@ try {
   assert.deepEqual(installation, { installRoot, binRoot }, 'The installer did not remain inside the isolated fixture.');
   run(launcher, ['init', storageRoot], environment);
   const created = JSON.parse(run(launcher, ['create', 'upgrade-fixture', '--title', 'Update Rehearsal', '--logline', 'Saved before the update.', '--json'], environment));
-  const sourceNode = path.join(sourceProduct, 'runtime/node', process.platform === 'win32' ? 'node.exe' : 'bin/node');
   const recipeUrl = new URL('./upgrades/recipe.mjs', import.meta.url).href;
   execFileSync(sourceNode, ['--input-type=module', '--eval', `import { populateProject } from ${JSON.stringify(recipeUrl)}; await populateProject(...${JSON.stringify([sourceProduct, created.projectPath, fixture.schemaGeneration])});`], { env: environment, cwd: root });
   if (fixture.schemaGeneration >= 71) {
@@ -134,8 +137,8 @@ try {
   launchDesktopTerminal(root, 'start-fixture', launcher, ['studio', 'start'], environment);
   const first = await waitForStatus('available', sourceRelease.version, 30_000);
   assert.equal(first.publishedVersion, targetRelease.version);
-  assert.ok(existsSync(descriptorPath), 'Studio used a different profile; do not continue with the handoff.');
-  const oldPid = readJson(descriptorPath).pid;
+  assert.ok(existsSync(sourceDescriptorPath), 'Studio used a different profile; do not continue with the handoff.');
+  const oldPid = readJson(sourceDescriptorPath).pid;
   console.log('\nIn the browser, open the update indicator and choose Download and update. Complete the skills prompts in the new Terminal window.');
   console.log(`Evidence and request log: ${root}`);
   const updated = await waitForStatus('current', targetRelease.version, 300_000);
@@ -151,7 +154,7 @@ try {
   const retried = await fetch('http://localhost:5173/studio-api/projects/upgrade-fixture');
   assert.ok(retried.ok, `Project did not recover after fixing the backup destination: ${await retried.text()}`);
   await prompt.question('Confirm the reopened browser shows no update indicator and the saved Project is visible. Also check a second tab and close/reopen the first tab during handoff. Press Return only after those checks pass. ');
-  const nextPid = readJson(descriptorPath).pid;
+  const nextPid = readJson(candidateDescriptorPath).pid;
   assert.notEqual(nextPid, oldPid, 'The original Studio process is still serving.');
   assert.throws(() => process.kill(oldPid, 0), 'The original Studio process did not exit');
   assert.equal(readJson(path.join(installedProduct(), 'RELEASE.json')).version, targetRelease.version);
@@ -179,7 +182,7 @@ try {
   throw error;
 } finally {
   prompt.close();
-  if (existsSync(launcher) && existsSync(descriptorPath)) {
+  if (existsSync(launcher) && (existsSync(candidateDescriptorPath) || existsSync(sourceDescriptorPath))) {
     try {
       run(launcher, ['studio', 'stop'], environment);
     } catch (error) {

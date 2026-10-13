@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { DialogueDirectionDraft, DialogueDirectionRoute, DialogueDirectionSession, DialogueLineRange } from '@gorenku/studio-codex/dialogue-direction';
 import type { JsonValue } from '@gorenku/studio-core/client';
 import { initialNativeRequestValues } from '@/features/codex-panels/native-request-values';
-import { directionGenerateApproval } from './direction-disclosure';
 import { sameDialogueLineRange } from './dialogue-line-range';
 import { directionSpeakers, linesInDialogueRange } from './direction-speakers';
 import type { DialogueDirectionSessionInteraction } from './use-dialogue-direction-session';
@@ -50,7 +49,7 @@ export function useDirectionDesk(session: DialogueDirectionSession, interaction:
         scripts,
         voices: speakers.map((speaker) => ({ castMemberId: speaker.castMemberId, castVoiceId: castVoiceIds[speaker.castMemberId] ?? '' })),
         values: values[operationName],
-      }, directionGenerateApproval(route));
+      });
     },
   };
 }

@@ -24,13 +24,9 @@ import type { GenerationExecutionReport } from './execution-result.js';
 import { showGenerationSchema } from './schema.js';
 import { listGenerationModels, showGenerationModel } from './models/queries.js';
 import { importGenerationModel, removeGenerationModel } from './models/mutations.js';
-import {
-  inspectGenerationConfigurationVisualization,
-  prepareGenerationConfigurationVisualizationCommand,
-  invalidateGenerationConfigurationVisualization,
-  refreshGenerationConfigurationVisualization,
-  storeGenerationConfigurationVisualization,
-} from './configuration-visualization.js';
+import { syncGenerationDefaultModels } from './default-models-sync.js';
+import { estimateGenerationRequest } from './estimate.js';
+import { recordGenerationPrice, showGenerationPrice } from './price.js';
 
 export interface GenerationCommandFlags {
   project?: string;
@@ -44,9 +40,6 @@ export interface GenerationCommandFlags {
   beat?: string | string[];
   provider?: string;
   model?: string;
-  schema?: string;
-  template?: string;
-  payload?: string;
   routeIndex?: string[];
   query?: string;
   ifRevision?: string;
@@ -75,13 +68,12 @@ const handlers = [
   { path: ['models', 'show'], run: showGenerationModel },
   { path: ['models', 'import'], run: importGenerationModel },
   { path: ['models', 'remove'], run: removeGenerationModel },
+  { path: ['default-models', 'sync'], run: syncGenerationDefaultModels },
+  { path: ['price', 'show'], run: showGenerationPrice },
+  { path: ['price', 'record'], run: recordGenerationPrice },
+  { path: ['estimate'], run: estimateGenerationRequest },
   { path: ['context'], run: showGenerationContext },
   { path: ['schema', 'show'], run: showGenerationSchema },
-  { path: ['configuration-visualization', 'inspect'], run: inspectGenerationConfigurationVisualization },
-  { path: ['configuration-visualization', 'prepare'], run: prepareGenerationConfigurationVisualizationCommand },
-  { path: ['configuration-visualization', 'store'], run: storeGenerationConfigurationVisualization },
-  { path: ['configuration-visualization', 'refresh'], run: refreshGenerationConfigurationVisualization },
-  { path: ['configuration-visualization', 'invalidate'], run: invalidateGenerationConfigurationVisualization },
   { path: ['validate'], run: validateGenerationRequest },
   { path: ['prepare'], run: prepareGenerationRequest },
   { path: ['preview', 'show'], run: showGenerationPreview },
@@ -117,7 +109,7 @@ export async function runGenerationCommand(options: {
     unknownCommand: (commandPath) => new StructuredError({
       code: 'CLI019',
       message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
-      suggestion: 'Use generation context, models, schema show, configuration-visualization, prepare, validate, preview show, execute, or recover.',
+      suggestion: 'Use generation context, models, default-models sync, price show|record, estimate, schema show, prepare, validate, preview show, execute, or recover.',
     }),
   });
   const render = textRenderers[options.input.join(' ')];

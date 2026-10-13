@@ -1,5 +1,9 @@
 # 0086 Use Skill-Directed Provider Engines And Asset Generation Provenance
 
+> **Decision 0117 update:** Provider prices return as cached provider
+> metadata owned by Engines, with estimates shown before review. Core, Studio
+> and Skills still hold no price data.
+>
 > **Decision 0087 update:** Provider-native authorship and execution ownership remain unchanged. Core additionally owns deterministic, advisory Project context and relationship-derived media suggestions for each purpose and target.
 >
 > **Decision 0088 update:** Engines expose existing live provider input schemas

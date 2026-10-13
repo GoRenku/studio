@@ -36,7 +36,7 @@ does not mean every command uses it. This table reflects the current handlers.
 | Cast facts and `cast design` | Current authoring project only; `--project` does not retarget these handlers. |
 | `location` (including World), `prop`, `production-design`, `director context` | Current authoring project only. |
 | `generation context`, `validate`, `execute`, `recover`, `preview show` | Supports `--project` for Project context/files. |
-| `generation schema show`, `generation models`, `generation configuration-visualization` | Global provider/model/configuration operations; `--project` is not a target. |
+| `generation schema show`, `generation models`, `generation default-models sync`, `generation price` | Global provider/model operations; `--project` is not a target. |
 | `project open`, `select`, `migrate` | Positional project name. `open` changes authoring selection; `select` requests Studio selection. |
 | `project current`, `close` | Reads or clears authoring selection. |
 | `create` | Positional new project name; successful creation establishes authoring selection. |
@@ -107,6 +107,29 @@ open `/?settings=provider-credentials` to guide the user to the existing global
 Settings key editor. Closing or saving preserves the current route and other
 query parameters.
 
+## `renku settings generation`
+
+Show or change the generation lanes of Project Settings without replacing the
+whole document. Agents change them only at the user's direct request.
+
+```bash
+renku settings generation show [--lane image|image-edit|video|audio] --json
+renku settings generation set --lane image-edit --provider fal-ai
+renku settings generation set --lane video --model <model-guide-key> --model-name <name>
+renku settings generation set --lane video --clear-model
+renku settings generation set --lane image-edit --choose-route off --ask-before-generating on
+```
+
+`show` prints `{ "enableProviderPromptExpansion", "lanes": { "<lane>": {
+"provider", "model", "chooseRouteBeforeGenerating", "askBeforeGenerating",
+"runGenerationsConcurrently", "maxConcurrentGenerations" } } }`. `model` is null
+for the Skill's recommendation, or `{ "key", "name" }` from the Default Model
+List. `set` calls Core's focused lane command: `--model` requires
+`--model-name`, `--clear-model` returns to the recommendation, and changing
+`--provider` without a model clears the model. Invalid flags fail with
+`CLI167`; an empty change or unknown lane fails with `PROJECT_SETTINGS003`.
+`set` notifies Studio like `settings set`.
+
 ## `renku init`
 
 Create or inspect the global Renku config.
@@ -130,20 +153,32 @@ Behavior:
 - Leaves an existing config in place and reports its current storage root.
 - Fails when the storage root argument is missing.
 
-The same global YAML config accepts `codexGenerationReview: auto`,
-`codexGenerationReview: panel` or `codexGenerationReview: visualize`. Omission
-defaults to `auto`; new configs write that default. There is no UI toggle. Edit this key to compare the
-Codex desktop review surfaces, retaining the existing version and storageRoot.
-Invalid values fail with `CONFIG015`. Skills read the effective preference from
-`generation context` rather than reading this file themselves.
+The config directory holds only user-authored files: `config.yaml`, provider
+keys in `.env`, `codex-plugin.json` and `model-library/`. Mutable Renku state
+lives in the Renku state directory instead, so sandboxed agents can write it
+without escalating:
 
-`codexGenerationReviewDisplayMode: inline` or
+- macOS and Linux/Unix: `${XDG_STATE_HOME:-$HOME/.local/state}/renku`;
+- Windows: `%LOCALAPPDATA%\Renku\Studio\State`.
+
+| File | Holds |
+| --- | --- |
+| `current-project.json` | The Project the CLI works on |
+| `studio-runtime.json` | The running Studio's URL, port, pid, heartbeat and notification token |
+| `studio-events.jsonl` | Resource-changed events that refresh open Studio windows |
+| `cache/provider-metadata/` | Engines' cache of provider input schemas, prices and recorded price entries |
+| `default-models.json` | Copy of the Skill's Default Model List |
+
+Old state files under the config directory are not read; select the current
+Project again after upgrading.
+
+The global YAML config accepts `codexGenerationReviewDisplayMode: inline` or
 `codexGenerationReviewDisplayMode: fullscreen` independently selects the initial
 packaged review display preference. Omission defaults to `inline`; new configs
 write that default. Invalid values fail with `CONFIG016`. The MCP resource
 advertises both modes and supplies the configured initial preference. The host
 controls its actual display mode; the app follows host switches without losing
-edits. This setting does not affect Visualize or Studio Preview.
+edits. This setting does not affect Studio Preview.
 
 Studio can create its recommended Project Library during first-run setup. Run
 this command before completing onboarding when a custom Project Library is
@@ -225,7 +260,7 @@ Arguments:
 Behavior:
 
 - Opens the project database, reads the project record, and writes
-  `current-project.json` in the Renku config directory.
+  `current-project.json` in the Renku state directory.
 - Closes the SQLite handle after recording the descriptor. The current project
   is persisted as a descriptor, not as a long-lived CLI database session.
 - Returns status `set` when the current project changes and `unchanged` when
@@ -1613,21 +1648,23 @@ Candidate roles, availability, display/workflow selection and dialogue ranges
 remain separate relationship facts. Readable output also shows candidate title
 and path for direct use. Other generation subcommand outputs are unchanged.
 
-`workflowPolicy.codexGenerationReview` returns the effective global `auto`,
-`panel` or `visualize` preference. `workflowPolicy.codexPluginInstalled` returns
-the verified installation flag from `codex-plugin.json` beside the global config.
-Missing installation state means false; invalid state uses `CONFIG017`. The
-setting is separate from Project `displayPreview`.
+`workflowPolicy` resolves the purpose's generation lane: `lane`, `provider`,
+`model` (null for the Skill recommendation, or `{ key, name }`),
+`chooseRouteBeforeGenerating`, `askBeforeGenerating`, `concurrencyLimit` and
+`enableProviderPromptExpansion`. `image.edit` uses the Image Editing lane; every
+other purpose uses the lane of its output media kind.
+`workflowPolicy.codexPluginInstalled` returns the verified installation flag from
+`codex-plugin.json` beside the global config. Missing installation state means
+false; invalid state uses `CONFIG017`.
 `workflowPolicy.codexGenerationReviewDisplayMode` returns the effective global
 `inline` or `fullscreen` preference, defaulting to `inline`.
 Skills use trusted host context and the current Renku connection to select presentation.
-Codex Desktop probes available panel capabilities for `auto` and `panel`; advertised
-support selects the panel even without an installer record. Explicit Visualize
-still wins. Without a probe or installation record it uses Visualize. An unavailable
-or failed probe, a missing probe with installation recorded, or a failed handshake
-stops without opening another review. Panel
-review never automatically delivers Studio Preview; CLI/non-Codex sessions always
-require it. The CLI context command makes no hosting-interface guesses.
+Codex Desktop probes available panel capabilities; advertised support selects the
+panel even without an installer record. An unavailable or failed probe, a missing
+probe with installation recorded, or a failed handshake stops without opening
+another review. Panel review never automatically delivers Studio Preview;
+CLI/non-Codex sessions use it when "Ask Before Generating" is on. The CLI context
+command makes no hosting-interface guesses.
 
 The report contains current Project and target facts, workflow policy,
 purpose-level output guidance, relevant Lookbooks and domain relationships, and
@@ -1655,8 +1692,7 @@ markers. `reviewLabel` is required for Renku review; `promptMention` is optional
 and is never derived from media kind.
 
 Inspect the selected provider/model's current raw input schema before authoring
-its native request. `--output` atomically saves the same unmodified JSON for the
-generation configuration visualization cache:
+its native request. `--output` atomically saves the same unmodified JSON:
 
 ```bash
 renku generation schema show \
@@ -1670,80 +1706,6 @@ This command supplies technical fields and constraints only. Retained model
 prompt guides remain the editorial authority for writing an effective prompt.
 The provider Skill's canonical model-guide key is not accepted as a substitute
 for the exact provider API id.
-
-For a fresh task-local HTML instance, use the saved descriptor and current payload:
-
-```bash
-renku generation configuration-visualization prepare \
-  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
-  --payload tmp/scratch/generation-configuration-payload.json \
-  --route-index <installed-provider-route-index> \
-  --output <absolute-task-visualization-html> --json
-```
-
-Pass all installed provider indexes with repeated `--route-index` flags. Core
-resolves their effective list with the personal library and computes the catalog
-digest; the preparation input descriptor does not require a supplied digest.
-Every result includes the resolved `descriptor` for subsequent cache operations;
-non-fresh results also include the complete `routes` for selector authoring.
-No catalog file is written. Core checks cache compatibility and freshness, embeds the opaque JSON payload
-with HTML-safe escaping, and atomically writes the instance outside the shared
-cache. A fresh result includes `outputPath`; other cache statuses return without
-writing an instance. No provider request occurs. The Skill's
-`prepare-generation-configuration-visualization.mjs` combines descriptor creation
-and this CLI operation in one invocation. Its contract fingerprint comes from
-`generation-configuration-template.md`, independently of workflow instructions.
-
-In the Codex inline-configuration flow, inspect the Core-owned system cache
-before calling `schema show`:
-
-```bash
-renku generation configuration-visualization inspect \
-  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
-  --json
-```
-
-The descriptor names the exact provider, executable model, operation, and input
-mode, and fingerprints the route catalogs, installed Visualize Skill, and
-template contract. A `fresh` result returns absolute `schemaPath` and
-`templatePath` values and requires no live schema request. Entries expire
-exactly 24 hours after the manifest's `checkedAt`, regardless of file
-modification times.
-
-After obtaining one current schema for an expired entry, refresh it:
-
-```bash
-renku generation configuration-visualization refresh \
-  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
-  --schema tmp/scratch/current-input-schema.json \
-  --json
-```
-
-An unchanged semantic schema returns `refreshed` and keeps the existing
-template. `schema-changed`, `miss`, `invalid`, or `incompatible` requires a new
-request-independent template, stored with:
-
-```bash
-renku generation configuration-visualization store \
-  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
-  --schema tmp/scratch/current-input-schema.json \
-  --template tmp/scratch/generation-configuration-template.html \
-  --json
-```
-
-The cache lives under the Core-resolved Renku platform config directory, not a
-Project. Templates contain one Renku request-payload placeholder; prompts,
-targets, references, selections, credentials, and browser state stay in fresh
-task-local instances. An expired entry is never used when refresh fails.
-
-If final live provider validation rejects a cached-schema value, expire that
-exact entry before rebuilding it:
-
-```bash
-renku generation configuration-visualization invalidate \
-  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
-  --json
-```
 
 For example, a Pika image-to-video request first inspects the exact operation:
 
@@ -1785,12 +1747,13 @@ renku generation prepare --file tmp/operations/media-generation/request.json --j
 
 The command loads the request once, delegates provider validation to Engines,
 projects that same document through Core, and delivers Preview to Studio.
-It returns provider, model, media kind, `requestSha256`, reference diagnostics,
-and `studio.delivery`. Invalid requests never open Preview; unavailable Studio
+It returns provider, model, media kind, `requestSha256`, the cost `estimate`,
+reference diagnostics, and `studio.delivery`; the estimate is also shown in
+Studio Preview. Invalid requests never open Preview; unavailable Studio
 returns `CLI144` rather than readiness. It does not execute generation or wait
 for confirmation. Skills retain the hash for Execute after normal confirmation.
-Use standalone Validate when Preview is disabled, and standalone Preview for
-Codex or an ordered multi-request review.
+Use standalone Validate when "Ask Before Generating" is off, and standalone
+Preview for Codex or an ordered multi-request review.
 
 Validate an Engines-owned provider request:
 
@@ -1812,7 +1775,8 @@ renku generation preview show \\
   --json
 ```
 
-Preview accepts a `codex` review document. It returns promptly after delivery and
+Preview accepts a `codex` review document. Each preview carries a cost estimate;
+a `codex` document shows plan usage instead. It returns promptly after delivery and
 never executes generation. Studio may update only the top-level prompt; the Skill
 rereads the document and rebuilds provider-native request JSON conversationally.
 
@@ -1853,7 +1817,63 @@ provider recovery. Provenance assembly, validation, or write failures identify
 completed media, the provider request id when available, and any complete
 temporary provenance file; they must not trigger another generation. Validation
 failures retain Core diagnostics and do not publish invalid provenance.
-There is no Spec, Run, estimate, approval token, freeze, or simulation command.
+Estimate one prepared request without delivering Preview:
+
+```bash
+renku generation estimate --file tmp/operations/media-generation/request.json --json
+```
+
+It returns Core's `GenerationCostEstimate`: `state` (`quoted`, `computed`,
+`missingPrice`, `expired` or `unpriced`), `amountUsd` (null whenever no amount
+is known, never 0 for a missing price), `basis`, `observedAt`, `sourceUrl`,
+`notes` and `requestSha256`. Engines tries a live provider quote, then a fresh
+recorded price, then the provider's API price. A failed estimate returns
+`missingPrice` with the reason in `notes`; it never blocks generation.
+
+Show or record the cached price of one route:
+
+```bash
+renku generation price show --provider <provider> --model <exact-provider-api-id> --json
+renku generation price record --provider <provider> --model <exact-provider-api-id> --file tmp/scratch/price.json --json
+```
+
+`show` returns `{ provider, model, recorded, providerApi }`, each null or
+`{ price, ageHours, expired }`. `record` stores an agent-researched `RoutePrice`
+in the provider metadata cache:
+
+```json
+{
+  "currency": "USD",
+  "components": [{
+    "unit": "second",
+    "unitPriceUsd": 0.1,
+    "quantity": { "kind": "field", "pointer": "/duration" },
+    "tiers": [{ "when": { "/resolution": "1080p" }, "unitPriceUsd": 0.2 }]
+  }],
+  "source": { "kind": "recorded", "url": "https://provider.example/pricing", "observedAt": "2026-10-12T10:00:00Z" },
+  "expiresAt": "2026-10-26T10:00:00Z",
+  "notes": []
+}
+```
+
+Units are `request`, `image`, `megapixel`, `second`, `character` and `credit`;
+quantities are `constant`, request `field` (JSON Pointer with optional default),
+`characters` and `imageMegapixels` (a guessed image size times an optional
+image count field). Engines validates the entry (`ENGINE_PRICE_INVALID`) and caps
+its expiry at 14 days after `observedAt`.
+
+Publish the Skill's Default Model List for Studio Settings and the Codex Route
+Chooser:
+
+```bash
+renku generation default-models sync --file <media-producer>/references/default-models.json --json
+```
+
+It needs no Project and no running Studio, validates the envelope
+(`DEFAULT_MODELS001`), writes `default-models.json` in the Renku state directory,
+and returns `{ changed, sha256, path }`; unchanged content is a no-op.
+
+There is no Spec, Run, approval token, freeze, or simulation command.
 
 ## `renku media import`
 

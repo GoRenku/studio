@@ -3,7 +3,9 @@ import type { GenerationReviewReference } from '@gorenku/studio-codex/client';
 import type { CodexApp } from '@/services/codex-app';
 import { Alert, AlertDescription } from '@/ui/alert';
 import { Button } from '@/ui/button';
+import { Checkbox } from '@/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { GenerationCostEstimateView } from '@/features/media-generation-request/generation-cost-estimate-view';
 import { MediaGenerationConfiguration } from '@/features/media-generation-request/media-generation-configuration';
 import { MediaGenerationReferenceCard } from '@/features/media-generation-request/media-generation-reference-card';
 import { MediaGenerationRequestView, type MediaGenerationRequestTab } from '@/features/media-generation-request/media-generation-request-view';
@@ -62,10 +64,15 @@ export function CodexGenerationReviewPanel() {
           </>}
         />
       </div> : null}
-      <div className='flex flex-wrap justify-end gap-3 border-t p-5'>
+      <div className='flex flex-wrap items-center justify-end gap-3 border-t p-5'>
+        {request ? <div className='mr-auto min-w-0'><GenerationCostEstimateView estimate={interaction.estimateFor(request.requestId)} outdated={interaction.estimateOutdated(request.requestId)} refreshing={interaction.estimateRefreshing(request.requestId)} /></div> : null}
         {interaction.pendingResponse && !interaction.busy ? <Button variant='outline' onClick={() => { void interaction.retryResponse(); }}>Retry review response</Button> : null}
         {interaction.notification ? <Button variant='outline' disabled={interaction.busy} onClick={() => { void interaction.retryNotification(); }}>Retry conversation notification</Button> : null}
         <Button variant='outline' disabled={!interaction.connected || interaction.busy || Boolean(interaction.pendingResponse) || !review || ['submitted', 'cancelled'].includes(review.phase)} onClick={() => { void interaction.respond('cancel'); }}>Cancel</Button>
+        <div className='flex items-center gap-2'>
+          <Checkbox id='generate-without-asking' checked={interaction.generateWithoutAsking} disabled={locked} onCheckedChange={(checked) => interaction.setGenerateWithoutAsking(checked === true)} />
+          <label htmlFor='generate-without-asking' className='text-sm'>Generate without asking next time</label>
+        </div>
         <Button disabled={locked || !request} onClick={() => { void interaction.respond('submit'); }}>Submit and generate</Button>
       </div>
       {review?.phase === 'submitted' ? <p role='status' className='px-5 pb-4 text-sm text-muted-foreground'>{interaction.notification ? 'The reviewed choices are saved. Conversation notification is pending.' : 'The reviewed request was submitted to the conversation.'}</p> : null}

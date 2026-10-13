@@ -48,10 +48,10 @@ describe('Codex dialogue direction bridge', () => {
     [{ start: 7, end: 9 }, 'Lines 7–9'],
   ])('posts the exact Generate message for %o', async (turnRange, label) => {
     const receipt: DialogueDirectionGenerateReceipt = { sessionId: 'session', actionId: 'action', turnRange, session: lineScriptsSessionFixture() };
-    await notifyDialogueDirectionGenerate(createDialogueDirectionApp('Direction'), receipt, 'I approve one paid run.');
+    await notifyDialogueDirectionGenerate(createDialogueDirectionApp('Direction'), receipt);
     expect(integration.extensions.message!.send).toHaveBeenCalledWith({
       role: 'user',
-      content: [{ type: 'text', text: `Generate dialogue Take · Shot plan 02-01 · ${label}. I approve one paid run. Session session, action action. Consume it with dialogue.direction.consume once.` }],
+      content: [{ type: 'text', text: `Generate dialogue Take · Shot plan 02-01 · ${label}. Session session, action action. Consume it with dialogue.direction.consume once.` }],
       _meta: { 'openai/message': { target: 'active', send: true } },
     });
   });

@@ -45,6 +45,7 @@ it.each([
   const recover = vi.fn(completedResult);
   vi.spyOn(providerRegistry, 'createRenkuMediaEngine').mockReturnValue({
     providerIds: ['atlas'], validate: vi.fn(), readInputSchema: vi.fn(), execute, recover,
+    estimateCost: vi.fn(), readRoutePrices: vi.fn(), recordRoutePrice: vi.fn(),
   });
   vi.spyOn(engineContext, 'createExecutionContext').mockImplementation(async ({ signal, outputDirectory }) => ({
     credential: 'fixture', signal, outputDirectory,
@@ -104,7 +105,7 @@ it('executes a validated request, imports its saved provenance, and exposes it t
   const input: GenerationCommandInput = {
     flags: { file, output: 'tmp/media/cover' },
     runtime: { homeDir, projectName: 'handoff', projectDataService: service, io, json: true,
-      mediaEngine: { providerIds: ['atlas'], validate: vi.fn(), readInputSchema: vi.fn(), execute, recover },
+      mediaEngine: { providerIds: ['atlas'], validate: vi.fn(), readInputSchema: vi.fn(), execute, recover, estimateCost: vi.fn(), readRoutePrices: vi.fn(), recordRoutePrice: vi.fn() },
       createProviderContext: async ({ signal }) => context(signal),
       createProviderExecutionContext: async ({ signal, outputDirectory }) => ({ ...context(signal), outputDirectory }),
     },

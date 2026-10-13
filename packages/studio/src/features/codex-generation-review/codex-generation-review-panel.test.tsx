@@ -12,6 +12,9 @@ const interaction = vi.hoisted(() => ({
   pendingResponse: undefined as GenerationReviewResponse | undefined,
   displayMode: 'inline' as CodexGenerationReviewDisplayMode,
   respond: vi.fn(), editPrompt: vi.fn(), editValue: vi.fn(),
+  generateWithoutAsking: false, setGenerateWithoutAsking: vi.fn(),
+  estimate: null as import('@gorenku/studio-core/client').GenerationCostEstimate | null,
+  estimateFor: vi.fn(() => interaction.estimate), estimateRefreshing: vi.fn(() => false), estimateOutdated: vi.fn(() => false),
 }));
 
 vi.mock('./use-codex-generation-review', () => ({ useCodexGenerationReview: () => interaction }));
@@ -24,11 +27,16 @@ beforeEach(() => {
   interaction.busy = false;
   interaction.pendingResponse = undefined;
   interaction.displayMode = 'inline';
+  interaction.generateWithoutAsking = false;
+  interaction.estimate = null;
+  interaction.estimateFor.mockImplementation(() => interaction.estimate);
+  interaction.estimateRefreshing.mockImplementation(() => false);
+  interaction.estimateOutdated.mockImplementation(() => false);
   interaction.review = {
-    reviewId: 'review', revision: 1, phase: 'ready', diagnostics: [],
+    reviewId: 'review', revision: 1, lane: 'video', phase: 'ready', diagnostics: [],
     requests: [{
       requestId: 'request', requestSha256: 'a'.repeat(64),
-      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'video-model', label: 'Video model', mediaKind: 'video' }],
+      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'video-model', label: 'Video model', mediaKind: 'video', billing: 'providerCharge' }],
       controls: { groups: [{ label: 'Video settings', fields: [
         { key: '/resolution', label: 'Resolution', kind: 'enum', options: [{ value: '768P', label: '768P' }, { value: '1080P', label: '1080P' }] },
         { key: '/duration', label: 'Duration (seconds)', kind: 'integer' },
@@ -39,6 +47,7 @@ beforeEach(() => {
         kind: 'mediaGenerationPreview', provider: 'fal-ai', model: 'video-model', mediaKind: 'video', prompt: 'Café', editable: true, diagnostics: [],
         configuration: { reference_image_urls: [], resolution: '768P', duration: 15, aspect_ratio: '16:9', prompt_expansion_mode: 'quality' },
         references: [{ requestPointer: '/reference_image_urls/0', referenceId: 'image', resourceUri: 'renku-reference://review/image', kind: 'image', reviewLabel: 'Opening frame', available: true }],
+        requestSha256: 'a'.repeat(64), estimate: null,
       },
     }],
     drafts: [],
@@ -124,5 +133,36 @@ describe('combined generation review configuration', () => {
     expect((screen.getByRole('spinbutton', { name: 'Seed' }) as HTMLInputElement).value).toBe('42');
     expect((screen.getByRole('spinbutton', { name: 'Height' }) as HTMLInputElement).value).toBe('1080');
     expect(screen.queryByRole('textbox', { name: 'Provider' })).toBeNull();
+  });
+
+  it('shows the estimate with no dollar amount for an unknown price', () => {
+    interaction.estimate = { state: 'missingPrice', amountUsd: null, basis: 'No price is known for this route', observedAt: null, sourceUrl: null, notes: [], requestSha256: 'a'.repeat(64) };
+    render(<CodexGenerationReviewPanel />);
+    const estimate = screen.getByRole('region', { name: 'Estimated cost' });
+    expect(estimate.textContent).toContain('No price is known for this route');
+    expect(estimate.textContent).not.toContain('$');
+  });
+
+  it('shows a computed estimate and host plan usage', () => {
+    interaction.estimate = { state: 'computed', amountUsd: 1.68, basis: '10 seconds × $0.168', observedAt: '2026-10-12T00:00:00.000Z', sourceUrl: 'https://example.test/pricing', notes: [], requestSha256: 'a'.repeat(64) };
+    render(<CodexGenerationReviewPanel />);
+    expect(screen.getByRole('region', { name: 'Estimated cost' }).textContent).toContain('$1.68');
+    cleanup();
+    interaction.estimate = { state: 'hostPlanUsage', amountUsd: null, basis: 'Uses your ChatGPT plan\'s Codex usage', observedAt: null, sourceUrl: null, notes: [], requestSha256: 'a'.repeat(64) };
+    render(<CodexGenerationReviewPanel />);
+    expect(screen.getByRole('region', { name: 'Estimated cost' }).textContent).toContain('Uses your ChatGPT plan\'s Codex usage');
+  });
+
+  it('offers Generate without asking next time beside Submit', () => {
+    render(<CodexGenerationReviewPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Generate without asking next time' }));
+    expect(interaction.setGenerateWithoutAsking).toHaveBeenCalledWith(true);
+  });
+
+  it('identifies a displayed estimate that no longer matches the edited draft', () => {
+    interaction.estimate = { state: 'computed', amountUsd: 0.04, basis: 'Fixture price', observedAt: null, sourceUrl: null, notes: [], requestSha256: 'a'.repeat(64) };
+    interaction.estimateOutdated.mockReturnValue(true);
+    render(<CodexGenerationReviewPanel />);
+    expect(screen.getByRole('region', { name: 'Estimated cost' }).textContent).toContain('Estimate outdated');
   });
 });

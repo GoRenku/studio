@@ -1,10 +1,11 @@
 import Ajv2020, { type ErrorObject } from 'ajv/dist/2020.js';
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import { GENERATION_LANES } from '../../client/generation-lanes.js';
 import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 6,
+  version: 7,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -13,22 +14,35 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
     generateBeatStoryboardImages: false,
   },
   generation: {
-    displayPreview: true,
     enableProviderPromptExpansion: true,
     image: {
       provider: 'codex',
+      model: null,
+      chooseRouteBeforeGenerating: true,
       askBeforeGenerating: false,
       runGenerationsConcurrently: true,
       maxConcurrentGenerations: 5,
     },
+    imageEdit: {
+      provider: 'fal-ai',
+      model: null,
+      chooseRouteBeforeGenerating: true,
+      askBeforeGenerating: true,
+      runGenerationsConcurrently: false,
+      maxConcurrentGenerations: 1,
+    },
     video: {
       provider: 'fal-ai',
+      model: null,
+      chooseRouteBeforeGenerating: true,
       askBeforeGenerating: true,
       runGenerationsConcurrently: false,
       maxConcurrentGenerations: 1,
     },
     audio: {
       provider: 'elevenlabs',
+      model: null,
+      chooseRouteBeforeGenerating: true,
       askBeforeGenerating: true,
       runGenerationsConcurrently: false,
       maxConcurrentGenerations: 1,
@@ -36,17 +50,36 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
   },
 };
 
-const concurrencySchema = {
+const laneModelSchema = {
+  anyOf: [
+    { type: 'null' },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['key', 'name'],
+      properties: {
+        key: { type: 'string', minLength: 1, maxLength: 128, pattern: '^[a-z0-9]+(?:[.-][a-z0-9]+)*$' },
+        name: { type: 'string', minLength: 1, maxLength: 128 },
+      },
+    },
+  ],
+} as const;
+
+const laneSchema = {
   type: 'object',
   additionalProperties: false,
   required: [
     'provider',
+    'model',
+    'chooseRouteBeforeGenerating',
     'askBeforeGenerating',
     'runGenerationsConcurrently',
     'maxConcurrentGenerations',
   ],
   properties: {
     provider: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+    model: laneModelSchema,
+    chooseRouteBeforeGenerating: { type: 'boolean' },
     askBeforeGenerating: { type: 'boolean' },
     runGenerationsConcurrently: { type: 'boolean' },
     maxConcurrentGenerations: { type: 'integer', minimum: 1, maximum: 5 },
@@ -59,7 +92,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation'],
   properties: {
-    version: { const: 6 },
+    version: { const: 7 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -82,18 +115,12 @@ const projectSettingsSchema = {
       type: 'object',
       additionalProperties: false,
       required: [
-        'displayPreview',
         'enableProviderPromptExpansion',
-        'image',
-        'video',
-        'audio',
+        ...GENERATION_LANES,
       ],
       properties: {
-        displayPreview: { type: 'boolean' },
         enableProviderPromptExpansion: { type: 'boolean' },
-        image: concurrencySchema,
-        video: concurrencySchema,
-        audio: concurrencySchema,
+        ...Object.fromEntries(GENERATION_LANES.map((lane) => [lane, laneSchema])),
       },
     },
   },
@@ -179,7 +206,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 6 Project Settings contract.'
+      'Use the complete current version 7 Project Settings contract.'
     );
   });
 }
@@ -192,7 +219,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 6.';
+    return 'Project Settings version must be 7.';
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

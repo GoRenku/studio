@@ -18,6 +18,7 @@ import { pollProviderJob } from '../../shared/polling.js';
 import { withProviderRetries } from '../../shared/retry.js';
 import { createRequestTimeoutFetch } from '../../shared/request-timeout.js';
 import { loadWaveSpeedInputSchema } from './metadata.js';
+import { quoteWaveSpeedCost, readWaveSpeedPrice } from './pricing.js';
 
 const BASE_URL = 'https://api.wavespeed.ai/api/v3';
 
@@ -30,6 +31,14 @@ interface WaveSpeedResult {
 export function createWaveSpeedMediaProvider(): MediaProvider {
   return {
     id: 'wavespeed-ai',
+    async readPrice(model, context) {
+      requireCredential(model, context);
+      return readWaveSpeedPrice(model, context);
+    },
+    async quoteCost(model, request, context) {
+      requireCredential(model, context);
+      return quoteWaveSpeedCost(model, request, context);
+    },
     async readInputSchema(model, context) {
       requireCredential(model, context);
       return loadWaveSpeedInputSchema(model, context);

@@ -34,6 +34,7 @@ export function MediaGenerationRequestDialog({
   unavailableMessage,
   footerError,
   tabTrailing,
+  footerLeading,
   updateAction,
 }: {
   open: boolean;
@@ -47,6 +48,7 @@ export function MediaGenerationRequestDialog({
   unavailableMessage?: string | null;
   footerError?: string | null;
   tabTrailing?: ReactNode;
+  footerLeading?: ReactNode;
   updateAction?: MediaGenerationRequestUpdateAction;
 }) {
   return (
@@ -84,6 +86,7 @@ export function MediaGenerationRequestDialog({
           />
         )}
         <DialogFooter>
+          {footerLeading ? <div className='mr-auto min-w-0'>{footerLeading}</div> : null}
           {footerError ? <p className='mr-auto text-sm text-destructive'>{footerError}</p> : null}
           {updateAction ? (
             <Button

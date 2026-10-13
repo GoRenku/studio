@@ -1,5 +1,9 @@
 # 0100 — Use personal media model libraries
 
+> **Decision 0116 update:** The Skill's Default Model List is published to
+> the Renku state directory with `renku generation default-models sync` and
+> read by Studio Settings and the Route Chooser.
+
 Date: 2026-09-19
 Status: accepted
 

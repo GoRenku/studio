@@ -25,17 +25,16 @@ describe('media generation context', () => {
     await projectData.createMovieProject({ homeDir, projectName: 'review-policy', title: 'Review policy' });
     const input = { homeDir, projectName: 'review-policy', purpose: 'project.cover', target: { kind: 'project', id: 'project' } } as const;
     const first = await projectData.readMediaGenerationContext(input);
-    expect(first.workflowPolicy.codexGenerationReview).toBe('auto');
     expect(first.workflowPolicy.codexGenerationReviewDisplayMode).toBe('inline');
+    expect(first.workflowPolicy.lane).toBe('image');
     expect(first.workflowPolicy.codexPluginInstalled).toBe(false);
     await recordCodexPluginInstallation(true, { homeDir });
     const configPath = resolveRenkuConfigPath({ homeDir });
-    await fs.appendFile(configPath, 'codexGenerationReview: visualize\ncodexGenerationReviewDisplayMode: fullscreen\n');
+    await fs.appendFile(configPath, 'codexGenerationReviewDisplayMode: fullscreen\n');
     const second = await projectData.readMediaGenerationContext(input);
     expect(second.workflowPolicy.codexPluginInstalled).toBe(true);
-    expect(second.workflowPolicy.codexGenerationReview).toBe('visualize');
     expect(second.workflowPolicy.codexGenerationReviewDisplayMode).toBe('fullscreen');
-    expect(second.workflowPolicy.displayPreview).toBe(first.workflowPolicy.displayPreview);
+    expect(second.workflowPolicy.askBeforeGenerating).toBe(first.workflowPolicy.askBeforeGenerating);
   });
 
   it('projects current same-owner evidence without selecting or excluding creative alternatives', async () => {

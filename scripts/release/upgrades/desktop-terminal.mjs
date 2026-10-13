@@ -6,7 +6,7 @@ export function shellQuote(value) { return `'${value.replaceAll("'", "'\\''")}'`
 export function powershellQuote(value) { return `'${value.replaceAll("'", "''")}'`; }
 
 export function launchDesktopTerminal(root, name, executable, args, environment) {
-  const names = ['HOME', 'ZDOTDIR', 'XDG_CONFIG_HOME', 'FLATPAK_XDG_CONFIG_HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA',
+  const names = ['HOME', 'ZDOTDIR', 'XDG_CONFIG_HOME', 'XDG_STATE_HOME', 'FLATPAK_XDG_CONFIG_HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA',
     'CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'VIBE_HOME', 'HERMES_HOME', 'AUTOHAND_HOME', 'GROK_HOME', 'SARVAM_HOME',
     'SHELL', 'PATH', 'RENKU_DOWNLOAD_BASE_URL', 'RENKU_INSTALL_ROOT', 'RENKU_BIN_ROOT'];
   if (process.platform === 'win32') {

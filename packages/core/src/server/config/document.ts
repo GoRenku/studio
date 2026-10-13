@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import type { CodexGenerationReview, CodexGenerationReviewDisplayMode } from '../../client/project-settings.js';
+import type { CodexGenerationReviewDisplayMode } from '../../client/project-settings.js';
 import { RenkuConfigError } from './errors.js';
 import {
   resolveRenkuConfigPath,
@@ -14,7 +14,6 @@ export const RENKU_CONFIG_VERSION = '0.1.0' as const;
 export interface RenkuConfig {
   version: typeof RENKU_CONFIG_VERSION;
   storageRoot: string;
-  codexGenerationReview: CodexGenerationReview;
   codexGenerationReviewDisplayMode: CodexGenerationReviewDisplayMode;
 }
 
@@ -86,7 +85,6 @@ export async function initRenkuConfig(
   const config: RenkuConfig = {
     version: RENKU_CONFIG_VERSION,
     storageRoot,
-    codexGenerationReview: 'auto',
     codexGenerationReviewDisplayMode: 'inline',
   };
 
@@ -176,7 +174,7 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
     }
   }
 
-  assertAllowedKeys(value, ['version', 'storageRoot', 'codexGenerationReview', 'codexGenerationReviewDisplayMode'], configPath);
+  assertAllowedKeys(value, ['version', 'storageRoot', 'codexGenerationReviewDisplayMode'], configPath);
 
   if (value.version !== RENKU_CONFIG_VERSION) {
     throw new RenkuConfigError(
@@ -189,24 +187,6 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
     throw new RenkuConfigError(
       'CONFIG007',
       'Renku config must define storageRoot as a non-empty string.'
-    );
-  }
-
-  const codexGenerationReview = value.codexGenerationReview === undefined
-    ? 'auto'
-    : value.codexGenerationReview;
-  if (codexGenerationReview !== 'auto' && codexGenerationReview !== 'panel' && codexGenerationReview !== 'visualize') {
-    throw new RenkuConfigError(
-      'CONFIG015',
-      'Renku config codexGenerationReview must be "auto", "panel" or "visualize".',
-      {
-        issues: [createDiagnosticError(
-          'CONFIG015',
-          'Choose "auto", "panel" or "visualize".',
-          { path: ['codexGenerationReview'], context: 'Renku config' }
-        )],
-        suggestion: 'Set codexGenerationReview to "auto", "panel" or "visualize" in the global Renku config.',
-      }
     );
   }
 
@@ -231,7 +211,6 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
   return {
     version: RENKU_CONFIG_VERSION,
     storageRoot: path.resolve(value.storageRoot),
-    codexGenerationReview,
     codexGenerationReviewDisplayMode,
   };
 }

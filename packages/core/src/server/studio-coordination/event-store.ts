@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { resolveRenkuConfigDir, type RenkuConfigPathOptions } from '../config/index.js';
+import { resolveRenkuStateDir, type RenkuConfigPathOptions } from '../config/index.js';
 import { studioCoordinationWarning, StudioCoordinationError } from './errors.js';
 import { formatStudioEventCursor, parseStudioEventCursor } from './event-cursors.js';
 import { validateStudioEvent } from './event-validation.js';
@@ -19,7 +19,7 @@ export interface StudioEventStoreSummary {
 let appendQueue = Promise.resolve();
 
 export function resolveStudioEventStorePath(options: RenkuConfigPathOptions = {}): string {
-  return path.join(resolveRenkuConfigDir(options), STUDIO_EVENTS_FILE_NAME);
+  return path.join(resolveRenkuStateDir(options), STUDIO_EVENTS_FILE_NAME);
 }
 
 export async function appendStudioEventToStore(

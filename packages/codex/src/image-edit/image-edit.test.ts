@@ -8,6 +8,7 @@ import { RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { createProjectDataService, initRenkuConfig } from '@gorenku/studio-core/server';
 import { openCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import type { AssetFile } from '@gorenku/studio-core/client';
+import { createFakeCostEstimator } from '../testing/fake-cost-estimator.js';
 import { createCodexServer } from '../server.js';
 import type {
   ImageEditConsumeResult,
@@ -28,6 +29,7 @@ const route: ImageEditRoute = {
     { id: 'erase', label: 'Erase', instructionRequired: false, placeholder: 'Optional fill' },
   ],
   styleReference: true,
+  billing: 'providerCharge',
   controls: { groups: [{ label: 'Output', fields: [
     { key: '/detail', label: 'Detail', kind: 'enum', options: [{ value: 'low', label: 'Low' }, { value: 'high', label: 'High' }], initialValue: 'high' },
   ] }] },
@@ -68,7 +70,7 @@ beforeAll(async () => {
 
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0' }, { capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } } as never });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);

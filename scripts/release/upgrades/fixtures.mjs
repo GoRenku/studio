@@ -4,11 +4,23 @@ import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, realpathSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export const upgradeFixtures = JSON.parse(readFileSync(new URL('./fixtures.json', import.meta.url), 'utf8')).fixtures;
 export function sha256File(file) { return createHash('sha256').update(readFileSync(file)).digest('hex'); }
 export function coreRoot(product) {
   return realpathSync(path.join(product, 'app/node_modules/@gorenku/studio-core'));
+}
+export function resolveProductRuntimeDescriptorPath(node, product, environment) {
+  const packageUrl = pathToFileURL(path.join(coreRoot(product), 'package.json')).href;
+  const source = `
+    import { createRequire } from 'node:module';
+    import { pathToFileURL } from 'node:url';
+    const require = createRequire(${JSON.stringify(packageUrl)});
+    const { resolveStudioRuntimeDescriptorPath } = await import(pathToFileURL(require.resolve('@gorenku/studio-core/server')).href);
+    process.stdout.write(resolveStudioRuntimeDescriptorPath());
+  `;
+  return execFileSync(node, ['--input-type=module', '--eval', source], { env: environment, encoding: 'utf8' }).trim();
 }
 export function releaseIdentity(product) {
   const release = JSON.parse(readFileSync(path.join(product, 'RELEASE.json'), 'utf8'));

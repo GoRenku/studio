@@ -8,6 +8,7 @@ export {
   readRenkuConfig,
   resolveRenkuConfigDir,
   resolveRenkuConfigPath,
+  resolveRenkuStateDir,
   resolveRecommendedRenkuStorageRoot,
   resolveRenkuStorageRoot,
   initializeRenkuSetup,
@@ -51,6 +52,11 @@ export {
 } from './project-data-service.js';
 export { DEFAULT_PROJECT_SETTINGS } from './project-settings/document.js';
 export { resolveGenerationWorkflowPolicy } from './project-settings/index.js';
+export {
+  readDefaultModelList,
+  resolveDefaultModelListPath,
+  syncDefaultModelList,
+} from './default-models/index.js';
 export * from './provider-credentials/index.js';
 export { attachGenerationMedia, type AttachGenerationMediaInput, type GenerationMediaAttachmentReport } from './generation/attachments.js';
 export { attachSceneStoryboardImages } from './generation/scene-storyboard-attachments.js';
@@ -68,7 +74,6 @@ export { readAssetFileMediaGenerationRequest } from './media-generation-review/i
 export { readMediaGenerationContext } from './media-generation-context/index.js';
 export { validateMediaGenerationProvenance } from './asset-files/generation-provenance.js';
 export { assertSafeMediaGenerationRequest } from './media-generation-review/safety.js';
-export * from './generation-configuration-visualizations/index.js';
 export {
   normalizeReviewDocumentPath,
   resolveReviewDocumentPath,

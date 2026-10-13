@@ -121,9 +121,9 @@ describe('StudioCoordinationService', () => {
 
   it('reports the filesystem cause when Studio events cannot be appended', async () => {
     const blockedHomeDir = path.join(homeDir, 'blocked-home');
-    await fs.mkdir(path.join(blockedHomeDir, '.config'), { recursive: true });
+    await fs.mkdir(path.join(blockedHomeDir, '.local', 'state'), { recursive: true });
     await fs.writeFile(
-      path.join(blockedHomeDir, '.config', 'renku'),
+      path.join(blockedHomeDir, '.local', 'state', 'renku'),
       'not a directory',
       'utf8'
     );

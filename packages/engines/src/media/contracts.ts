@@ -1,3 +1,5 @@
+import type { CostEstimate, CostQuote, RoutePrice } from '../pricing/contracts.js';
+
 export type JsonValue =
   | null
   | boolean
@@ -48,6 +50,10 @@ export interface ProviderExecutionContext extends ProviderContext {
 
 export interface MediaProvider {
   readonly id: string;
+  /** The provider's API price for a route, or null when the provider publishes none. */
+  readPrice?(model: string, context: ProviderContext): Promise<RoutePrice | null>;
+  /** An exact provider quote for one native request. */
+  quoteCost?(model: string, request: JsonValue, context: ProviderContext): Promise<CostQuote>;
   readInputSchema?(
     model: string,
     context: ProviderContext,
@@ -93,6 +99,23 @@ export interface MediaEngine {
     request: ProviderRecoveryRequest,
     context: ProviderExecutionContext,
   ): Promise<ProviderExecutionResult>;
+  estimateCost(
+    provider: string,
+    request: ProviderRequest,
+    context: ProviderContext,
+  ): Promise<CostEstimate>;
+  /** The cached prices of one route: a recorded entry and the provider API price. */
+  readRoutePrices(
+    provider: string,
+    model: string,
+    context: ProviderContext,
+  ): Promise<{ recorded: RoutePrice | null; providerApi: RoutePrice | null }>;
+  recordRoutePrice(
+    provider: string,
+    model: string,
+    price: unknown,
+    context: ProviderContext,
+  ): Promise<RoutePrice>;
 }
 
 export interface GeneratedMediaArtifact {

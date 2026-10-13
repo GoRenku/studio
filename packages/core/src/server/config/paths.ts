@@ -16,6 +16,7 @@ export interface RenkuPlatformPathContext {
   homeDir: string;
   localAppData?: string;
   xdgConfigHome?: string;
+  xdgStateHome?: string;
 }
 
 export function resolveRenkuConfigDir(
@@ -25,6 +26,21 @@ export function resolveRenkuConfigDir(
     return path.join(options.homeDir, '.config', RENKU_CONFIG_DIR_NAME);
   }
   return resolveRenkuConfigDirForPlatform(currentPlatformPathContext());
+}
+
+/**
+ * Mutable Renku state (current Project pointer, Studio runtime descriptor,
+ * Studio events, provider metadata cache and the Default Model List copy)
+ * lives outside the user-authored config directory so sandboxed agents can
+ * write it without escalating.
+ */
+export function resolveRenkuStateDir(
+  options: RenkuConfigPathOptions = {}
+): string {
+  if (options.homeDir) {
+    return path.join(options.homeDir, '.local', 'state', RENKU_CONFIG_DIR_NAME);
+  }
+  return resolveRenkuStateDirForPlatform(currentPlatformPathContext());
 }
 
 export function resolveRenkuConfigPath(
@@ -84,6 +100,24 @@ export function resolveRenkuConfigDirForPlatform(
   return path.join(configHome, RENKU_CONFIG_DIR_NAME);
 }
 
+export function resolveRenkuStateDirForPlatform(
+  context: RenkuPlatformPathContext
+): string {
+  if (context.platform === 'win32') {
+    return path.win32.join(
+      resolveRenkuConfigDirForPlatform(context),
+      'State'
+    );
+  }
+
+  const xdgStateHome = context.xdgStateHome?.trim();
+  const stateHome =
+    xdgStateHome && path.isAbsolute(xdgStateHome)
+      ? xdgStateHome
+      : path.join(context.homeDir, '.local', 'state');
+  return path.join(stateHome, RENKU_CONFIG_DIR_NAME);
+}
+
 export function resolveRecommendedRenkuStorageRootForPlatform(
   context: RenkuPlatformPathContext
 ): string {
@@ -103,5 +137,6 @@ function currentPlatformPathContext(): RenkuPlatformPathContext {
     homeDir: os.homedir(),
     localAppData: process.env.LOCALAPPDATA,
     xdgConfigHome: process.env.XDG_CONFIG_HOME,
+    xdgStateHome: process.env.XDG_STATE_HOME,
   };
 }

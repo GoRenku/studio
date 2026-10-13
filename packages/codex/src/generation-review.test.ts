@@ -8,8 +8,9 @@ import type { GenerationReviewDraft, GenerationReviewRoute } from './client.js';
 import { openGenerationReview } from './generation-review.js';
 import { consumeGenerationReview, respondToGenerationReview } from './generation-review-responses.js';
 import { GenerationReviewState } from './generation-review-state.js';
+import { createFakeCostEstimator } from './testing/fake-cost-estimator.js';
 
-const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'model-a', label: 'Model A', mediaKind: 'image' as const };
+const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'model-a', label: 'Model A', mediaKind: 'image' as const, billing: 'providerCharge' as const };
 const alternative = { ...route, model: 'model-b', label: 'Model B' };
 const third = { ...route, model: 'model-c', label: 'Model C' };
 const reviewFile = 'tmp/operations/media-generation/prepared.json';
@@ -23,6 +24,7 @@ let homeDir: string;
 let projectFolder: string;
 let state: GenerationReviewState;
 let reviewId: string;
+const estimator = createFakeCostEstimator();
 
 function document(selected: GenerationReviewRoute) {
   return { provider: selected.provider, model: selected.model, mediaKind: selected.mediaKind, prompt: 'Café\nα', request: { prompt: 'Café\nα', seed: 1 } };
@@ -41,7 +43,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await fs.writeFile(path.join(projectFolder, reviewFile), originalBytes);
   state = new GenerationReviewState();
-  const review = await openGenerationReview(state, { project: 'movie', requests: [request] }, homeDir);
+  const review = await openGenerationReview(state, { project: 'movie', lane: 'image', requests: [request] }, estimator, homeDir);
   reviewId = review.reviewId;
 });
 
@@ -69,9 +71,9 @@ describe('staged model preparation', () => {
     await fs.writeFile(path.join(projectFolder, stagedFile), '{ invalid JSON');
     await expect(openGenerationReview(state, {
       project: 'movie', reviewId, expectedRevision, requests: [{ ...request, reviewFile: stagedFile }],
-    }, homeDir)).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_REVIEW_INVALID' });
+    }, estimator, homeDir)).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_REVIEW_INVALID' });
 
-    const failed = await openGenerationReview(state, { project: 'movie', reviewId, expectedRevision, preparationFailure: diagnostics }, homeDir);
+    const failed = await openGenerationReview(state, { project: 'movie', reviewId, expectedRevision, preparationFailure: diagnostics }, estimator, homeDir);
     expect(failed).toMatchObject({ phase: 'preparationFailed', drafts });
     expect(await fs.readFile(path.join(projectFolder, reviewFile), 'utf8')).toBe(originalBytes);
     expect(state.binding(reviewId).sources[0]!.reviewFile).toBe(reviewFile);
@@ -80,7 +82,7 @@ describe('staged model preparation', () => {
     }, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_INVALID' });
 
     const returnRevision = await select(route);
-    const restored = await openGenerationReview(state, { project: 'movie', reviewId, expectedRevision: returnRevision, requests: [request] }, homeDir);
+    const restored = await openGenerationReview(state, { project: 'movie', reviewId, expectedRevision: returnRevision, requests: [request] }, estimator, homeDir);
     expect(restored).toMatchObject({ phase: 'ready', drafts });
     await respondToGenerationReview(state, { reviewId, expectedRevision: restored.revision, responseId: 'submit', action: 'submit', drafts }, homeDir);
     const consumed = await consumeGenerationReview(state, { reviewId, responseId: 'submit' }, homeDir);
@@ -89,7 +91,7 @@ describe('staged model preparation', () => {
 
   it.each([alternative, third])('adopts a validated staged file for $label after preparation failure', async (selected) => {
     const expectedRevision = await select(alternative);
-    await openGenerationReview(state, { project: 'movie', reviewId, expectedRevision, preparationFailure: diagnostics }, homeDir);
+    await openGenerationReview(state, { project: 'movie', reviewId, expectedRevision, preparationFailure: diagnostics }, estimator, homeDir);
     const retryRevision = await select(selected);
     const bytes = JSON.stringify(document(selected));
     await fs.writeFile(path.join(projectFolder, stagedFile), bytes);
@@ -97,7 +99,7 @@ describe('staged model preparation', () => {
     const prepared = await openGenerationReview(state, {
       project: 'movie', reviewId, expectedRevision: retryRevision,
       requests: [{ ...request, reviewFile: stagedFile, expectedRequestSha256 }],
-    }, homeDir);
+    }, estimator, homeDir);
     expect(prepared).toMatchObject({ phase: 'ready', requests: [{ preview: { model: selected.model }, requestSha256: expectedRequestSha256 }] });
     expect(await fs.readFile(path.join(projectFolder, reviewFile), 'utf8')).toBe(originalBytes);
     await respondToGenerationReview(state, { reviewId, expectedRevision: prepared.revision, responseId: 'submit', action: 'submit', drafts: prepared.drafts }, homeDir);
@@ -110,7 +112,7 @@ describe('staged model preparation', () => {
     await fs.writeFile(path.join(projectFolder, stagedFile), JSON.stringify(document(third)));
     await expect(openGenerationReview(state, {
       project: 'movie', reviewId, expectedRevision, requests: [{ ...request, reviewFile: stagedFile }],
-    }, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_INVALID' });
+    }, estimator, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_INVALID' });
     expect(state.binding(reviewId).sources[0]!.reviewFile).toBe(reviewFile);
     expect(state.read(reviewId).phase).toBe('preparing');
   });
@@ -121,7 +123,7 @@ describe('staged model preparation', () => {
     await expect(openGenerationReview(state, {
       project: 'movie', reviewId, expectedRevision,
       requests: [{ ...request, reviewFile: stagedFile, expectedRequestSha256: 'a'.repeat(64) }],
-    }, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_STALE' });
+    }, estimator, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_STALE' });
     expect(state.binding(reviewId).sources[0]!.reviewFile).toBe(reviewFile);
   });
 
@@ -131,10 +133,10 @@ describe('staged model preparation', () => {
     await fs.writeFile(path.join(projectFolder, stagedFile), JSON.stringify(document(alternative)));
     await expect(openGenerationReview(state, {
       project: 'movie', reviewId, expectedRevision, requests: [{ ...request, reviewFile: stagedFile }],
-    }, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_STALE' });
+    }, estimator, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_STALE' });
     await expect(openGenerationReview(state, {
       project: 'movie', reviewId, expectedRevision, preparationFailure: diagnostics,
-    }, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_STALE' });
+    }, estimator, homeDir)).rejects.toMatchObject({ code: 'CODEX_REVIEW_STALE' });
     expect(state.read(reviewId).phase).toBe('preparing');
   });
 });

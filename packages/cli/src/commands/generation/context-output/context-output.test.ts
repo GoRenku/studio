@@ -15,7 +15,7 @@ const report: MediaGenerationContextReport = {
   project: { projectName: 'test', id: 'project_1', projectFolder: '/project',
     title: 'Film', aspectRatio: '16:9', languages: [], synopsis: '  Exact “dialogue”\n# Markdown\n雪  ' },
   purpose: 'image.edit', target: { kind: 'assetFile', assetFileId: 'asset_1' }, outputMediaKind: 'image',
-  workflowPolicy: { codexPluginInstalled: false, codexGenerationReview: 'panel', codexGenerationReviewDisplayMode: 'inline', displayPreview: false, enableProviderPromptExpansion: true, provider: 'codex', askBeforeGenerating: false, concurrencyLimit: 1 },
+  workflowPolicy: { codexPluginInstalled: false, codexGenerationReviewDisplayMode: 'inline', enableProviderPromptExpansion: true, lane: 'imageEdit', provider: 'codex', model: null, chooseRouteBeforeGenerating: false, askBeforeGenerating: false, concurrencyLimit: 1 },
   outputGuidance: { aspectRatio: null, quality: null },
   targetContext: { kind: 'assetFile', assetFileId: 'asset_1' }, visualLanguage: [],
   assetFiles: [{ id: 'file_1', owner: { kind: 'project' }, localeId: null, type: 'image',
@@ -33,7 +33,7 @@ describe('readable generation context', () => {
     const before = structuredClone(report);
     const text = renderMediaGenerationContext(report);
     expect(text).toContain(report.project.synopsis);
-    for (const value of ['codexGenerationReview: panel', 'codexGenerationReviewDisplayMode: inline', 'asset_1', 'file_1', 'images/exact.png', 'source-image', 'isDisplaySelected: false',
+    for (const value of ['lane: imageEdit', 'model: null', 'codexGenerationReviewDisplayMode: inline', 'asset_1', 'file_1', 'images/exact.png', 'source-image', 'isDisplaySelected: false',
       'sizeBytes: 0', '## Warnings\n[]', '## Resource Keys', 'aspectRatio: null']) {
       expect(text).toContain(value);
     }

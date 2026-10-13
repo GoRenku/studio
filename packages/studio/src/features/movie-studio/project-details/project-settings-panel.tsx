@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ProjectSettingsDocument, ProviderCredentialStatus } from '@gorenku/studio-core/client';
+import type { DefaultModelListResource, ProjectSettingsDocument, ProviderCredentialStatus } from '@gorenku/studio-core/client';
 import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
 import { useDebouncedAutosave } from '@/hooks/use-debounced-autosave';
 import { Button } from '@/ui/button';
@@ -12,6 +12,7 @@ import {
   replaceProjectSettings,
 } from '@/services/studio-projects-api';
 import { readProviderCredentials } from '@/services/studio-provider-credentials-api';
+import { readDefaultModelList } from '@/services/studio-default-models-api';
 import { ProjectTemporaryFilesSection } from './project-temporary-files-section';
 import { ProjectSettingsFields } from './project-settings-fields';
 
@@ -30,6 +31,8 @@ export function ProjectSettingsPanel({
   const [providers, setProviders] = useState<ProviderCredentialStatus[] | null>(null);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providersLoading, setProvidersLoading] = useState(true);
+  const [defaultModels, setDefaultModels] = useState<DefaultModelListResource | null>(null);
+  const [defaultModelsError, setDefaultModelsError] = useState<string | null>(null);
   const draftRef = useRef<ProjectSettingsDocument | null>(null);
   const committedRef = useRef<ProjectSettingsDocument | null>(null);
   const providerReadRevision = useRef(0);
@@ -74,6 +77,24 @@ export function ProjectSettingsPanel({
     return () => {
       cancelled = true;
       providerReadRevision.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void readDefaultModelList()
+      .then((resource) => {
+        if (!cancelled) {
+          setDefaultModels(resource);
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setDefaultModelsError(loadError instanceof Error ? loadError.message : 'Unable to load the Renku model list.');
+        }
+      });
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -171,8 +192,12 @@ export function ProjectSettingsPanel({
           <Button type='button' variant='outline' size='sm' onClick={() => void refreshProviders()}>Retry</Button>
         </div>
       ) : null}
+      {defaultModelsError ? (
+        <p role='alert' className='py-4 text-sm text-destructive'>{defaultModelsError}</p>
+      ) : null}
       <ProjectSettingsFields
         settings={draft}
+        defaultModels={defaultModels}
         onChange={setDraft}
         providers={providers}
         providersLoading={providersLoading}

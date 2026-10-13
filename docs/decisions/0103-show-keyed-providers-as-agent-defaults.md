@@ -1,5 +1,9 @@
 # 0103 Show Keyed Providers As Agent Defaults
 
+> **Decision 0115 update:** Keyed providers are lane defaults, with an
+> optional model per lane. Keyless Codex is offered in Image Generation and
+> Image Editing and labelled "Codex (built-in)".
+
 Date: 2026-09-27
 
 Status: accepted

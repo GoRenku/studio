@@ -5,7 +5,7 @@ import { CodexPanelNotice, CodexPanelPending } from '@/features/codex-panels/cod
 import { initialNativeRequestValues } from '@/features/codex-panels/native-request-values';
 import { usePanelMediaLibrary, usePanelMediaUrl, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { imageEditGenerateReadiness, nextImageEditTakeNumber } from './shared/generate-readiness';
-import { imageEditGenerateApproval, imageEditGenerateDisclosure } from './shared/image-edit-disclosure';
+import { imageEditGenerateDisclosure } from './shared/image-edit-disclosure';
 import { ImageEditGenerateBar } from './shared/image-edit-generate-bar';
 import { ImageEditOutputSettings } from './shared/image-edit-output-settings';
 import { ImageEditPanelFrame } from './shared/image-edit-panel-frame';
@@ -73,7 +73,7 @@ function ImageEditDesk(input: { session: ImageEditSession; interaction: ImageEdi
       styleReferenceAssetFileId,
       regions: draft.regions,
       values,
-    }, imageEditGenerateApproval(route));
+    });
   };
   const directionDisabled = !interaction.connected;
   const failure = session.action?.status === 'failed' ? session.action.message : undefined;

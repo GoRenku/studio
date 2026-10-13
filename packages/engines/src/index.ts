@@ -28,6 +28,16 @@ export {
   type EngineErrorCode,
   type EngineErrorOptions,
 } from './shared/errors.js';
+export type {
+  CostEstimate,
+  CostEstimateState,
+  CostQuote,
+  PriceComponent,
+  PriceQuantity,
+  PriceTier,
+  PriceUnit,
+  RoutePrice,
+} from './pricing/index.js';
 export {
   createFileSystemProviderMetadataCache,
   createMemoryProviderMetadataCache,

@@ -3,7 +3,7 @@ import { isStructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationReviewState } from './generation-review-state.js';
 import { reviewError } from './diagnostics.js';
 
-export async function assertReviewSources(binding: ReturnType<GenerationReviewState['binding']>, homeDir?: string): Promise<void> {
+export async function assertReviewSources(binding: Pick<ReturnType<GenerationReviewState['binding']>, 'project' | 'projectId' | 'sources'>, homeDir?: string): Promise<void> {
   await Promise.all(binding.sources.map(async (source) => {
     const read = await readMediaGenerationReview({ projectName: binding.project, documentPath: source.reviewFile, expectedRequestSha256: source.requestSha256, homeDir }).catch((error: unknown) => {
       if (isStructuredError(error) && error.code === 'CORE_MEDIA_GENERATION_REVIEW_CHANGED') {

@@ -12,10 +12,16 @@ describe('Project Settings document', () => {
     expect(parseStoredProjectSettings(JSON.stringify(settings))).toEqual(settings);
   });
 
+  it('accepts a named lane model', () => {
+    const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
+    settings.generation.video.model = { key: 'fictional-video-2.5', name: 'Fictional Video 2.5' };
+    expect(validateProjectSettingsDocument(settings)).toEqual(settings);
+  });
+
   const invalidDocuments: Array<[string, unknown]> = [
     ['null', null],
     ['old version', { ...DEFAULT_PROJECT_SETTINGS, version: 0 }],
-    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 7 }],
+    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 8 }],
     [
       'missing field',
       {
@@ -35,10 +41,32 @@ describe('Project Settings document', () => {
         ...DEFAULT_PROJECT_SETTINGS,
         generation: {
           ...DEFAULT_PROJECT_SETTINGS.generation,
-          displayPreview: 'yes',
+          enableProviderPromptExpansion: 'yes',
         },
       },
     ],
+    [
+      'missing lane',
+      {
+        ...DEFAULT_PROJECT_SETTINGS,
+        generation: {
+          enableProviderPromptExpansion: true,
+          image: DEFAULT_PROJECT_SETTINGS.generation.image,
+          video: DEFAULT_PROJECT_SETTINGS.generation.video,
+          audio: DEFAULT_PROJECT_SETTINGS.generation.audio,
+        },
+      },
+    ],
+    ...[{ key: '', name: 'Empty' }, { key: 'Fictional Model', name: 'Spaces' }, { key: 'fictional' }].map<[string, unknown]>((model) => [
+      `invalid lane model ${JSON.stringify(model)}`,
+      {
+        ...DEFAULT_PROJECT_SETTINGS,
+        generation: {
+          ...DEFAULT_PROJECT_SETTINGS.generation,
+          imageEdit: { ...DEFAULT_PROJECT_SETTINGS.generation.imageEdit, model },
+        },
+      },
+    ]),
     ...[0, 1.5, 6].map<[string, unknown]>((maximum) => [
       `invalid maximum ${maximum}`,
       {

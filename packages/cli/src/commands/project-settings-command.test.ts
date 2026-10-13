@@ -17,6 +17,7 @@ describe('Project Settings command', () => {
   const settings = projectSettings();
   const readProjectSettings = vi.fn();
   const replaceProjectSettings = vi.fn();
+  const updateGenerationLaneSettings = vi.fn();
   const resolveStudioProjectRef = vi.fn();
 
   beforeEach(() => {
@@ -41,7 +42,15 @@ describe('Project Settings command', () => {
       resolveStudioProjectRef,
       readProjectSettings,
       replaceProjectSettings,
+      updateGenerationLaneSettings,
     } as never);
+    updateGenerationLaneSettings.mockResolvedValue({
+      resource: {
+        project: { id: 'project_test', name: 'constantinople' },
+        settings,
+      },
+      resourceKeys: ['project-settings'],
+    });
   });
 
   it('shows canonical settings for an explicit Project', async () => {
@@ -95,6 +104,72 @@ describe('Project Settings command', () => {
     });
   });
 
+  it('shows one generation lane by its CLI name', async () => {
+    const stdout: string[] = [];
+    await runProjectSettingsCommand({
+      input: ['generation', 'show'],
+      flags: { lane: 'image-edit' },
+      json: true,
+      io: captureIo(stdout),
+    });
+    expect(JSON.parse(stdout[0]!)).toEqual({
+      enableProviderPromptExpansion: true,
+      lanes: { imageEdit: settings.generation.imageEdit },
+    });
+  });
+
+  it('delegates one focused lane change and emits one notification', async () => {
+    await runProjectSettingsCommand({
+      input: ['generation', 'set'],
+      flags: {
+        lane: 'image-edit',
+        provider: 'fal-ai',
+        model: 'fictional-edit',
+        modelName: 'Fictional Edit',
+        chooseRoute: 'off',
+        askBeforeGenerating: 'on',
+      },
+      json: true,
+      io: captureIo([]),
+    });
+    expect(updateGenerationLaneSettings).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      homeDir: undefined,
+      lane: 'imageEdit',
+      provider: 'fal-ai',
+      model: { key: 'fictional-edit', name: 'Fictional Edit' },
+      chooseRouteBeforeGenerating: false,
+      askBeforeGenerating: true,
+    });
+    expect(appendStudioResourceChangedEvent).toHaveBeenCalledOnce();
+  });
+
+  it('clears a lane model back to the recommendation', async () => {
+    await runProjectSettingsCommand({
+      input: ['generation', 'set'],
+      flags: { lane: 'video', clearModel: true },
+      json: true,
+      io: captureIo([]),
+    });
+    expect(updateGenerationLaneSettings).toHaveBeenCalledWith(expect.objectContaining({ lane: 'video', model: null }));
+  });
+
+  it.each([
+    [{ lane: 'imageEdit', askBeforeGenerating: 'off' }],
+    [{ lane: 'video', chooseRoute: 'yes' }],
+    [{ lane: 'video', model: 'fictional-video' }],
+    [{ lane: 'video', clearModel: true, model: 'fictional-video', modelName: 'Fictional Video' }],
+    [{ askBeforeGenerating: 'off' }],
+  ])('rejects invalid lane flags before writing: %j', async (flags) => {
+    await expect(runProjectSettingsCommand({
+      input: ['generation', 'set'],
+      flags,
+      json: true,
+      io: captureIo([]),
+    })).rejects.toMatchObject({ code: 'CLI167' });
+    expect(updateGenerationLaneSettings).not.toHaveBeenCalled();
+  });
+
   it('reports malformed JSON through the shared structured input boundary', async () => {
     const file = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'settings-cli-')), 'broken.json');
     await fs.writeFile(file, '{', 'utf8');
@@ -142,7 +217,7 @@ function captureIo(stdout: string[]) {
 
 function projectSettings() {
   return {
-    version: 5 as const,
+    version: 7 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -151,26 +226,22 @@ function projectSettings() {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      displayPreview: true,
       enableProviderPromptExpansion: true,
-      image: {
-        provider: 'codex',
-        askBeforeGenerating: false,
-        runGenerationsConcurrently: true,
-        maxConcurrentGenerations: 5,
-      },
-      video: {
-        provider: 'fal-ai',
-        askBeforeGenerating: true,
-        runGenerationsConcurrently: false,
-        maxConcurrentGenerations: 1,
-      },
-      audio: {
-        provider: 'elevenlabs',
-        askBeforeGenerating: true,
-        runGenerationsConcurrently: false,
-        maxConcurrentGenerations: 1,
-      },
+      image: lane('codex', false, true, 5),
+      imageEdit: lane('fal-ai', true, false, 1),
+      video: lane('fal-ai', true, false, 1),
+      audio: lane('elevenlabs', true, false, 1),
     },
+  };
+}
+
+function lane(provider: string, askBeforeGenerating: boolean, runGenerationsConcurrently: boolean, maxConcurrentGenerations: number) {
+  return {
+    provider,
+    model: null,
+    chooseRouteBeforeGenerating: true,
+    askBeforeGenerating,
+    runGenerationsConcurrently,
+    maxConcurrentGenerations,
   };
 }
