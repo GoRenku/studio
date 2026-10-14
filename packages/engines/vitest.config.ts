@@ -15,7 +15,6 @@ export default defineConfig({
     exclude: [
       'node_modules/**',
       'dist/**',
-      'tests/e2e/**',
       'src/sdk/replicate/retry.test.ts',
       'src/model-catalog.test.ts',
     ],

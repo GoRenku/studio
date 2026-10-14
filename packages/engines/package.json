@@ -14,23 +14,17 @@
   },
   "license": "AGPL-3.0-only",
   "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
-    "dist/index.d.ts.map",
-    "dist/media",
-    "dist/providers",
-    "dist/shared",
+    "dist",
     "docs",
     "README.md"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "eslint src tests",
+    "lint": "eslint src",
     "type-check": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+    "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit"
   },
   "keywords": [
     "ai",

@@ -1,22 +1,16 @@
 import fs from 'node:fs/promises';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createFalMediaProvider } from '../../src/providers/fal-ai/index.js';
-import { createMediaEngine } from '../../src/media/engine.js';
-import { readOptInProviderTestCredential } from './provider-test-credentials.js';
-import { createProviderTestContext } from './provider-test-context.js';
+import { createFalMediaProvider, createMediaEngine } from '@gorenku/studio-engines';
+import { createProviderTestContext, isPaidProviderTestEnabled } from './provider-test-context.js';
 
-const credential = readOptInProviderTestCredential({
-  optInEnvironmentVariable: 'RUN_FAL_TEST',
-  credentialEnvironmentVariable: 'FAL_KEY',
-});
-const describeIf = credential ? describe : describe.skip;
+const describeIf = isPaidProviderTestEnabled('RUN_FAL_TEST') ? describe : describe.skip;
 
 describeIf('Fal.ai paid provider smoke test', () => {
   let cleanup: (() => Promise<void>) | undefined;
   afterAll(async () => cleanup?.());
 
   it('validates against live metadata and generates one small image', async () => {
-    const test = await createProviderTestContext(credential!);
+    const test = await createProviderTestContext('fal-ai');
     cleanup = test.cleanup;
     const engine = createMediaEngine([createFalMediaProvider()]);
     const request = {

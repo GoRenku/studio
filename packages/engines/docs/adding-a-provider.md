@@ -159,12 +159,12 @@ Then add mocked protocol regression tests for authentication, submission,
 polling, recovery, output shapes, and downloads. Network-free tests are
 required. Paid tests are optional, manual, and explicitly approved.
 
-When adding an approved paid E2E, use the Engines-local
-`readOptInProviderTestCredential` and `createProviderTestContext` helpers. Give
-the suite a short, provider-specific `RUN_<PROVIDER>_TEST=1` opt-in, keep it out
-of automatic test commands, and let the shared context remove its temporary
-output. The E2E must not import Core, inspect saved Renku credentials, or add a
-saved-artifact mode merely for debugging.
+When adding an approved paid E2E, add it to `packages/cli/tests/e2e` and use
+the `isPaidProviderTestEnabled` and `createProviderTestContext` helpers there.
+Give the suite a short, provider-specific `RUN_<PROVIDER>_TEST=1` opt-in, keep
+it out of automatic test commands, and let the shared context remove its
+temporary output. The context reads the saved provider key through the CLI's
+credential lookup; do not add a saved-artifact mode merely for debugging.
 
 The current `src/media/engine.test.ts` is the minimal public-seam example. It
 registers a test-only `atlas` provider without adding it to production catalogs,

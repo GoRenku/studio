@@ -1,21 +1,16 @@
 import fs from 'node:fs/promises';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createReplicateMediaProvider } from '../../src/providers/replicate/index.js';
-import { readOptInProviderTestCredential } from './provider-test-credentials.js';
-import { createProviderTestContext } from './provider-test-context.js';
+import { createReplicateMediaProvider } from '@gorenku/studio-engines';
+import { createProviderTestContext, isPaidProviderTestEnabled } from './provider-test-context.js';
 
-const credential = readOptInProviderTestCredential({
-  optInEnvironmentVariable: 'RUN_REPLICATE_TEST',
-  credentialEnvironmentVariable: 'REPLICATE_API_TOKEN',
-});
-const describeIf = credential ? describe : describe.skip;
+const describeIf = isPaidProviderTestEnabled('RUN_REPLICATE_TEST') ? describe : describe.skip;
 
 describeIf('Replicate paid provider smoke test', () => {
   let cleanup: (() => Promise<void>) | undefined;
   afterAll(async () => cleanup?.());
 
   it('validates against live metadata and generates one image', async () => {
-    const test = await createProviderTestContext(credential!);
+    const test = await createProviderTestContext('replicate');
     cleanup = test.cleanup;
     const result = await createReplicateMediaProvider().execute({
       model: 'black-forest-labs/flux-schnell',

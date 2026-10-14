@@ -3,7 +3,11 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { assertStudioWebAssets, verifyStudioModule } from './verify-product.mjs';
+import {
+  assertPackagedRelativeImports,
+  assertStudioWebAssets,
+  verifyStudioModule,
+} from './verify-product.mjs';
 
 function studioFixture(source) {
   const home = mkdtempSync(path.join(os.tmpdir(), 'renku-server-verification-'));
@@ -53,4 +57,31 @@ test('Studio web verification requires the built HTML and populated asset direct
   assert.throws(() => assertStudioWebAssets(app), /RELEASE022/);
   writeFileSync(path.join(studio, 'dist', 'assets', 'index.js'), '');
   assertStudioWebAssets(app);
+});
+
+function packagedAppFixture() {
+  const app = mkdtempSync(path.join(os.tmpdir(), 'renku-packaged-imports-'));
+  const engines = path.join(app, 'node_modules', '@gorenku', 'studio-engines');
+  mkdirSync(path.join(engines, 'dist', 'providers'), { recursive: true });
+  mkdirSync(path.join(app, 'dist'), { recursive: true });
+  writeFileSync(path.join(app, 'dist', 'cli.js'), "const load = () => import('./commands.js');\n");
+  writeFileSync(path.join(app, 'dist', 'commands.js'), "export { run } from '@gorenku/studio-engines';\n");
+  writeFileSync(path.join(engines, 'dist', 'index.js'), "export * from './providers/fal.js';\n");
+  writeFileSync(path.join(engines, 'dist', 'providers', 'fal.js'), "import { estimate } from '../pricing/estimate.js';\nexport const run = estimate;\n");
+  return { app, engines };
+}
+
+test('packaged import verification reports a module left out of a dependency package', () => {
+  const { app } = packagedAppFixture();
+  assert.throws(
+    () => assertPackagedRelativeImports(app),
+    /RELEASE095[\s\S]*studio-engines[\/\\]dist[\/\\]providers[\/\\]fal\.js -> \.\.\/pricing\/estimate\.js/
+  );
+});
+
+test('packaged import verification accepts a complete package tree', () => {
+  const { app, engines } = packagedAppFixture();
+  mkdirSync(path.join(engines, 'dist', 'pricing'));
+  writeFileSync(path.join(engines, 'dist', 'pricing', 'estimate.js'), 'export const estimate = 1;\n');
+  assertPackagedRelativeImports(app);
 });

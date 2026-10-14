@@ -1,22 +1,16 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { createMediaEngine } from '../../src/media/engine.js';
-import { createElevenLabsMediaProvider } from '../../src/providers/elevenlabs/index.js';
-import { readOptInProviderTestCredential } from './provider-test-credentials.js';
-import { createProviderTestContext } from './provider-test-context.js';
+import { createElevenLabsMediaProvider, createMediaEngine } from '@gorenku/studio-engines';
+import { createProviderTestContext, isPaidProviderTestEnabled } from './provider-test-context.js';
 
-const credential = readOptInProviderTestCredential({
-  optInEnvironmentVariable: 'RUN_ELEVENLABS_MEDIA_ENGINE_TEST',
-  credentialEnvironmentVariable: 'ELEVENLABS_API_KEY',
-});
 const voice = process.env.ELEVENLABS_TEST_TTS_VOICE_ID ?? 'EXAVITQu4vr4xnSDxMaL';
-const describeIf = credential ? describe : describe.skip;
+const describeIf = isPaidProviderTestEnabled('RUN_ELEVENLABS_MEDIA_ENGINE_TEST') ? describe : describe.skip;
 
 describeIf('ElevenLabs MediaEngine paid smoke test', () => {
   let cleanup: (() => Promise<void>) | undefined;
   afterAll(async () => cleanup?.());
 
   it('validates and generates short TTS audio through MediaEngine dispatch', async () => {
-    const test = await createProviderTestContext(credential!);
+    const test = await createProviderTestContext('elevenlabs');
     cleanup = test.cleanup;
     const engine = createMediaEngine([createElevenLabsMediaProvider()]);
     const request = {

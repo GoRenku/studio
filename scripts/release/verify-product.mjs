@@ -76,6 +76,7 @@ export function verifyProductStructure(productRoot) {
   assertNoForbiddenFiles(productRoot);
   assertTargetNativeDependencies(productRoot, target);
   assertStudioWebAssets(path.join(productRoot, 'app'));
+  assertPackagedRelativeImports(path.join(productRoot, 'app'));
   console.log(`Structurally verified Renku ${release.version} ${release.target}.`);
   return { release, target, nodeExecutable };
 }
@@ -124,6 +125,48 @@ export function assertStudioWebAssets(appRoot) {
       readdirSync(assets).length === 0) {
     throw new Error(`RELEASE022 Missing built Studio web assets: ${dist}`);
   }
+}
+
+// Commands load lazily, so a file left out of a workspace package's `files`
+// list only fails when that command runs. Check every relative import of the
+// packaged Renku code instead of relying on the smoke commands to reach it.
+export function assertPackagedRelativeImports(appRoot) {
+  const missing = [];
+  for (const packageRoot of packagedRenkuRoots(appRoot)) {
+    for (const file of javascriptFiles(packageRoot)) {
+      for (const specifier of relativeImportSpecifiers(readFileSync(file, 'utf8'))) {
+        if (!existsSync(path.resolve(path.dirname(file), specifier))) {
+          missing.push(`${path.relative(appRoot, file)} -> ${specifier}`);
+        }
+      }
+    }
+  }
+  if (missing.length > 0) {
+    throw new Error(`RELEASE095 Packaged modules import files that are missing:\n${missing.join('\n')}`);
+  }
+}
+
+function packagedRenkuRoots(appRoot) {
+  const scope = path.join(appRoot, 'node_modules', '@gorenku');
+  const packages = existsSync(scope)
+    ? readdirSync(scope).map((name) => realpathSync(path.join(scope, name)))
+    : [];
+  return [realpathSync(appRoot), ...packages];
+}
+
+function javascriptFiles(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name === 'node_modules' ? [] : javascriptFiles(entryPath);
+    }
+    return /\.m?js$/.test(entry.name) ? [entryPath] : [];
+  });
+}
+
+function relativeImportSpecifiers(source) {
+  const pattern = /(?:\bfrom\s*|\bimport\s*\(?\s*)(['"])(\.\.?\/[^'"]+)\1/g;
+  return [...source.matchAll(pattern)].map((match) => match[2]);
 }
 
 export function verifyStudioModule(executable, appRoot, homeDir) {

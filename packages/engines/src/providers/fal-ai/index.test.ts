@@ -43,7 +43,7 @@ describe('Fal.ai media provider', () => {
       const value = String(url);
       if (value.startsWith('https://api.fal.ai/v1/models')) {
         expect(new URL(value).searchParams.get('endpoint_id')).toBe(model);
-        expect(new Headers(init?.headers).get('Authorization')).toBe('Key fal-secret');
+        expect(new Headers(init?.headers).has('Authorization')).toBe(false);
         return Response.json(modelSearchResponse(model), {
           headers: { 'cache-control': cacheControl },
         });
@@ -166,6 +166,28 @@ describe('Fal.ai media provider', () => {
     )).rejects.toMatchObject({
       code: 'ENGINE_METADATA_UNAVAILABLE',
       message: 'Fal.ai endpoint "xai/grok-imagine-image" was not found in live provider metadata.',
+    });
+  });
+
+  it('reports the provider reason when Fal cannot expand the endpoint schema', async () => {
+    const model = 'fal-ai/nano-banana-pro/edit';
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({
+      models: [{
+        endpoint_id: model,
+        openapi: { error: { code: 'expansion_failed', message: 'Failed to fetch OpenAPI schema' } },
+      }],
+      has_more: false,
+      next_cursor: null,
+    }));
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fal-provider-'));
+
+    await expect(createFalMediaProvider().readInputSchema!(
+      model,
+      await providerContext(directory, fetchMock),
+    )).rejects.toMatchObject({
+      code: 'ENGINE_METADATA_UNAVAILABLE',
+      message: `Fal.ai could not provide the input schema for ${model}: Failed to fetch OpenAPI schema (expansion_failed).`,
+      details: { providerError: { code: 'expansion_failed', message: 'Failed to fetch OpenAPI schema' } },
     });
   });
 

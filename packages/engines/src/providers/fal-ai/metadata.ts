@@ -12,10 +12,12 @@ export async function loadFalInputSchema(
   const url = new URL(MODELS_URL);
   url.searchParams.set('endpoint_id', model);
   url.searchParams.set('expand', 'openapi-3.0');
+  // The model catalog is public. Sending the account key adds nothing the
+  // schema lookup needs, and Fal can fail the OpenAPI expansion for an
+  // authenticated account while the same public request succeeds.
   const metadata = await retrieveProviderMetadata({
     key: { provider: 'fal-ai', model, url: url.toString() },
     context,
-    headers: { Authorization: `Key ${context.credential}` },
   });
   const body = metadata.body;
   if (!isRecord(body) || !Array.isArray(body.models)) {
@@ -32,6 +34,9 @@ export async function loadFalInputSchema(
     );
   }
   const openApi = selected.openapi;
+  if (isRecord(openApi) && isRecord(openApi.error)) {
+    throw expansionFailed(model, openApi.error);
+  }
   if (!isRecord(openApi) || !isRecord(openApi.paths) || !isRecord(openApi.components)) {
     throw invalidMetadata(model);
   }
@@ -60,6 +65,16 @@ function assertExactFalEndpointId(model: string): void {
       { provider: 'fal-ai', model },
     );
   }
+}
+
+function expansionFailed(model: string, error: Record<string, JsonValue>): EngineError {
+  const code = typeof error.code === 'string' ? error.code : 'unknown';
+  const message = typeof error.message === 'string' ? error.message : 'No reason given.';
+  return new EngineError(
+    'ENGINE_METADATA_UNAVAILABLE',
+    `Fal.ai could not provide the input schema for ${model}: ${message} (${code}).`,
+    { provider: 'fal-ai', model, details: { providerError: { code, message } } },
+  );
 }
 
 function invalidMetadata(model: string): EngineError {

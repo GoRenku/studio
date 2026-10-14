@@ -1,24 +1,16 @@
 import fs from 'node:fs/promises';
 import { afterAll, describe, expect, it } from 'vitest';
-import {
-  createMediaEngine,
-  createPikaMediaProvider,
-} from '../../src/index.js';
-import { readOptInProviderTestCredential } from './provider-test-credentials.js';
-import { createProviderTestContext } from './provider-test-context.js';
+import { createMediaEngine, createPikaMediaProvider } from '@gorenku/studio-engines';
+import { createProviderTestContext, isPaidProviderTestEnabled } from './provider-test-context.js';
 
-const credential = readOptInProviderTestCredential({
-  optInEnvironmentVariable: 'RUN_PIKA_TEST',
-  credentialEnvironmentVariable: 'PIKA_API_KEY',
-});
-const describeIf = credential ? describe : describe.skip;
+const describeIf = isPaidProviderTestEnabled('RUN_PIKA_TEST') ? describe : describe.skip;
 
 describeIf('Pika paid provider smoke test', () => {
   let cleanup: (() => Promise<void>) | undefined;
   afterAll(async () => cleanup?.());
 
   it('uses live metadata to generate and download one inexpensive image', async () => {
-    const test = await createProviderTestContext(credential!);
+    const test = await createProviderTestContext('pika');
     cleanup = test.cleanup;
     const engine = createMediaEngine([createPikaMediaProvider()]);
     const request = {
@@ -58,7 +50,7 @@ describeIf('Pika paid provider smoke test', () => {
     expect(result.artifacts[0]!.byteLength).toBeGreaterThan(0);
     expect((await fs.stat(result.artifacts[0]!.path)).size).toBe(result.artifacts[0]!.byteLength);
     const serialized = JSON.stringify(result);
-    expect(serialized).not.toContain(credential!);
+    expect(serialized).not.toContain(test.context.credential);
     expect(serialized).not.toContain('X-Amz-Signature');
     expect(serialized).not.toContain('cdn.pika.art');
     expect(serialized).not.toContain('https://');

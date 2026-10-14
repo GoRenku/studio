@@ -155,11 +155,11 @@ e2e tests:
 ```bash
 pnpm --dir packages/engines test
 pnpm --dir packages/engines test:integration
-pnpm --dir packages/engines test:e2e
+pnpm --dir packages/cli test:e2e
 ```
 
-The live provider e2e tests under `packages/engines/tests/e2e` are correctly
-outside the default Engines test command. They require provider credentials and
+The live provider e2e tests under `packages/cli/tests/e2e` are correctly
+outside the default CLI test command. They require saved provider keys and
 may spend money or time. They should remain opt-in final checks.
 
 Engines has no generic simulation integration suite. Provider protocol,
@@ -293,7 +293,7 @@ pnpm --dir packages/studio test:e2e
 Engines live provider e2e:
 
 ```bash
-pnpm --dir packages/engines test:e2e
+pnpm --dir packages/cli test:e2e
 ```
 
 Tier 4 tests may be slow, use a real browser, use live provider credentials, or
@@ -313,7 +313,7 @@ Protected examples:
 
 - `packages/studio/src/app/app.e2e.test.tsx`
 - `packages/studio/e2e/tests/smoke/*.spec.ts`
-- provider e2e tests under `packages/engines/tests/e2e` when provider behavior
+- provider e2e tests under `packages/cli/tests/e2e` when provider behavior
   is being changed intentionally.
 
 The correct optimization for these tests is:
@@ -472,7 +472,7 @@ pnpm test:e2e:studio
 Use Engines live provider e2e only for provider-facing changes:
 
 ```bash
-pnpm --dir packages/engines test:e2e
+pnpm --dir packages/cli test:e2e
 ```
 
 ### Full Release Or PR Gate
