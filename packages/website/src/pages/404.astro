@@ -1,0 +1,97 @@
+---
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { site } from '../data/site';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Page not found — Renku" description="This page does not exist. Download Renku or start from the home page, Quick Start or Tutorials.">
+  <SiteHeader />
+  <main class="not-found" id="top">
+    <div class="not-found-glow" aria-hidden="true"></div>
+    <section class="container not-found-inner">
+      <p class="eyebrow">404 · Page not found</p>
+      <h1>This scene didn’t <em>make the cut.</em></h1>
+      <p class="not-found-line">The link may be old or mistyped. Start from one of these instead.</p>
+      <div class="not-found-actions">
+        <a href={site.downloadUrl} class="btn btn-primary">Download Renku</a>
+        <nav class="not-found-links" aria-label="Start here">
+          <a href="/">Renku home</a>
+          <a href="/quick-start/">Quick Start</a>
+          <a href="/tutorials/">Tutorials</a>
+        </nav>
+      </div>
+    </section>
+  </main>
+  <SiteFooter />
+</BaseLayout>
+
+<style>
+  .not-found {
+    position: relative;
+    overflow: hidden;
+    min-height: 72vh;
+    display: grid;
+    align-items: center;
+    padding-block: clamp(8rem, 18vh, 11rem) clamp(5rem, 12vh, 8rem);
+  }
+
+  .not-found-glow {
+    position: absolute;
+    inset: -12rem -16rem auto;
+    height: 52rem;
+    pointer-events: none;
+    background:
+      radial-gradient(36rem 24rem at 30% 30%, rgba(253, 160, 45, 0.15), transparent 68%),
+      radial-gradient(34rem 22rem at 76% 12%, rgba(229, 54, 95, 0.08), transparent 68%);
+  }
+
+  .not-found-inner {
+    position: relative;
+    max-width: 50rem;
+    text-align: center;
+  }
+
+  h1 {
+    margin-top: 1.1rem;
+    font-size: clamp(2.6rem, 6vw, 4.4rem);
+  }
+
+  h1 em {
+    color: var(--amber-400);
+    font-weight: 400;
+  }
+
+  .not-found-line {
+    margin: 1.4rem auto 0;
+    max-width: 36rem;
+    font-size: clamp(1rem, 1.6vw, 1.16rem);
+    color: var(--paper-300);
+  }
+
+  .not-found-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6rem;
+    margin-top: 2.4rem;
+  }
+
+  .not-found-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.75rem;
+    font-size: 0.92rem;
+    color: var(--paper-300);
+  }
+
+  .not-found-links a {
+    transition: color 0.2s ease;
+  }
+
+  .not-found-links a:hover,
+  .not-found-links a:focus-visible {
+    color: var(--amber-400);
+  }
+</style>

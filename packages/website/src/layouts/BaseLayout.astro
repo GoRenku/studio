@@ -2,17 +2,40 @@
 import '@fontsource-variable/fraunces/index.css';
 import '../styles/global.css';
 
-import { site } from '../data/site';
+import { getImage } from 'astro:assets';
+
+import { defaultLinkPreview, site, type LinkPreview } from '../data/site';
 import CookieConsent from '../components/CookieConsent.astro';
 import WebsiteAnalytics from '../components/WebsiteAnalytics.astro';
 
 interface Props {
   title?: string;
   description?: string;
+  linkPreview?: LinkPreview;
 }
 
-const { title = `${site.name} — ${site.tagline}`, description = site.description } =
-  Astro.props;
+const {
+  title = `${site.name} — ${site.tagline}`,
+  description = site.description,
+  linkPreview = defaultLinkPreview,
+} = Astro.props;
+
+const pathname = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const canonicalUrl = new URL(pathname, Astro.site).href;
+if (linkPreview.image.width < 1200 || linkPreview.image.height < 630) {
+  throw new Error(
+    `Link preview for ${pathname} must be at least 1200×630; ${linkPreview.image.src} is ${linkPreview.image.width}×${linkPreview.image.height}.`,
+  );
+}
+const previewImage = await getImage({
+  src: linkPreview.image,
+  width: 1200,
+  height: 630,
+  fit: 'cover',
+  position: 'top',
+  format: 'jpg',
+});
+const previewImageUrl = new URL(previewImage.src, Astro.site).href;
 ---
 
 <!doctype html>
@@ -27,6 +50,13 @@ const { title = `${site.name} — ${site.tagline}`, description = site.descripti
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={previewImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={linkPreview.alt} />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <slot />

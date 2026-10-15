@@ -15,9 +15,14 @@ const previous = tutorials[index - 1];
 const next = tutorials[index + 1];
 let nextLabel = next ? 'Up next' : 'Keep creating';
 if (next?.optional) nextLabel = 'Optional · When you need it';
+// Tutorial pictures smaller than a link preview keep the default preview card.
+const linkPreview =
+  tutorial.image && tutorial.alt && tutorial.image.width >= 1200 && tutorial.image.height >= 630
+    ? { image: tutorial.image, alt: tutorial.alt }
+    : undefined;
 ---
 
-<LearnLayout title={`${tutorial.title} — Renku Tutorials`} description={tutorial.description} current="tutorials">
+<LearnLayout title={`${tutorial.title} — Renku Tutorials`} description={tutorial.description} current="tutorials" linkPreview={linkPreview}>
   <header class="container learn-hero">
     <p class="eyebrow">{tutorial.optional ? 'Optional guide' : `Chapter 0${index + 1} · ${tutorial.phase}`}</p><h1>{tutorial.title}</h1><p class="lede">{tutorial.description}</p>
     <div class="learn-meta"><a class="text-link" href="/tutorials/">All chapters</a><span>{tutorial.optional ? tutorial.phase : 'Learn by making one scene'}</span></div>

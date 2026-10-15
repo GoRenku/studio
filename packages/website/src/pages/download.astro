@@ -7,6 +7,37 @@ import LearnNav from '../components/LearnNav.astro';
 const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh';
 const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
 const launchCommand = 'renku studio start';
+
+// Real requests from the Urban Basilica film, priced at list prices on 15 Oct 2026.
+// Refresh all three together, from real project records, when prices change.
+const generationCostExamples = [
+  {
+    // Scene 03 storyboard iteration 02 (s03-b01…b04), one request, 26 Aug 2026;
+    // Codex built-in image generation, so no provider bill.
+    title: 'Storyboard pass',
+    detail: 'Four Beat frames for one scene in a single image, made with Codex’s built-in image generation (26 Aug 2026).',
+    cost: 'No provider charge',
+    costNote: 'Uses your ChatGPT plan’s Codex usage. With Claude or another agent, storyboards use an image provider’s prices.',
+  },
+  {
+    // asset_file_exnux9d4, Fal.ai request 01a1256a-e327-7c91-8fd6-01ebbfd87101, 10 Oct 2026.
+    // fal.ai/models/minimax/h3-max/reference-to-video: 15 s × $0.08 at 768p = $1.20; reference
+    // tokens 4 × 1,824 (16:9 images) + 102,816 (15 s 24 fps 16:9 video) + 1,198 (14.98 s audio)
+    // = 111,310, minus 4,096 included, × $0.02 per 1,000 = $2.14.
+    title: 'Video take',
+    detail: '15 seconds at 768p with MiniMax H3 Max on Fal.ai, guided by four reference images, a previs video and the dialogue audio (10 Oct 2026).',
+    cost: '$3.34',
+    costNote: '$1.20 for the video plus $2.14 for the reference inputs.',
+  },
+  {
+    // asset_file_chmraa77, 10 Oct 2026; elevenlabs.io/pricing/api: Eleven v4 $0.08 per 1,000
+    // characters on pay as you go; 54 characters = $0.0043.
+    title: 'Voice line',
+    detail: 'One line of dialogue, 54 characters, with ElevenLabs Eleven v4 (10 Oct 2026).',
+    cost: '$0.004',
+    costNote: 'Pay-as-you-go API price.',
+  },
+];
 ---
 
 <BaseLayout
@@ -30,26 +61,54 @@ const launchCommand = 'renku studio start';
       </p>
     </section>
 
+    <section class="container install-before" aria-labelledby="before-heading">
+      <div class="before-needs" data-reveal>
+        <p class="eyebrow">Before you start</p>
+        <h2 id="before-heading">What you’ll need</h2>
+        <dl class="need-list">
+          <div>
+            <dt>A Mac or Windows PC</dt>
+            <dd>macOS 13.5 or newer on Apple silicon or Intel, or Windows 10 (version 1803 or newer) or Windows 11 on x64.</dd>
+          </div>
+          <div>
+            <dt>An AI agent app</dt>
+            <dd>Renku has no built-in agent. <a href="https://learn.chatgpt.com/docs/app" target="_blank" rel="noreferrer">Codex in the ChatGPT app</a> is included with ChatGPT plans, including Free; usage limits depend on the plan. <a href="https://claude.com/download" target="_blank" rel="noreferrer">Claude Desktop</a>’s Code tab needs a paid Claude plan (Pro or higher). A terminal agent, or another app that can run local commands and use Renku’s skills, works too. Desktop apps are recommended so you can see images beside the conversation.</dd>
+            <dd class="need-checked">Plans checked 15 Oct 2026: <a href="https://learn.chatgpt.com/docs/pricing" target="_blank" rel="noreferrer">OpenAI pricing</a> · <a href="https://claude.com/pricing" target="_blank" rel="noreferrer">Claude pricing</a></dd>
+          </div>
+          <div>
+            <dt>An API key with credit</dt>
+            <dd>To generate images, video or voices, add an API key from at least one provider Renku supports: Fal.ai, Pika, Replicate, WaveSpeed, ElevenLabs or World Labs. You pay the provider directly; Renku adds no fee. With Codex, some images can use its built-in image generation instead.</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="before-costs" data-reveal style="--reveal-delay: 0.06s">
+        <p class="eyebrow">What generation costs</p>
+        <h2>Three real examples</h2>
+        <p class="costs-intro">Renku is free. Your provider bills each generation. These are real requests from making our Basilica film, priced at list prices on 15 Oct 2026.</p>
+        <ul class="cost-list">
+          {generationCostExamples.map((example) => (
+            <li>
+              <div class="cost-heading">
+                <h3>{example.title}</h3>
+                <strong>{example.cost}</strong>
+              </div>
+              <p>{example.detail}</p>
+              <p class="cost-note">{example.costNote}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="costs-note">A retake costs the same again. Prices change, so check your provider. When a provider publishes its prices, Renku shows an estimate before you confirm a generation.</p>
+      </div>
+    </section>
+
     <section class="container install-workflow" aria-labelledby="install-heading">
       <div class="install-heading-row" data-reveal>
         <div>
           <p class="eyebrow">Installation</p>
           <h2 id="install-heading">Three steps to get started</h2>
         </div>
-        <p>macOS 13.5+ on Apple silicon or Intel · Windows 10 (1803+) or 11, x64</p>
       </div>
       <p class="install-terms">Before installing Renku, the installer asks you to read and accept the <a href="/terms/">Terms of Use</a>. It remembers your answer for updates and asks again only if the terms change. You can also review the <a href="/privacy/">Privacy Notice</a>. Renku Studio’s AGPLv3 license and the Skills’ MIT license govern your open-source rights independently.</p>
-
-      <div class="install-step" data-reveal>
-        <div class="step-intro">
-          <span class="step-number" aria-hidden="true">→</span>
-          <div>
-            <h3>First, install an AI agent</h3>
-            <p>Renku requires a separate agent app; it has no built-in agent. If you do not have one yet, install <a href="https://developers.openai.com/codex/app/" target="_blank" rel="noreferrer">Codex Desktop</a> or <a href="https://claude.com/download" target="_blank" rel="noreferrer">Claude Desktop</a> (use its Code tab).</p>
-            <p>We recommend desktop apps for viewing images alongside your conversation and using computer-use tools where supported. You can also use a terminal agent or another app that supports local commands and Renku’s skills.</p>
-          </div>
-        </div>
-      </div>
 
       <div class="platform-tabs" role="tablist" aria-label="Operating system" data-reveal>
         <button
@@ -119,7 +178,7 @@ const launchCommand = 'renku studio start';
             <h3>Let setup connect your agent</h3>
             <p>Setup automatically installs the Renku plugin for Claude and Codex when their CLI or desktop app is available. There is no agent picker. These plugins teach your agent how to work with Renku.</p>
             <p>For Claude Desktop, open its Code tab once before running setup. After installation, start a new local Code conversation and invoke <code>/renku:movie-director</code>. Standalone Claude Code is supported too.</p>
-            <p>Restart Codex Desktop after setup to load its plugin. Renku does not install the agent apps themselves. Using another agent? Follow the <a href="/agent-skills/">separate skills installation guide</a>.</p>
+            <p>Restart the ChatGPT app after setup to load the Codex plugin. Renku does not install the agent apps themselves. Using another agent? Follow the <a href="/agent-skills/">separate skills installation guide</a>.</p>
           </div>
         </div>
       </div>
@@ -297,6 +356,114 @@ const launchCommand = 'renku studio start';
     color: var(--paper-300);
   }
 
+  .install-before {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 64rem;
+    margin-bottom: clamp(2rem, 5vh, 3rem);
+    border: 1px solid rgba(244, 239, 230, 0.1);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--ink-850) 82%, transparent);
+    box-shadow: 0 32px 80px -40px rgba(0, 0, 0, 0.9);
+  }
+
+  .install-before > div {
+    padding: clamp(1.5rem, 4vw, 2.6rem);
+  }
+
+  .install-before > div + div {
+    border-left: 1px solid rgba(244, 239, 230, 0.08);
+  }
+
+  .install-before h2 {
+    margin-top: 0.55rem;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+  }
+
+  .need-list {
+    margin: 1.4rem 0 0;
+  }
+
+  .need-list > div + div {
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(244, 239, 230, 0.08);
+  }
+
+  .need-list dt,
+  .cost-list h3 {
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    font-weight: 650;
+    letter-spacing: 0;
+  }
+
+  .need-list dd {
+    margin: 0.35rem 0 0;
+    font-size: 0.88rem;
+    color: var(--paper-500);
+  }
+
+  .need-list dd.need-checked {
+    font-size: 0.8rem;
+    color: var(--paper-700);
+  }
+
+  .install-before a {
+    color: var(--amber-400);
+  }
+
+  .costs-intro {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--paper-300);
+  }
+
+  .cost-list {
+    margin: 1.4rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cost-list li {
+    padding-block: 1.1rem;
+    border-top: 1px solid rgba(244, 239, 230, 0.08);
+  }
+
+  .cost-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .cost-heading strong {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--amber-400);
+    white-space: nowrap;
+  }
+
+  .cost-list li p {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+    color: var(--paper-500);
+  }
+
+  .cost-list li p.cost-note {
+    font-size: 0.78rem;
+    color: var(--paper-700);
+  }
+
+  .costs-note {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(244, 239, 230, 0.08);
+    font-size: 0.8rem;
+    color: var(--paper-700);
+  }
+
   .install-workflow {
     position: relative;
     max-width: 64rem;
@@ -317,12 +484,6 @@ const launchCommand = 'renku studio start';
   .install-heading-row h2 {
     margin-top: 0.55rem;
     font-size: clamp(1.9rem, 4vw, 2.7rem);
-  }
-
-  .install-heading-row > p {
-    padding-bottom: 0.25rem;
-    font-size: 0.82rem;
-    color: var(--paper-700);
   }
 
   .install-terms {
@@ -558,8 +719,13 @@ const launchCommand = 'renku studio start';
       display: block;
     }
 
-    .install-heading-row > p {
-      margin-top: 0.7rem;
+    .install-before {
+      grid-template-columns: 1fr;
+    }
+
+    .install-before > div + div {
+      border-left: 0;
+      border-top: 1px solid rgba(244, 239, 230, 0.08);
     }
 
     .platform-tabs {

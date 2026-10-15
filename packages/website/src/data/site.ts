@@ -5,6 +5,7 @@ import actStoryboard from '../assets/screens/act-storyboard.png';
 import castGrid from '../assets/screens/cast-grid.png';
 import castSheets from '../assets/screens/cast-sheets.png';
 import locationDetail from '../assets/screens/location-detail.png';
+import renkuLinkPreview from '../assets/renku-link-preview.jpg';
 import sceneBeats from '../assets/screens/scene-beats.png';
 import sceneNarrative from '../assets/screens/scene-narrative.png';
 import screenplayAnalysis from '../assets/screens/screenplay-analysis.png';
@@ -17,7 +18,20 @@ export const site = {
   description:
     'Renku is a filmmaking studio for live-action, hybrid, and fully AI productions. Iterate on your screenplay through FDX, develop your visual language, direct Blender previs, and generate AI footage in one cinematic workspace.',
   githubUrl: 'https://github.com/GoRenku/studio',
+  studioSkillsGithubUrl: 'https://github.com/GoRenku/studio-skills',
+  githubDiscussionsUrl: 'https://github.com/GoRenku/studio/discussions',
+  latentMatineeUrl: 'https://latentmatinee.com',
   downloadUrl: '/download',
+};
+
+export interface LinkPreview {
+  image: ImageMetadata;
+  alt: string;
+}
+
+export const defaultLinkPreview: LinkPreview = {
+  image: renkuLinkPreview,
+  alt: 'Renku Studio showing a Blender previs beside its generated film take, with the line Watch your film while you’re still writing it.',
 };
 
 export interface Feature {

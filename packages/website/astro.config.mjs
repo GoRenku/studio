@@ -1,9 +1,12 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 
+import { sitemapIntegration } from './sitemap-integration.mjs';
+
 // https://astro.build/config
 export default defineConfig({
   site: 'https://gorenku.com',
+  integrations: [sitemapIntegration()],
   build: {
     assets: 'assets',
   },

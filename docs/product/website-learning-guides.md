@@ -4,7 +4,10 @@ The public website separates installation, first-session setup, and filmmaking
 instruction so that downloading Renku remains a focused task.
 
 - `/download/` covers the platform installer, automatic Claude/Codex plugin
-  setup, and Studio launch instructions. It links onward to Quick Start.
+  setup, and Studio launch instructions. It links onward to Quick Start. Above
+  the install steps, "What you'll need" lists the supported computers, the
+  agent app and plan it needs, and a provider API key; "What generation costs"
+  shows three real, dated example requests.
 - `/agent-skills/` covers independent skills installation and updates for other
   agents, with explicit agent selection and project/global scope.
 - `/quick-start/` first explains the agent-first working model: ask the agent to
@@ -42,6 +45,17 @@ Verify wording against the current owning implementation and documentation:
 - Decisions 0048 and 0080 for the two Lookbook roles and Beat Storyboard style.
 - The sister `studio-skills` project for specialist workflow handoffs and current
   generation, Shot List, and Blender Previs capabilities.
+
+Download page facts:
+
+- Re-check agent app plan requirements on the vendors' pricing pages and update
+  the "Plans checked" date with them.
+- Cost examples come only from real Urban Basilica generation records, priced
+  at the provider's published list price on a stated date. Refresh all three
+  together and keep the record, date and price source in the comment beside
+  them in `download.astro`.
+- System requirements match `distribution/install.sh` and
+  `distribution/install.ps1`; the provider list matches onboarding.
 
 Distinguish deterministic FDX import from Movie Director’s follow-up stages:
 Project Settings can enable continuity subjects, media, analysis, Beats, and
