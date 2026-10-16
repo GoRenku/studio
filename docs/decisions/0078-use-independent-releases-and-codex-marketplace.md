@@ -4,6 +4,11 @@ Date: 2026-08-10
 
 Status: accepted
 
+> [ADR 0123](0123-publish-studio-releases-as-latest-with-commit-notes.md)
+> narrows the release type and notes: Studio GitHub Releases are published as
+> full releases marked Latest, with notes built from commit subjects. The
+> draft-first and R2-before-public order is unchanged.
+
 > [ADR 0108](0108-require-native-project-upgrade-verification.md) confirms local
 > publication remains the default. Native upgrade tooling and GitHub Actions
 > remain optional; verification on other machines is separate follow-up work.

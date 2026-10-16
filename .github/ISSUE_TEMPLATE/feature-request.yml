@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest something that would help you make your film
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to make or do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else

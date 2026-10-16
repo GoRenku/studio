@@ -1,23 +1,89 @@
 # Renku Studio
 
-Renku Studio is a local-first context engine and visualization app for
-agent-assisted filmmaking. Codex provides the agent harness; Renku keeps the
-screenplay, visual language, cast, locations, scene Beats, Shot Plans, and media
-in a durable project that the agent can read and update through the CLI.
+**An open-source, local-first film studio you direct through Codex or Claude Code.**
 
-**For installation, tutorials, and usage, start at [gorenku.com](https://gorenku.com).**
-This repository is the technical entrypoint for the Studio runtime, CLI, and
-shared domain implementation. To work on the code, read [CONTRIBUTING.md](CONTRIBUTING.md).
+[![License: AGPL-3.0](https://img.shields.io/github/license/GoRenku/studio)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/GoRenku/studio)](https://github.com/GoRenku/studio/releases/latest)
 
-Copyright © 2026 Kerem Karatal. Renku Studio is licensed under
-[GNU AGPLv3](LICENSE). The license covers the software, not the films and other
-creative work people make with it. Third-party materials retain their own
-licenses. The Renku names and brand assets are covered by the separate
-[trademark policy](TRADEMARKS.md).
+You give direction in your agent's conversation. Renku keeps the screenplay,
+visual language, cast, locations, scene Beats, Shot Plans, Blender previs and
+generated footage in one project on your computer, and Studio shows it all in
+your browser, for live-action, hybrid and fully AI films.
+
+![A Blender previs of a harbor walk beside the AI-generated take of the same shot](docs/readme-media/previs-to-shot.webp)
+
+<sub>A Blender previs and the AI-generated take of the same shot, from Urban
+Basilica, the sample film made alongside Renku.</sub>
+
+## Install
+
+Works with **Codex** (desktop app or CLI) and **Claude Code** (Claude
+Desktop's Code tab or the terminal). Each needs its own plan or API account.
+You also need an API key with credit for at least one media provider, such as
+fal.ai; you pay providers directly and Renku adds no markup.
+macOS 13.5+ (Apple silicon or Intel) or Windows 10 (1803+) / 11, x64.
+
+macOS:
+
+```sh
+curl -fsSL https://downloads.gorenku.com/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://downloads.gorenku.com/install.ps1 | iex
+```
+
+Then start Studio (on macOS, in a new Terminal window):
+
+```sh
+renku studio start
+```
+
+Setup adds the Renku plugin from [Studio Skills](https://github.com/GoRenku/studio-skills)
+to Codex and Claude automatically. The [download page](https://gorenku.com/download/?utm_source=github&utm_medium=referral&utm_campaign=always-on&utm_content=studio-readme)
+has every step, [tutorials](https://gorenku.com/tutorials/?utm_source=github&utm_medium=referral&utm_campaign=always-on&utm_content=studio-readme) take you to a
+first scene, and other agents use the [skills guide](https://gorenku.com/agent-skills/?utm_source=github&utm_medium=referral&utm_campaign=always-on&utm_content=studio-readme).
+
+## See it in action
+
+[Watch the 2-minute launch film](https://gorenku.com/?utm_source=github&utm_medium=referral&utm_campaign=always-on&utm_content=studio-readme)
+
+## Made with Renku
+
+<p>
+  <img src="docs/readme-media/made-with-renku-storyboard.jpg" width="32%" alt="A pencil storyboard of three shots">
+  <img src="docs/readme-media/made-with-renku-character-sheet.jpg" width="32%" alt="A character sheet with costume, face and hand studies">
+  <img src="docs/readme-media/made-with-renku-council-chamber.jpg" width="32%" alt="A generated shot in a council chamber">
+</p>
+
+Storyboard, character sheet and a generated shot from Urban Basilica, the
+sample film made alongside Renku. [Explore the project](https://github.com/GoRenku/sample-project).
+
+Renku is free and open source, made by one developer. If it helps your work,
+starring this repository helps other filmmakers find it. Questions and
+finished scenes are welcome in
+[Discussions](https://github.com/GoRenku/studio/discussions).
+
+## How it works
 
 ![Codex directing a scene alongside Renku Studio, with Blender previs and generated footage](docs/screenshots/codex-and-renku.png)
 
-## How the repositories fit together
+Renku's skills teach your agent filmmaking workflows and use the `renku`
+command line to read and update your project. Studio runs locally and shows
+the screenplay, cast, locations, shot plans and media so you can review the
+work and tell the agent what to change. Creative choices stay with you and
+your agent; Renku keeps the project consistent.
+
+## For contributors
+
+This repository is the technical entrypoint for the Studio runtime, CLI, and
+shared domain implementation. To work on the code, read
+[CONTRIBUTING.md](CONTRIBUTING.md). Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+### How the repositories fit together
 
 - **[studio](https://github.com/GoRenku/studio)** (this repository) owns project
   storage, domain commands, generation engines, the CLI, and the browser app.
@@ -30,7 +96,7 @@ Creative decisions live in the user/agent workflow. Core owns domain validation
 and durable changes. When a CLI contract changes, update its callers and the
 corresponding skill references in `studio-skills` together.
 
-## Repository organization
+### Repository organization
 
 | Path | Responsibility |
 | --- | --- |
@@ -48,7 +114,7 @@ The CLI and Studio server call core-owned commands. React consumes projections
 and sends user intent through the server. Keep business rules in their owning
 package rather than duplicating them in UI, HTTP, CLI, or skill code.
 
-## Local configuration and project storage
+### Local configuration and project storage
 
 Manage provider API keys in **Studio Settings**, or in the optional provider
 step during first-run setup. Keys are saved in `.env` in the configuration
@@ -78,7 +144,7 @@ folder picker. To choose another root, close Studio and run
 This command preserves existing configuration; it does not relocate an existing
 library.
 
-## CLI for technical work
+### CLI for technical work
 
 Use `renku --help` for the command overview and the
 [CLI reference](docs/cli/commands.md) for complete arguments and document shapes.
@@ -116,7 +182,7 @@ separate: opening a project in the CLI is not the same as selecting it in Studio
 The reference also covers cast, locations, props, Lookbooks, scene Beats, Shot
 Lists, Blender Previs, media attachment, provider execution, and Trash.
 
-## Development commands
+### Development commands
 
 Contributor prerequisites and initial setup are in [CONTRIBUTING.md](CONTRIBUTING.md).
 Run these from the repository root:
@@ -142,7 +208,7 @@ scripts do not include the website. See [`package.json`](package.json) for the
 exact script definitions. Creating and publishing releases is maintainer work,
 not part of the contributor workflow.
 
-## Documentation
+### Documentation
 
 - [Contributor guide](CONTRIBUTING.md)
 - [Documentation map](docs/README.md)
@@ -155,3 +221,11 @@ not part of the contributor workflow.
 - [Parallel worktrees and agent-assisted integration](docs/development/parallel-worktree-integration.md)
 - [Architecture decision records](docs/decisions)
 - [Renku agent skills](https://github.com/GoRenku/studio-skills)
+
+## License
+
+Copyright © 2026 Kerem Karatal. Renku Studio is licensed under
+[GNU AGPLv3](LICENSE). The license covers the software, not the films and other
+creative work people make with it. Third-party materials retain their own
+licenses. The Renku names and brand assets are covered by the separate
+[trademark policy](TRADEMARKS.md).

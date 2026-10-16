@@ -297,12 +297,13 @@ tag. Publish then:
 5. records `runtime` or `structural` verification evidence for every artifact;
 6. packages all three target products;
 7. pushes `main` and the annotated tag;
-8. creates or resumes a draft GitHub prerelease and uploads all three declared
+8. creates or resumes a draft GitHub release and uploads all three declared
    targets;
 9. downloads the GitHub assets into a fresh temporary directory and verifies
    their complete manifest, names, hashes, and bytes;
 10. promotes those exact downloaded bytes to immutable and beta R2 keys; and
-11. publishes the GitHub prerelease only after R2 verification succeeds.
+11. publishes the GitHub release and marks it Latest only after R2 verification
+    succeeds.
 
 Product assembly uses pnpm's modern deploy mode with the workspace injection
 setting enabled only for that command. Windows additionally uses
@@ -384,6 +385,19 @@ A stalled verification fails with `RELEASE045` and leaves GitHub as a draft;
 resume publication after resolving the connection problem. Existing immutable
 objects are reused only after their downloaded bytes pass checksum verification.
 
+### Release notes
+
+The draft release's notes are composed from commit subjects since the previous
+annotated `v*` tag (`scripts/release/release-notes.mjs`): `feat:` under
+Features, `fix:` under Fixes, everything else under Other changes, and
+`release:` commits left out. Commit subjects therefore become public text, so
+write them for readers. To correct a published page, edit the notes and run
+`gh release edit vX.Y.Z --notes-file <file>`.
+
+The GitHub release is a full release marked Latest
+([ADR 0123](../decisions/0123-publish-studio-releases-as-latest-with-commit-notes.md));
+the download channel and product remain beta.
+
 ## Optional GitHub Actions Release
 
 The retained `.github/workflows/release.yml` builds one self-contained Node 24
@@ -399,7 +413,7 @@ pnpm release:dispatch -- --tag vX.Y.Z
 Use one invocation to drive a release; another invocation finds the same
 commit/tag run and resumes it.
 Do not run local publication and Actions dispatch for the same tag.
-The workflow creates or resumes a draft GitHub prerelease, uploads uniquely
+The workflow creates or resumes a draft GitHub release, uploads uniquely
 named archives and checksums for all three targets, verifies the complete asset
 set, and downloads the release assets again. R2 promotion consumes only that
 fresh GitHub Release download. It publishes immutable version keys before beta

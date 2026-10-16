@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or help
+    url: https://github.com/GoRenku/studio/discussions/categories/help
+    about: Ask in Discussions.
+  - name: Skill idea or model request
+    url: https://github.com/GoRenku/studio-skills/issues/new/choose
+    about: Open these in the Studio Skills repository.

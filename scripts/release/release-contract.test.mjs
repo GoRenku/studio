@@ -26,6 +26,8 @@ import {
 } from './release-contract.mjs';
 import { requirePrivateNodeRuntime } from './build-local-release.mjs';
 import {
+  githubDraftReleaseArguments,
+  githubFinalizeReleaseArguments,
   publishDraftReleaseAssets,
   stageGitHubReleaseAssets,
   verifyDownloadedReleaseAssets,
@@ -217,7 +219,6 @@ test('GitHub publication reuses a complete verified draft instead of rebuilt byt
   const release = {
     tagName: `v${version}`,
     isDraft: true,
-    isPrerelease: true,
     url: 'https://example.invalid/release',
     assets: readdirSync(publishedAssetsRoot).map((name) => ({ name })),
   };
@@ -343,6 +344,25 @@ test('product assembly deploys into staging without legacy workspace purging', (
   assert.match(assembly, /node_modules', '\.pnpm', 'lock\.yaml/);
   assert.match(assembly, /node_modules', '\.pnpm-workspace-state-v1\.json'/);
   assert.match(assembly, /path\.join\(appRoot, 'pnpm-lock\.yaml'\)/);
+});
+
+test('GitHub releases are drafted with composed notes and published as Latest', () => {
+  const draft = githubDraftReleaseArguments({ tag: 'v1.2.3', notesFile: '/tmp/notes.md' });
+  assert.deepEqual(draft.slice(0, 3), ['release', 'create', 'v1.2.3']);
+  assert.ok(draft.includes('--draft'));
+  assert.ok(draft.includes('--verify-tag'));
+  assert.equal(draft[draft.indexOf('--notes-file') + 1], '/tmp/notes.md');
+  assert.equal(draft[draft.indexOf('--title') + 1], 'Renku v1.2.3');
+  assert.ok(!draft.includes('--generate-notes'));
+  assert.ok(!draft.includes('--prerelease'));
+  assert.deepEqual(githubFinalizeReleaseArguments('v1.2.3'), [
+    'release',
+    'edit',
+    'v1.2.3',
+    '--draft=false',
+    '--prerelease=false',
+    '--latest',
+  ]);
 });
 
 test('release dependency policy is strict and installers do not resolve dependencies', () => {

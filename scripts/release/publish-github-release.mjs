@@ -22,6 +22,7 @@ import {
   repositoryRoot,
   runCommand,
 } from './release-contract.mjs';
+import { composeReleaseNotes } from './release-notes.mjs';
 import {
   RELEASE_TARGETS,
   requireReleaseTarget,
@@ -273,7 +274,7 @@ function readOptions(args) {
 function viewRelease(tag) {
   const result = spawnSync(
     'gh',
-    ['release', 'view', tag, '--json', 'tagName,isDraft,isPrerelease,url,assets'],
+    ['release', 'view', tag, '--json', 'tagName,isDraft,url,assets'],
     { cwd: repositoryRoot, encoding: 'utf8' }
   );
   if (result.status !== 0) {
@@ -285,23 +286,38 @@ function viewRelease(tag) {
 function ensureDraftRelease(tag) {
   const current = viewRelease(tag);
   if (!current) {
-    runCommand('gh', [
-      'release',
-      'create',
-      tag,
-      '--verify-tag',
-      '--draft',
-      '--prerelease',
-      '--generate-notes',
-      '--title',
-      `Renku ${tag}`,
-    ]);
+    const notesRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-release-notes-'));
+    try {
+      const notesFile = path.join(notesRoot, 'notes.md');
+      writeFileSync(notesFile, composeReleaseNotes({ tag }));
+      runCommand('gh', githubDraftReleaseArguments({ tag, notesFile }));
+    } finally {
+      rmSync(notesRoot, { recursive: true, force: true });
+    }
     return null;
   }
-  if (current.tagName !== tag || !current.isDraft || !current.isPrerelease) {
-    throw new Error(`RELEASE082 Existing GitHub Release ${tag} is not the expected draft prerelease.`);
+  if (current.tagName !== tag || !current.isDraft) {
+    throw new Error(`RELEASE082 Existing GitHub Release ${tag} is not a draft.`);
   }
   return current;
+}
+
+export function githubDraftReleaseArguments({ tag, notesFile }) {
+  return [
+    'release',
+    'create',
+    tag,
+    '--verify-tag',
+    '--draft',
+    '--notes-file',
+    notesFile,
+    '--title',
+    `Renku ${tag}`,
+  ];
+}
+
+export function githubFinalizeReleaseArguments(tag) {
+  return ['release', 'edit', tag, '--draft=false', '--prerelease=false', '--latest'];
 }
 
 function copyStagedAssets(source, destination) {
@@ -382,7 +398,7 @@ async function main() {
     }
     const evidenceRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-release-evidence-'));
     downloadVerifiedReleaseAssets(options.tag, path.join(evidenceRoot, 'assets'));
-    runCommand('gh', ['release', 'edit', options.tag, '--draft=false', '--prerelease']);
+    runCommand('gh', githubFinalizeReleaseArguments(options.tag));
     return;
   }
   if (!options.releaseDir || !options.stagingDir || !options.downloadDir) {
