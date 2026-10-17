@@ -176,8 +176,9 @@ Playwright from a local Studio, viewing only.
 | `films/basilica/harbor/take-direction.txt` | the `gsb7` take's stored request prompt | copied exactly |
 | `films/basilica/first-patron/previs-revision-1.jpg` | `scenes/02/02-shot-plan/previs/renders/previs-g51n.mp4` | frame at 16 s |
 | `media/first-patron-previs.mp4` | `scenes/02/02-shot-plan/previs/renders/previs-gkh9.mp4` (revision 6) | remuxed, fast-start |
-| `media/first-patron-take.mp4` | `scenes/02/02-shot-plan/s02-p02-video-ghm2.mp4` | 960 wide, H.264 CRF 26, AAC 128 kb/s, fast-start |
+| `media/first-patron-take.mp4` | the selected takes of revision 6's two clips, `scenes/02/02-shot-plan/s02-p02-video-gxqv.mp4` (Clip 1, take 3) then `s02-p02-video-gt9b.mp4` (Clip 2, take 1), as Studio plays them | joined, 960 wide, H.264 CRF 26, AAC 128 kb/s, fast-start |
 | `screens/first-patron-previs-plan.png`, `location-hero-harbor-quarter.png` | Studio: Scene 2 Previs Shot Plan; Harbor Quarter Location | screenshot |
+| `screens/first-patron-two-clips.png` | Studio: Scene 2 previs revision 6 with the Generation clip menu open | screenshot, cropped |
 | `screens/harbor-dialogue-direction.png` | Studio: Scene 3 dialogue panel, captured by the maintainer | copied |
 | `films/sintel/scene-3/beat-01.png` … `beat-04.png` | Sintel `storyboards/3/00-iteration/s3-b01-image-g403.png` … `s3-b04-image-gqdt.png` (Codex built-in) | copied |
 | `public/captions/*.vtt` | the scenes' screenplay lines | written; timing from silence detection, checked with a Whisper transcript |

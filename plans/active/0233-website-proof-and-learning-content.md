@@ -1,6 +1,6 @@
 # 0233 Website Proof And Learning Content
 
-Status: implemented 2026-10-17, waiting on the maintainer items below (not committed or published)
+Status: done for Basilica, published by the maintainer on 2026-10-17. Sintel's previs and take come later.
 Date: 2026-10-15
 
 ## Review
@@ -38,35 +38,51 @@ Date: 2026-10-15
 - New production runs. The timed storyboard run (old D5) and the first-session
   screen recording are both out. Everything uses content that already exists.
 
-### Decisions (all answered 2026-10-17)
+### Where it stands (2026-10-17)
 
-- **Layout: Scene story.** The four stages are stacked, each with a short
-  paragraph, and the take ends the section full width. The Scene story mockup
-  (see "Mockups") is the implementation target.
-- **Harbor videos shown once.** The "Two ways to shape a scene" section's
-  Blender Previs tab loses its collapsed "Watch the previs and generation"
-  videos. A "See the whole scene" link to the new section takes their place,
-  and the tab keeps its screenshot.
-- **Show what the video model was given.** Under the take, the section shows
-  a row of the five pictures the model received (Mara's and Urban's character
-  sheets, the Harbor Quarter location sheet, the "Imperial Wound" look sheet
-  and the Blender previs) and a collapsed "Read the full direction" panel with
-  the full stored text, about 1,000 words. Mara's sheet still needs your
-  confirmation of how it was made; without it the row shows four pictures.
-- **No Sintel recipe for now.** Sintel appears only in the Made with Renku
-  section. A Final Draft storyboard recipe can be a later plan.
+Done and published:
 
-### What I need from you
+- Made with Renku on the home page, Scene story layout, with the Basilica and
+  Sintel switch.
+- Quick Start step 05, the Journal with its RSS feed and first post, the
+  Changelog, the recipe, and the new header and footer links.
+- Credit lines: "Basilica, a short film by Kerem Karatal. Made with Renku." and
+  the Sintel credit with links to durian.blender.org and the CC BY 3.0
+  license, noting that only the script is Sintel's and everything else was
+  made in Renku Studio.
+- Captions and lip sync checked by the maintainer on every video with speech,
+  including the recipe's joined two-clip video.
 
-- The credit lines: who wrote and directed Basilica. For Sintel, confirm the
-  wording. Sintel is the Blender Foundation's open film, released under
-  CC BY, so the page must credit it, for example "Sintel © Blender
-  Foundation, sintel.org, CC BY 3.0".
-- How `cast/mara/mara.png` was made. The project records it as imported, with
-  no generation record. Until you confirm, it stays off the site.
-- Edit and approve the first journal post.
-- Watch the take with captions on and confirm they match what is said.
-- Publish (`pnpm deploy:website`). Builds and previews never publish.
+Changed after the first review, at the maintainer's request:
+
+- The harbor take is the second take (`gsb7`). It used an ElevenLabs v4
+  six-line dialogue recording as its audio reference. "What the take was
+  given" shows that take's five references (Mara and Urban sheets made with
+  Codex, the Harbor Quarter sheet, a frame from the first take, the previs),
+  a player for the recording, and the take's own direction text. The first
+  take and why it was replaced are covered in the journal post, with the
+  maintainer's dialogue-panel screenshot.
+- The journal post has a cover image, inline storyboards, previs and reference
+  images with captions, and proper spacing.
+- The recipe shows the selected takes of both clips (Clip 1 take 3, Clip 2
+  take 1) played back to back, as Studio plays them. A new section explains
+  why the 30-second previs was generated as two clips and how Studio shows
+  them. The recipe is linked from the tutorials page header and from the
+  Blender Previs chapter.
+
+Still open:
+
+- Sintel's previs and take. When they exist, add them to
+  `src/data/made-with-renku.ts`; the section needs no code change.
+
+Decisions made along the way:
+
+- Layout: Scene story (stacked stages, take full width at the end).
+- The Shot Planning section's collapsed harbor videos were removed and replaced
+  with a link to the new section.
+- Show what the video model was given: yes.
+- No Sintel recipe and no "Why I built Renku" page for now.
+- The changelog reads GitHub Releases at build time (0231 D5).
 
 ### Technical changes worth noticing
 
@@ -89,13 +105,8 @@ Date: 2026-10-15
 
 ## Mockups
 
-Scratch file, not committed:
-`/private/tmp/claude-501/-Users-keremk-Projects-aitinkerbox-studio/079defee-dac4-4c63-946f-34826cc8a589/scratchpad/mockups/index.html`,
-served by the `mockups` entry in `.claude/launch.json` (port 4399). The bar at
-the top switches between the two layouts, and the switch inside the section
-changes the film. The play buttons and the Sintel placeholder boxes exist only
-in the mockup. The direction panel shows an excerpt; the live page shows the
-full stored text.
+Two layout mockups (Filmstrip and Scene story) were shown on 2026-10-17 from a
+scratch file; Scene story was chosen. The mockups were not kept.
 
 ## Context And Evidence
 
@@ -422,55 +433,62 @@ date come from the tag and the publish date.
   bytes load on the home page before a play click.
 - `git diff --stat` and the full diff: no format churn, no large or tangled
   file, and nothing outside `packages/website` apart from the two docs files.
-- Nothing published. Both projects were only read, copied from and viewed.
+- Published by the maintainer. Both projects were only read, copied from and viewed.
 
 ## Completion Checklist
 
 ### Review
 
-- [ ] Credit lines and Mara's sheet answered.
-- [ ] File layout matches the Architecture Shape Gate.
-- [ ] No new dependency, framework or extra network call.
+- [x] Credit lines answered; Mara's sheet resolved by using the second take's
+      Codex-made sheet.
+- [x] File layout matches the Architecture Shape Gate (plus the release-notes
+      loader, date helper and sitemap fix listed there).
+- [x] No new dependency, framework or extra network call.
 
 ### Content foundation and journal
 
-- [ ] `article.css` rename done; legal pages look unchanged.
-- [ ] Journal pages and feed build; the feed is well-formed; every page has the
+- [x] `article.css` rename done; legal pages look unchanged.
+- [x] Journal pages and feed build; the feed is well-formed; every page has the
       RSS link.
-- [ ] Header and footer links added; the header fits at 1024×768.
-- [ ] Launch post approved.
+- [x] Header and footer links added; the header fits at 1024×768.
+- [x] Launch post approved and published, with the maintainer's "What didn't
+      work" section.
 
 ### Changelog
 
-- [ ] Loads GitHub Releases at build time and fails clearly if GitHub is
+- [x] Loads GitHub Releases at build time and fails clearly if GitHub is
       unreachable.
-- [ ] Only releases with notes, newest first, each linked to GitHub.
-- [ ] Footer link added.
+- [x] Only releases with notes, newest first, each linked to GitHub.
+- [x] Footer link added.
 
 ### Made with Renku
 
-- [ ] Media copied and recorded in the README for both films.
-- [ ] Credit lines present, including the Sintel CC BY credit.
-- [ ] Mara's sheet shown only after confirmation.
-- [ ] Take captions confirmed by playback.
-- [ ] Section matches the Scene story mockup; the film switch works; absent stages
-      render nothing.
-- [ ] Shot Planning collapsed videos removed; "See the whole scene" link works.
-- [ ] No video preloads or autoplays.
+- [x] Media copied and recorded in the README for both films.
+- [x] Credit lines present, including the Sintel CC BY credit with a license
+      link.
+- [x] Only media with a Renku generation record shown.
+- [x] Harbor take captions confirmed by playback.
+- [x] Section matches the Scene story mockup; the film switch works; absent
+      stages render nothing.
+- [x] Shot Planning collapsed videos removed; "See the whole scene" link works.
+- [x] No video preloads or autoplays.
+- [ ] Sintel previs and take added (later, when they exist).
 
 ### Tutorials and Quick Start
 
-- [ ] `TutorialKind` replaces `optional`; the Blender Previs chapter uses
+- [x] `TutorialKind` replaces `optional`; the Blender Previs chapter uses
       section videos and looks the same.
-- [ ] Group sidebar and pagination are correct.
-- [ ] Dialogue previs recipe published and checked against the skills.
-- [ ] Quick Start step 05 added and "Five steps" updated.
+- [x] Group sidebar and pagination are correct.
+- [x] Dialogue previs recipe published, checked against the skills, showing
+      both selected clips and the two-clip explanation.
+- [x] Captions on the recipe's joined two-clip video confirmed by playback.
+- [x] Quick Start step 05 added and "Five steps" updated.
 
 ### Documentation and final checks
 
-- [ ] README and both docs updated.
-- [ ] Check, build, feed and link audit pass.
-- [ ] Desktop screenshots reviewed; videos play with captions.
-- [ ] Provenance audit matches the README.
-- [ ] Full diff reviewed; no format churn; no tangled files.
-- [ ] Nothing published; both projects untouched.
+- [x] README and both docs updated.
+- [x] Check, build, feed and link audit pass.
+- [x] Desktop screenshots reviewed; videos play with captions.
+- [x] Provenance audit matches the README.
+- [x] Full diff reviewed; no format churn; no tangled files.
+- [x] Published by the maintainer; both projects untouched.

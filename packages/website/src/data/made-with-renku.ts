@@ -39,11 +39,14 @@ interface MadeWithRenkuStage {
   note: string;
 }
 
+// Plain text, or a linked phrase such as a license name.
+type CreditPart = string | { label: string; href: string };
+
 export interface MadeWithRenkuFilm {
   id: string;
   title: string;
   form: string;
-  credit?: string;
+  credit?: CreditPart[];
   scene: MadeWithRenkuStage & { heading: string; lines: ScreenplayLine[] };
   storyboard?: MadeWithRenkuStage & { frames: StoryboardFrame[] };
   previs?: MadeWithRenkuStage & {
@@ -68,6 +71,7 @@ export const madeWithRenkuFilms: MadeWithRenkuFilm[] = [
     id: 'basilica',
     title: 'Basilica',
     form: 'Live-action drama',
+    credit: ['Basilica, a short film by Kerem Karatal. Made with Renku.'],
     scene: {
       title: 'It starts with the page.',
       description: 'Scene 3 of Basilica, “The Harbor Argument”. Two characters, four lines, an evening harbor in 1452.',
@@ -145,7 +149,13 @@ export const madeWithRenkuFilms: MadeWithRenkuFilm[] = [
     id: 'sintel',
     title: 'Sintel',
     form: 'Animated short',
-    credit: 'Sintel © copyright Blender Foundation | durian.blender.org. Script used under the Creative Commons Attribution 3.0 license.',
+    credit: [
+      'Sintel © copyright Blender Foundation | ',
+      { label: 'durian.blender.org', href: 'https://durian.blender.org/' },
+      '. The script is used under ',
+      { label: 'CC BY 3.0', href: 'https://creativecommons.org/licenses/by/3.0/' },
+      '. Everything else shown here, including the storyboards, was made in Renku Studio.',
+    ],
     scene: {
       title: 'It starts with the page.',
       description: 'Scene 3 of Sintel, imported from Final Draft. A girl alone in a back alley, and a wounded creature on the roof.',
