@@ -8,10 +8,57 @@ const host = 'https://eu.i.posthog.com';
   (function () {
     var consentKey = 'renku_website_analytics_consent';
     var started = false;
+    var playedVideos = {};
+    var copyEvents = {
+      'install-macos': ['install_command_copied', { os: 'macos' }],
+      'install-windows': ['install_command_copied', { os: 'windows' }],
+      skills: ['skills_install_copied', {}],
+    };
+
+    function storedChoice() {
+      try {
+        return localStorage.getItem(consentKey);
+      } catch {
+        // Analytics stays off when browser storage is unavailable.
+        return null;
+      }
+    }
+
+    function start() {
+      if (started) return;
+      started = true;
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+
+      window.posthog.init(token, {
+        api_host: host,
+        capture_pageview: false,
+        capture_pageleave: true,
+        // Project settings can switch these on remotely; the Privacy Notice promises they stay off.
+        autocapture: false,
+        enable_heatmaps: false,
+        capture_dead_clicks: false,
+        capture_performance: false,
+        disable_session_recording: true,
+        persistence: 'localStorage',
+        person_profiles: 'identified_only',
+        cookieless_mode: 'on_reject',
+        before_send: function (event) {
+          if (event) event.properties.surface = 'website';
+          return event;
+        },
+      });
+    }
+
+    // Visitors who chose No are counted by page views and page-leave times only.
+    function captureConsented(name, properties, options) {
+      if (!started || storedChoice() !== 'yes') return;
+      window.posthog.capture(name, properties, options);
+    }
 
     function trackPage() {
       var path = window.location.pathname;
       window.posthog.capture('$pageview');
+      if (storedChoice() !== 'yes') return;
 
       if (path === '/download' || path === '/download/') {
         try {
@@ -32,55 +79,78 @@ const host = 'https://eu.i.posthog.com';
       }
     }
 
-    function start() {
-      if (started) return;
-      started = true;
-      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-
-      window.posthog.init(token, {
-        api_host: host,
-        capture_pageview: false,
-        autocapture: false,
-        disable_session_recording: true,
-        persistence: 'localStorage',
-        person_profiles: 'identified_only',
-      });
-      window.posthog.opt_in_capturing();
+    // PostHog switches between its browser identifier and its daily server-side code
+    // at each answer, so the page view is sent again under the new state.
+    function syncConsent(choice, answeredNow) {
+      if (choice !== 'yes' && choice !== 'no') return;
+      start();
+      if (choice === 'yes') {
+        window.posthog.opt_in_capturing(answeredNow ? undefined : { captureEventName: false });
+      } else {
+        window.posthog.opt_out_capturing();
+      }
       trackPage();
     }
 
-    try {
-      if (localStorage.getItem(consentKey) === 'yes') start();
-    } catch {
-      // Analytics stays off when browser storage is unavailable.
+    function placementOf(element) {
+      var root = element.closest('[data-analytics-placement]');
+      return root ? root.getAttribute('data-analytics-placement') : 'page';
     }
 
-    window.addEventListener('renku:analytics-consent', function (event) {
-      if (event.detail === 'yes') {
-        if (started) {
-          window.posthog.opt_in_capturing();
-          trackPage();
-        } else {
-          start();
-        }
-      } else if (started) {
-        window.posthog.opt_out_capturing();
-      }
-    });
+    function captureCopy(block) {
+      var copyEvent = copyEvents[block.getAttribute('data-analytics-copy')];
+      if (copyEvent) captureConsented(copyEvent[0], copyEvent[1]);
+    }
 
-    document.addEventListener('click', function (event) {
-      if (!started || !(event.target instanceof Element)) return;
+    function onDownloadLink() {
+      try {
+        sessionStorage.setItem('renku_download_click', 'yes');
+      } catch {
+        captureConsented('download_clicked', {}, { send_instantly: true });
+      }
+    }
+
+    function onClick(event) {
+      if (!started || storedChoice() !== 'yes' || !(event.target instanceof Element)) return;
+      var copyBlock = event.target.closest('[data-analytics-copy]');
+      if (copyBlock && event.target.closest('button')) captureCopy(copyBlock);
+
       var link = event.target.closest('a[href]');
       if (!link) return;
       var destination = new URL(link.href, window.location.href);
       if (destination.origin === window.location.origin && (destination.pathname === '/download' || destination.pathname === '/download/')) {
-        try {
-          if (localStorage.getItem(consentKey) !== 'yes') return;
-          sessionStorage.setItem('renku_download_click', 'yes');
-        } catch {
-          window.posthog.capture('download_clicked', {}, { send_instantly: true });
-        }
+        onDownloadLink();
+        return;
       }
+      var segments = destination.pathname.split('/');
+      if (destination.hostname === 'github.com' && segments[1].toLowerCase() === 'gorenku' && segments[2]) {
+        captureConsented('github_link_clicked', { repo: segments[2].toLowerCase(), placement: placementOf(link) }, { transport: 'sendBeacon' });
+      }
+    }
+
+    function onCopy() {
+      var selection = window.getSelection();
+      var node = selection && selection.anchorNode;
+      var element = node && (node instanceof Element ? node : node.parentElement);
+      var copyBlock = element && element.closest('[data-analytics-copy]');
+      if (copyBlock) captureCopy(copyBlock);
+    }
+
+    function onPlay(event) {
+      if (!(event.target instanceof HTMLMediaElement)) return;
+      var video = event.target.getAttribute('data-analytics-video');
+      if (!video || playedVideos[video] || !started || storedChoice() !== 'yes') return;
+      playedVideos[video] = true;
+      captureConsented('video_played', { video: video });
+    }
+
+    syncConsent(storedChoice(), false);
+    window.addEventListener('renku:analytics-consent', function (event) {
+      syncConsent(event.detail, true);
     });
+    document.addEventListener('click', onClick);
+    document.addEventListener('copy', onCopy);
+    // Media events do not bubble, so the play listener runs in the capture phase.
+    document.addEventListener('play', onPlay, true);
   })();
 </script>

@@ -7,16 +7,16 @@ import '../styles/article.css';
 
 <BaseLayout
   title="Privacy Notice — Renku"
-  description="How Renku handles local project data, provider requests, website hosting, and optional website analytics."
+  description="How Renku handles local project data, provider requests, website hosting, and website analytics."
 >
   <SiteHeader />
   <main class="article-page" id="top">
     <div class="container article-content">
       <p class="eyebrow">Legal</p>
       <h1>Privacy Notice</h1>
-      <p class="article-date">Last updated: 23 September 2026</p>
+      <p class="article-date">Last updated: 17 October 2026</p>
 
-      <p>This notice explains how Renku Studio and <a href="https://gorenku.com">gorenku.com</a> handle information. Kerem Karatal is responsible for the website and its optional analytics. You can contact him at <a href="mailto:support@codingventures.com">support@codingventures.com</a>.</p>
+      <p>This notice explains how Renku Studio and <a href="https://gorenku.com">gorenku.com</a> handle information. Kerem Karatal is responsible for the website and its analytics. You can contact him at <a href="mailto:support@codingventures.com">support@codingventures.com</a>.</p>
 
       <section aria-labelledby="privacy-studio">
         <h2 id="privacy-studio">Renku Studio runs locally</h2>
@@ -31,24 +31,26 @@ import '../styles/article.css';
 
       <section aria-labelledby="privacy-website">
         <h2 id="privacy-website">Website hosting</h2>
-        <p>The website is hosted on Cloudflare Pages. When you visit, Cloudflare processes technical request information such as your IP address, browser details, and requested pages to deliver and protect the site. This happens whether or not you accept optional analytics. Our legal basis is our legitimate interest in operating and securing the website. See <a href="https://www.cloudflare.com/policies/privacy/">Cloudflare’s privacy policy</a> for its handling of this information.</p>
+        <p>The website is hosted on Cloudflare Pages. When you visit, Cloudflare processes technical request information such as your IP address, browser details, and requested pages to deliver and protect the site. This happens whatever you choose in the analytics banner. Our legal basis is our legitimate interest in operating and securing the website. See <a href="https://www.cloudflare.com/policies/privacy/">Cloudflare’s privacy policy</a> for its handling of this information.</p>
       </section>
 
       <section aria-labelledby="privacy-analytics">
-        <h2 id="privacy-analytics">Optional website analytics</h2>
-        <p>We use PostHog’s EU service to understand which website pages, guides, and download links are useful. PostHog loads only if you choose <strong>Yes</strong> in the analytics banner. With your consent, it receives page views and events for visits to the Quick Start and tutorial pages and clicks to the download page. Analytics can include the page address, event time, a browser identifier, browser and device information, and approximate location derived from your network address.</p>
-        <p>We do not use website analytics to record sessions, automatically capture clicks, identify you by name, or collect your Renku project data. We do not use it for advertising or automated decisions. See <a href="https://posthog.com/privacy">PostHog’s privacy policy</a> for information about its service.</p>
+        <h2 id="privacy-analytics">Website analytics</h2>
+        <p>We use PostHog’s EU service to learn how people find gorenku.com and which pages, guides, and downloads are useful. The analytics banner asks whether we may store an analytics identifier in your browser. Until you answer, the website does not load PostHog and sends it nothing.</p>
+        <p>If you choose <strong>Yes</strong>, PostHog stores a browser identifier in your browser’s local storage and receives page views and when you leave a page; the website or tagged link that brought you here; clicks to the download page and to Renku’s GitHub repositories; copies of the installation commands; and when you start one of the website’s videos. This can include the page address, event time, the browser identifier, browser and device information, and approximate location derived from your network address. We may show a one-question survey on the Download page; if you answer, PostHog stores your answer with these events.</p>
+        <p>If you choose <strong>No</strong>, we store nothing in your browser except your choice. We still count page views and when you leave a page, without a browser identifier. To tell visits apart within one day, PostHog calculates a code on its servers from your network address, browser details, and the website’s name, combined with a random value it replaces every day. PostHog does not keep your network address or a location with these events, and the daily change means a returning visitor is counted again on another day. They are not linked to any visit in which you chose Yes. Our legal basis for this counting is our legitimate interest in knowing how many people visit the website and where they come from.</p>
+        <p>We do not use website analytics to record your screen, capture every click automatically, identify you by name, or collect your Renku project data. We do not use it for advertising or automated decisions. See <a href="https://posthog.com/privacy">PostHog’s privacy policy</a> for information about its service.</p>
       </section>
 
       <section aria-labelledby="privacy-choice">
         <h2 id="privacy-choice">Your analytics choice</h2>
-        <p>We save your <strong>Yes</strong> or <strong>No</strong> choice in your browser’s local storage so you are not asked on every visit. After you agree, PostHog may also store a browser identifier there. You can change your choice at any time with <strong>Analytics choice</strong> in the website footer. Choosing <strong>No</strong> stops future PostHog analytics; it does not affect the technical information Cloudflare needs to serve the website. You can also clear your browser’s site data to remove stored choices and identifiers.</p>
+        <p>We save your <strong>Yes</strong> or <strong>No</strong> choice in your browser’s local storage so you are not asked on every visit, and PostHog keeps its own copy of that choice there. If you choose Yes, PostHog also stores a browser identifier there. You can change your choice at any time with <strong>Analytics choice</strong> in the website footer. Changing from Yes to No removes PostHog’s browser identifier; after that your visits are only counted as described above. Your choice does not affect the technical information Cloudflare needs to serve the website. You can also clear your browser’s site data to remove stored choices and identifiers.</p>
       </section>
 
       <section aria-labelledby="privacy-sharing">
         <h2 id="privacy-sharing">Sharing and retention</h2>
-        <p>We do not sell your personal information. Website request data is handled by Cloudflare, which operates a global network; consented website analytics is handled through PostHog’s EU endpoint. Their linked policies describe their service providers and any international transfers. Model providers and AI agents that you choose to use receive information through your requests and apply their own retention rules.</p>
-        <p>Renku’s local copies of your project files and API keys remain on your device until you remove them. Your website analytics choice remains in your browser until you change it or clear site data. We keep analytics information only while needed to understand website use and improve the site, then delete or aggregate it. If you email us, we use your address and message to reply, based on our legitimate interest in handling your request, and keep them only as long as needed for that request or a legal obligation.</p>
+        <p>We do not sell your personal information. Website request data is handled by Cloudflare, which operates a global network; website analytics is handled through PostHog’s EU endpoint. Their linked policies describe their service providers and any international transfers. Model providers and AI agents that you choose to use receive information through your requests and apply their own retention rules.</p>
+        <p>Renku’s local copies of your project files and API keys remain on your device until you remove them. Your website analytics choice remains in your browser until you change it or clear site data. We keep analytics information only while needed to understand website use and improve the site, then delete or aggregate it. PostHog deletes analytics events after one year under our current plan. If you email us, we use your address and message to reply, based on our legitimate interest in handling your request, and keep them only as long as needed for that request or a legal obligation.</p>
       </section>
 
       <section aria-labelledby="privacy-rights">

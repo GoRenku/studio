@@ -28,13 +28,13 @@ import '../styles/learn.css';
         <section class="lesson-section" id="project">
           <h2>Install for one project</h2>
           <p>Open a terminal in the folder your agent will work in, then run:</p>
-          <pre><code>npx skills add GoRenku/studio-skills --agent cursor --skill '*' --copy</code></pre>
+          <pre data-analytics-copy="skills"><code>npx skills add GoRenku/studio-skills --agent cursor --skill '*' --copy</code></pre>
           <p>Choose project scope if prompted, review the destination, and confirm. Copy mode installs regular files rather than symbolic links. Keep your agent working in that folder so it can discover the skills.</p>
         </section>
         <section class="lesson-section" id="global">
           <h2>Install across projects</h2>
           <p>Use global scope only if the tool lists global installation support for your agent. For example, Cursor supports:</p>
-          <pre><code>npx skills add GoRenku/studio-skills --agent cursor --skill '*' --copy --global</code></pre>
+          <pre data-analytics-copy="skills"><code>npx skills add GoRenku/studio-skills --agent cursor --skill '*' --copy --global</code></pre>
           <p>Project-only agents, including PromptScript, must use project scope. Do not add <code>--global</code> for them.</p>
         </section>
         <section class="lesson-section" id="updates">

@@ -1,6 +1,7 @@
 ---
 import { getImage, Image } from 'astro:assets';
 
+import { analyticsVideoName } from '../data/analytics-video';
 import { madeWithRenkuFilms } from '../data/made-with-renku';
 
 const films = await Promise.all(
@@ -75,7 +76,7 @@ const films = await Promise.all(
             </div>
             <div class="mwr-previs">
               <figure>
-                <video controls muted playsinline preload="none" poster={film.previsPoster} aria-label={film.previs.label} src={film.previs.video}></video>
+                <video controls muted playsinline preload="none" poster={film.previsPoster} aria-label={film.previs.label} src={film.previs.video} data-analytics-video={analyticsVideoName(film.previs.video)}></video>
                 <figcaption>{film.previs.caption}</figcaption>
               </figure>
               <figure>
@@ -93,7 +94,7 @@ const films = await Promise.all(
               <h3>{film.take.title}</h3>
               <p>{film.take.description} {film.take.note}</p>
             </div>
-            <video controls playsinline preload="none" poster={film.takePoster} aria-label={film.take.label} src={film.take.video}>
+            <video controls playsinline preload="none" poster={film.takePoster} aria-label={film.take.label} src={film.take.video} data-analytics-video={analyticsVideoName(film.take.video)}>
               <track kind="captions" srclang="en" label="English" src={film.take.captions} />
             </video>
             {film.given && (
