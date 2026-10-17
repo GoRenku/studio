@@ -4,6 +4,7 @@ import LearnLayout from '../layouts/LearnLayout.astro';
 import CodexPrompt from '../components/CodexPrompt.astro';
 import AgentWorkspace from '../components/AgentWorkspace.astro';
 import screenplayImage from '../assets/screens/scene-narrative.png';
+import locationHeroImage from '../assets/screens/location-hero-harbor-quarter.png';
 import providerSetupImage from '../assets/screens/onboarding-provider-api-keys.png';
 import fal from '../assets/providers/fal-wordmark.svg';
 import pika from '../assets/providers/pika-wordmark.svg';
@@ -24,7 +25,7 @@ const providers = [
 <LearnLayout title="Quick Start — Your first project in Renku" description="Learn how to work with an AI agent and Renku Studio, then create your first project and start making a film." current="quick-start">
   <header class="container learn-hero">
     <div>
-      <p class="eyebrow">Four steps</p>
+      <p class="eyebrow">Five steps</p>
       <h1>Quick Start</h1>
       <p class="lede">Keep your agent app and Renku Studio both open. Ask questions and give direction to the agent; review the results in Studio.</p>
       <div class="hero-actions"><a href="#how-renku-works" class="btn btn-primary">See how Renku works</a></div>
@@ -37,7 +38,7 @@ const providers = [
   </section>
 
   <div class="container reading-layout">
-    <aside class="reading-nav"><p class="eyebrow">Your first session</p><a href="#how-renku-works">How Renku works</a><a href="#providers">01 · Connect your providers</a><a href="#project">02 · Create a project</a><a href="#screenplay">03 · Add your screenplay</a><a href="#codex">04 · Direct</a><a class="nav-divider" href="/tutorials/">Next: make your first scene</a></aside>
+    <aside class="reading-nav"><p class="eyebrow">Your first session</p><a href="#how-renku-works">How Renku works</a><a href="#providers">01 · Connect your providers</a><a href="#project">02 · Create a project</a><a href="#screenplay">03 · Add your screenplay</a><a href="#codex">04 · Direct</a><a href="#first-image">05 · Your first image</a><a class="nav-divider" href="/tutorials/">Next: make your first scene</a></aside>
     <div class="reading-content">
       <section class="lesson-section" id="how-renku-works">
         <p class="eyebrow">First, the way Renku works</p><h2>Start in the conversation.</h2>
@@ -105,6 +106,18 @@ const providers = [
         <h3>Review, respond, and make it yours.</h3>
         <p>Open a generated character or location image in Studio and tell Codex what to change: “Keep the character’s face and costume, but soften the light,” or “Keep this room’s layout and make it feel abandoned.” Keep directing until the result fits your film.</p>
         <p>You also have the other tools, skills, and plugins you use in Codex. Combine them with Renku’s workflows to research references, develop ideas, or refine an image.</p>
+      </section>
+      <section class="lesson-section" id="first-image">
+        <p class="eyebrow">05 · Generate</p><h2>Make your first image.</h2>
+        <p>Pick a place from your screenplay and ask Codex for a Location and its hero image: the single picture Studio shows at the top of that Location. Import does not create Locations, so the agent creates the one you name first.</p>
+        <CodexPrompt prompt="Create a Location for [a place from my screenplay] and generate a hero image for it." />
+        <ol>
+          <li>In Codex, the image lane starts with Codex’s built-in image tool, which needs no provider API key. In Claude and other agents, Renku asks which provider and model to use; those providers need a key from step 01.</li>
+          <li>Open <strong>Locations</strong> in Studio’s sidebar and select the new Location. The hero image appears on its <strong>Details</strong> tab.</li>
+          <li>Tell Codex what to change, such as “Keep the layout, but make it evening.” Each new image is kept, so you can compare versions before choosing one.</li>
+        </ol>
+        <figure class="learn-image"><Image src={locationHeroImage} alt="The Harbor Quarter Location in Renku Studio, with its hero image of a stone quay, moored boats and harbor walls at dusk." widths={[800, 1200, 1600]} sizes="800px" /><figcaption>The Harbor Quarter from the Basilica sample film. Its hero image was made with Codex’s built-in image tool.</figcaption></figure>
+        <div class="checkpoint"><p class="eyebrow">Ready when</p><p>The image appears on the Location in Studio.</p></div>
       </section>
       <div class="next-lesson"><div><p class="eyebrow">Setup complete</p><h2>Now, make a scene.</h2><p>Follow the full tutorial from screenplay analysis and inspiration to lookbooks, cast, storyboards, shot plans, and video.</p></div><a class="btn btn-primary" href="/tutorials/">Start the tutorial</a></div>
     </div>

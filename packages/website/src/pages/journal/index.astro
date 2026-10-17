@@ -1,0 +1,36 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import { formatArticleDate } from '../../data/article-dates';
+import '../../styles/article.css';
+
+const posts = (await getCollection('journal')).sort((a, b) => b.data.date.localeCompare(a.data.date));
+---
+
+<BaseLayout title="Journal — Renku" description="Notes on how films are made with Renku, and on how Renku itself is made.">
+  <SiteHeader />
+  <main class="article-page" id="top">
+    <div class="container article-content">
+      <p class="eyebrow">Journal</p>
+      <h1>Journal</h1>
+      <p>Notes on how films are made with Renku, and on how Renku itself is made. Follow along with the <a href="/journal/rss.xml">RSS feed</a>.</p>
+      <div class="article-list">
+        {posts.map((post) => (
+          <article class="article-row">
+            <time datetime={post.data.date}>{formatArticleDate(post.data.date)}</time>
+            <div>
+              {post.data.cover && <a class="article-row-cover" href={`/journal/${post.id}/`} tabindex="-1" aria-hidden="true"><Image src={post.data.cover} alt="" widths={[640, 1280]} sizes="(min-width: 52rem) 40rem, 100vw" /></a>}
+              <h2><a href={`/journal/${post.id}/`}>{post.data.title}</a></h2>
+              <p>{post.data.description}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>

@@ -1,0 +1,46 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import { formatArticleDate } from '../../data/article-dates';
+import '../../styles/article.css';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('journal');
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}
+
+interface Props { post: CollectionEntry<'journal'>; }
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout title={`${post.data.title} — Renku Journal`} description={post.data.description}>
+  <SiteHeader />
+  <main class="article-page journal-post" id="top">
+    <article>
+      <header class="container article-content journal-post-header">
+        <p class="eyebrow">Journal · <time datetime={post.data.date}>{formatArticleDate(post.data.date)}</time></p>
+        <h1>{post.data.title}</h1>
+        <p class="journal-post-lede">{post.data.description}</p>
+      </header>
+      {post.data.cover && (
+        <figure class="container journal-post-cover">
+          <Image src={post.data.cover} alt={post.data.coverAlt ?? ''} widths={[960, 1440, 2000]} sizes="(min-width: 74rem) 70rem, 100vw" loading="eager" />
+          {post.data.coverCaption && <figcaption>{post.data.coverCaption}</figcaption>}
+        </figure>
+      )}
+      <div class="container article-content article-body">
+        <Content />
+        <nav class="article-footer-links" aria-label="Journal">
+          <a href="/journal/">All journal posts</a>
+          <a href="/journal/rss.xml">RSS feed</a>
+        </nav>
+      </div>
+    </article>
+  </main>
+  <SiteFooter />
+</BaseLayout>

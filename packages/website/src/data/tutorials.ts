@@ -9,6 +9,12 @@ import previs from '../assets/screens/harbor-blender-previs.jpg';
 import takes from '../assets/screens/studio-generation-review-clean.jpg';
 import dialogueAudio from '../assets/screens/shot-plan-dialogue-audio.png';
 import generationSettings from '../assets/screens/codex-generation-settings.png';
+import harborPrevisVideo from '../assets/media/harbor-blender-previs.mp4';
+import harborGenerationVideo from '../assets/media/harbor-generation.mp4';
+import firstPatronPrevisVideo from '../assets/media/first-patron-previs.mp4';
+import firstPatronTakeVideo from '../assets/media/first-patron-take.mp4';
+import firstPatronPrevisPlan from '../assets/screens/first-patron-previs-plan.png';
+import firstPatronRevisionOne from '../assets/films/basilica/first-patron/previs-revision-1.jpg';
 import type { ImageMetadata } from 'astro';
 
 interface TutorialSection {
@@ -20,11 +26,34 @@ interface TutorialSection {
   prompt?: string;
   link?: { href: string; label: string };
   figure?: { image: ImageMetadata; alt: string; caption: string };
+  videos?: TutorialVideo[];
 }
+
+interface TutorialVideo {
+  src: string;
+  title: string;
+  label: string;
+  captions?: string;
+}
+
+export type TutorialKind = 'chapter' | 'guide' | 'recipe';
+
+interface TutorialKindPresentation {
+  sidebarTitle: string;
+  eyebrow: string;
+  indexLinkLabel: string;
+  checkpointLabel: string;
+}
+
+export const tutorialKindPresentation: Record<TutorialKind, TutorialKindPresentation> = {
+  chapter: { sidebarTitle: 'The first-scene guide', eyebrow: 'Chapter', indexLinkLabel: 'All chapters', checkpointLabel: 'Before moving on' },
+  guide: { sidebarTitle: 'Practical guides', eyebrow: 'Optional guide', indexLinkLabel: 'All tutorials', checkpointLabel: 'Before you finish' },
+  recipe: { sidebarTitle: 'Recipes', eyebrow: 'Recipe', indexLinkLabel: 'All tutorials', checkpointLabel: 'Before you finish' },
+};
 
 export interface Tutorial {
   slug: string;
-  optional?: boolean;
+  kind: TutorialKind;
   title: string;
   description: string;
   phase: string;
@@ -39,7 +68,7 @@ export interface Tutorial {
 
 export const tutorials: Tutorial[] = [
   {
-    slug: 'inspiration', title: 'Find your visual language', phase: 'Visual development',
+    slug: 'inspiration', kind: 'chapter', title: 'Find your visual language', phase: 'Visual development',
     description: 'Turn a collection of references into a clear cinematic direction.',
     image: inspiration, alt: 'The Wes Anderson reference collection in Renku’s Inspiration Grabs tab.',
     caption: 'Collect images for the decisions they help you make: light, framing, color, and atmosphere.',
@@ -53,7 +82,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'Your Inspiration Analysis is saved and reviewed. Next, use the collection and analysis as sources for your project’s lookbooks.',
   },
   {
-    slug: 'lookbooks', title: 'Give the film a visual compass', phase: 'Visual development',
+    slug: 'lookbooks', kind: 'chapter', title: 'Give the film a visual compass', phase: 'Visual development',
     description: 'Author Production and Storyboard Lookbooks with distinct jobs.',
     image: lookbook, alt: 'Renku Lookbook with cinematic imagery and visual direction.',
     caption: 'A shared visual brief keeps individual generations part of the same film.',
@@ -66,7 +95,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'Both lookbooks are authored, and you can distinguish the final film’s appearance from the boards’ presentation. Any generated sheets agree with the direction you intend to use.',
   },
   {
-    slug: 'cast-and-world', title: 'Meet the people. Build the world.', phase: 'Production design',
+    slug: 'cast-and-world', kind: 'chapter', title: 'Meet the people. Build the world.', phase: 'Production design',
     description: 'Develop characters, their voices, Locations, and Props before planning coverage.',
     image: cast, alt: 'Renku Cast grid with character portraits and descriptions.',
     caption: 'Stable character and world references give the scene continuity.',
@@ -81,7 +110,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'Your first scene has the people, places, and objects it needs, with useful descriptions and deliberately selected visual references. You do not need to finish the entire film’s asset library before continuing.',
   },
   {
-    slug: 'scene-beats', title: 'Find the turns inside the scene', phase: 'Story to screen',
+    slug: 'scene-beats', kind: 'chapter', title: 'Find the turns inside the scene', phase: 'Story to screen',
     description: 'Break the scene into meaningful changes in action and emotion.',
     image: beats, alt: 'Scene Beats in Renku with individual narrative moments.',
     caption: 'Beats describe how the scene changes before you decide how to photograph it.',
@@ -94,7 +123,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'The Beat sequence reads as the same scene as your script, with a clear progression and no unexplained story additions. The revision you intend to storyboard is saved.',
   },
   {
-    slug: 'storyboards', title: 'See the scene before you shoot it', phase: 'Story to screen',
+    slug: 'storyboards', kind: 'chapter', title: 'See the scene before you shoot it', phase: 'Story to screen',
     description: 'Turn reviewed Beats into images you can discuss and refine.',
     image: storyboard, alt: 'Renku storyboard images arranged across a story sequence.',
     caption: 'Review the visual progression, then refine the moments that are unclear.',
@@ -107,7 +136,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'You can follow the scene through the Beat Storyboards, and the important actions are legible. Next, choose Shot List planning for coverage or Blender Previs for spatial and timed staging.',
   },
   {
-    slug: 'shot-list', title: 'Design the coverage', phase: 'Shot planning',
+    slug: 'shot-list', kind: 'chapter', title: 'Design the coverage', phase: 'Shot planning',
     description: 'Translate story intentions into a practical, shot-by-shot plan.',
     image: shots, alt: 'Renku Shot List with numbered images and camera direction.',
     caption: 'Shot List planning puts framing, coverage, and references beside each camera decision.',
@@ -120,7 +149,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'The Shot Plan covers the scene with deliberate camera decisions and selected references. Continue to video generation, or explore Blender Previs if you want to direct staging in space and time.',
   },
   {
-    slug: 'blender-previs', title: 'Direct in space and time', phase: 'Shot planning',
+    slug: 'blender-previs', kind: 'chapter', title: 'Direct in space and time', phase: 'Shot planning',
     description: 'Block characters, cameras, and action in a moving 3D rehearsal.',
     image: previs, alt: 'A Blender harbor previs shown beside its generated cinematic interpretation.',
     caption: 'Previs establishes staging and timing; the generated take interprets it as a cinematic image.',
@@ -129,11 +158,12 @@ export const tutorials: Tutorial[] = [
     sections: [
       { id: 'stage', title: 'Create a Blender previs', introduction: 'The Blender Shot Planner skill creates a Previs Shot Plan using the scene, active Beats, and relevant character, Location, and Prop sheets. It builds a moving Blender rehearsal, reviews renders, and retains the source and completed render revisions.', steps: ['Open the scene and ask for a Blender previs. You can choose this approach without creating a Shot List first.', 'Describe any staging or camera ideas you have. The skill translates your direction into scene-specific controls for positions, cameras, timing, and performance, and asks when an ambiguous spatial choice matters.', 'Watch the render in Studio. Judge the geography, action, and camera intent before moving on to an AI interpretation.'], prompt: 'Create a Blender previs for the current scene. Start wide and move closer as the exchange becomes more tense.' },
       { id: 'timing', title: 'Refine the motion and timing', introduction: 'Blender Shot Planner continues the existing plan when you give feedback. It updates the staging, timing, and complete scene description together, checks the rendered motion, and registers a new completed revision.', steps: ['Watch the previs and identify the subject, moment, or camera move you want to change. Distinguish screen-left from the character’s left when it matters.', 'Give concrete direction in ordinary language. For dialogue timing, refer to the actual line or turn in your screenplay.', 'Review the new render in Studio. When you ask for AI video, Blender Shot Planner hands the chosen revision to Media Producer; you do not need to manage the revision files yourself.'], prompt: 'Hold the opening wide shot for two seconds longer, then move closer. Keep the character positions and the rest of the action unchanged.' },
+      { id: 'see-the-workflow', title: 'From rehearsal to interpretation', introduction: 'Watch the harbor previs, then its generated cinematic take. Compare the staging and camera intent across both.', steps: [], videos: [{ src: harborPrevisVideo, title: 'Blender Previs', label: 'Harbor Blender previs example' }, { src: harborGenerationVideo, title: 'Generated take', label: 'Harbor generated video example' }] },
     ],
     checkpoint: 'The previs communicates the intended geography, movement, and timing. You have reviewed the actual render and identified the revision to use for a generated take.',
   },
   {
-    slug: 'video-generation', title: 'Turn the plan into a take', phase: 'Generation & review',
+    slug: 'video-generation', kind: 'chapter', title: 'Turn the plan into a take', phase: 'Generation & review',
     description: 'Cast the dialogue, choose your models, review the request, and direct a video take.',
     image: takes, alt: 'Renku video generation review with a cinematic take in the Studio player.',
     caption: 'The first take is a creative result to review, not the end of the directing process.',
@@ -149,7 +179,23 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'The take is saved and reviewed, and you know whether to accept it or request a specific revision. You have completed the full path from inspiration to a generated scene.',
   },
   {
-    slug: 'sample-project', title: 'Explore the sample project', phase: 'Getting started', optional: true,
+    slug: 'previs-a-dialogue-scene', kind: 'recipe', title: 'Previs a dialogue scene in Blender', phase: 'Shot planning',
+    description: 'Stage a conversation in Blender with real dialogue timing, then hand the reviewed revision to video generation.',
+    image: firstPatronPrevisPlan, alt: 'The First Patron Previs Shot Plan in Renku Studio, with the Blender render, a generated take, and the dialogue cues for Urban, Loukas Notaras and Constantine XI.',
+    caption: 'Basilica, Scene 2: revision 6 of the Blender previs beside a generated take, with each spoken line placed on the timeline.',
+    prerequisite: 'A scene with dialogue and reviewed character and Location sheets, Cast Voices for each speaker, and a working Blender installation, which the agent checks before rendering.',
+    outcome: 'A Previs Shot Plan whose cameras cut to whoever is speaking, timed to the dialogue takes you selected, and a generated take that follows it.',
+    sections: [
+      { id: 'dialogue-first', title: 'Start with the dialogue takes', introduction: 'In a dialogue scene the performance sets the timing. With selected dialogue takes, the previs is timed to real line lengths and pauses. Without them it uses estimated timing, which is fine for a first blocking pass; Basilica’s first pass was made that way and the audio came in later revisions.', steps: ['Open the scene and ask for dialogue takes for the Turns you want to stage. The Media Producer skill uses the screenplay and each speaker’s Cast Voice.', 'Listen in Studio and select the takes you want to keep. The previs times its cues to the selected audio and does not stretch it.'], link: { href: '/tutorials/video-generation/#dialogue-audio', label: 'How to generate dialogue takes' } },
+      { id: 'first-pass', title: 'Ask for a first blocking pass', introduction: 'The Blender Shot Planner skill builds the room from the Location sheet and places proxies for each character from their sheets. A first pass is a starting point for directing, not a finished plan.', steps: ['Ask for a Blender previs of the scene, naming the Turns it should cover. Describe any staging you already have in mind, such as where each character sits.', 'Watch the render in Studio. Judge the geography first: who is where, which side of the table the windows are on, and whether the master shot reads clearly.'], prompt: 'Create a Blender previs for dialogue Turns 2–5 of this scene. Keep a symmetrical wide master down the length of the table.' },
+      { id: 'direct', title: 'Direct who is seen while speaking', introduction: 'The first Basilica pass was silent and 34 seconds long, with provisional line timing. The emperor’s question was heard off-screen over Urban’s reaction, and the drawing was a simple schematic. Over five more revisions it became a 30-second plan timed to the selected dialogue, with Constantine seen asking his question and a detailed drawing in the insert.', steps: ['Name the line and the change, in ordinary words: who should be on screen, when to cut, and what should stay the same.', 'Refer to the actual line or Turn rather than a timecode. The agent resolves the exact line, times the cue to the selected audio, and records it in the plan.', 'Review each new render. Every completed revision is kept, and you can step back through them in Studio.'], prompt: 'Cut to Constantine in close-up when he asks “What would you require?”, then cut to Urban for his list. Keep the opening wide and the rest of the timing unchanged.', figure: { image: firstPatronRevisionOne, alt: 'Revision 1 of The First Patron previs: a close-up of the Urban proxy, listening.', caption: 'Revision 1: the camera stays on Urban while the emperor asks his question off-screen. In revision 6 the shot cuts to Constantine as he speaks.' } },
+      { id: 'compare', title: 'Watch the reviewed revision', introduction: 'Revision 6 runs 30 seconds with the selected dialogue. It opens wide, inserts the drawing, cuts to each speaker in turn, and returns to the wide for the end of Urban’s list.', steps: [], videos: [{ src: firstPatronPrevisVideo, title: 'Blender previs, revision 6', label: 'The First Patron Blender previs, revision 6, with dialogue', captions: '/captions/first-patron-previs.en.vtt' }] },
+      { id: 'generate', title: 'Hand it to video generation', introduction: 'When you ask for a video, Blender Shot Planner hands the reviewed revision to the Media Producer skill. The previs controls motion, camera and timing; the character and Location sheets control appearance. Video models have length limits, so a longer previs is generated as consecutive clips.', steps: ['Ask for a video of the reviewed revision and check the generation preview before any paid request.', 'Review the take against the previs. AI video follows the previs as a reference; it does not reproduce motion or speech timing exactly.', 'Ask for a new take, or a focused repair, when a cut or a line lands in the wrong place.'], prompt: 'Generate a video from previs revision 6. Show me the generation preview before generating.', videos: [{ src: firstPatronTakeVideo, title: 'Generated take, first 15 seconds', label: 'Generated take for the first 15 seconds of The First Patron previs', captions: '/captions/first-patron-take.en.vtt' }] },
+    ],
+    checkpoint: 'The previs shows each speaker when they talk, its cues match the selected dialogue, and you have compared a generated take with the revision it came from. This take’s picture was generated with MiniMax H3 Max on fal.ai, and its sound is the selected dialogue master from the Shot Plan.',
+  },
+  {
+    slug: 'sample-project', title: 'Explore the sample project', phase: 'Getting started', kind: 'guide',
     description: 'Clone a ready-made Renku film into your Project Library and open it in Studio.',
     prerequisite: 'Renku Studio is installed and its Project Library has been set up. You need Git and a terminal (Terminal on Mac or PowerShell on Windows).',
     outcome: 'The Basilica sample appears on Studio’s Projects page, ready to explore.',
@@ -161,7 +207,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'Basilica opens from the Projects page. You can browse it without importing a screenplay or running a setup command for this project.',
   },
   {
-    slug: 'personal-models', title: 'Add a model of your own', phase: 'Optional', optional: true,
+    slug: 'personal-models', title: 'Add a model of your own', phase: 'Optional', kind: 'guide',
     description: 'Bring a model from your preferred provider into your personal library when you need another choice.',
     image: generationSettings, alt: 'Codex generation settings with provider and model choices.',
     caption: 'Your personal models join the bundled choices when the agent prepares generation settings.',
@@ -177,7 +223,7 @@ export const tutorials: Tutorial[] = [
     checkpoint: 'Your chosen provider and model are saved in your personal library. Any prompting notes are optional, and a saved entry is distinct from a successfully tested generation. Return to your film whenever you are ready.',
   },
   {
-    slug: 'uninstall-renku', optional: true, title: 'Uninstall Renku', phase: 'Installation',
+    slug: 'uninstall-renku', kind: 'guide', title: 'Uninstall Renku', phase: 'Installation',
     description: 'Remove Renku from macOS or Windows while keeping your films and, if you choose, your settings.',
     prerequisite: 'These steps apply to the terminal installer from the Download page. If you chose custom installation folders, use those locations instead.',
     outcome: 'Remove the runtime, agent plugins, and any separately installed skills, with separate choices for keeping your Project Library and saved settings.',

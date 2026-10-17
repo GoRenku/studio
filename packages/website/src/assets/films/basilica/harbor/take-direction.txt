@@ -1,0 +1,24 @@
+Create one continuous 15-second live-action historical film shot in Constantinople's working harbor in late 1452, before the Ottoman conquest. Begin immediately with real people and finished period surroundings.
+
+REFERENCE ROLES
+Image 1 defines Mara's face, 160 cm wiry build, dark wrapped hair, soot-marked skin and worn foundry work clothes. She is the coral/pink proxy in Video 1. Image 2 defines Urban's weathered bearded face, 170 cm build, heavy wool cloak, leather work apron, belt and boots. He is the ochre/yellow proxy. Image 3 defines harbor masonry, wet limestone, moored wooden boats, hemp ropes, nets, stairs, arches and pre-conquest Byzantine skyline. Its panels describe one location, never separate shots. Image 4 defines the finished photographic composition, cold gray dusk, tactile materials and restrained amber practical light. Preserve the two leads' identities from Images 1 and 2. Video 1 guides the camera trajectory, ground paths, staging, soldier interaction and continuous action. Its colored blocks are proxies; replace them with natural humans and period objects from the images. Audio 1 supplies the complete six-line English dialogue performance, alternating Mara and Urban. Preserve its words, speaker assignments, voices, phrasing and speech speed. Use Audio 1's performance timing instead of imposing different speech timing from the silent motion reference. Keep its brief pause before the final word.
+
+CAMERA AND ACTION
+One unbroken centered following shot, 35 mm lens feel, roughly 3.4 m above the quay and 9 m behind the pair, mild downward angle. Mara stays on screen left and Urban on right. Retaining wall and repair workers remain left; harbor and boats remain right. Track their moving midpoint, then settle; no orbit, reverse, zoom, insert or cut. Preserve natural full-body gait and grounded feet.
+0–5.29s: the pair walk away along the quay, Urban half a pace ahead. Refugees mend nets; a monk tends a small shrine flame.
+5.29–7.06s: Mara approaches the blue soldier by the shield rack on the left while Urban continues along the right. The blue proxy becomes a tired Byzantine repair soldier in muted blue wool and worn protective clothing.
+7.06–9.71s: Mara pauses beside the soldier and gestures briefly. The soldier acknowledges without intelligible speech. Urban settles farther along the quay around 7.76s and turns back toward Mara. Keep their lateral separation and approximately 1.3 m forward difference.
+9.71–11.47s: Mara slowly turns her head and torso toward Urban while remaining planted. The soldier returns to repairs.
+11.47–15s: hold their separated positions, with the camera settled. Mara's challenge meets Urban's defensive restraint. Keep the rolled cannon drawing edge under his coat; Urban closes the exchange with a quiet, clipped final word. Do not restart their walk.
+
+DIALOGUE AND SOUND
+Audio 1 is the dialogue performance authority. All six lines must be heard once, in this exact order, with no substitutions or narration:
+Mara: "They are afraid of your gun."
+Urban: "They are afraid of the man who can afford it."
+Mara: "Then do not go to him."
+Urban: "A design unfired is a corpse with clean hands."
+Mara: "And a design fired?"
+Urban: "Work."
+Aim for Audio 1's approximate passages: Mara 0.12–1.85s; Urban 2.29–5.11s; Mara 5.39–7.40s; Urban 7.93–12.01s; Mara 12.42–14.08s; Urban 14.28–14.81s. Match visible mouth activity only to that person's speech; the other person listens. The soldier never speaks these lines. Do not compress the spoken delivery. Background water slap, rope and boat creaks, low indistinct harbor activity, soft wind and sparse shield-repair taps stay below the dialogue. No music.
+
+Maintain cold overcast dusk, sparse amber flames, damp stone, rough cloth, soot and exhausted natural skin. Keep props, supporting workers and boats in Video 1's relationships. Do not show proxy anatomy, flat proxy colors, transformation effects, modern objects, fantasy armor, minarets, reference-sheet borders, text, captions, labels, watermarks, montage or added foreground crowds.

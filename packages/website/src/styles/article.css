@@ -1,0 +1,256 @@
+.article-page {
+  padding-block: clamp(7rem, 12vw, 10rem) 6rem;
+}
+
+.article-content {
+  max-width: 52rem;
+}
+
+.article-content h1 {
+  margin-block: 0.5rem 0.75rem;
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+}
+
+.article-content .article-date {
+  margin-bottom: 2.5rem;
+  color: var(--paper-500);
+  font-size: 0.9rem;
+}
+
+.article-content section {
+  margin-top: 2.5rem;
+}
+
+.article-content h2 {
+  margin-bottom: 0.9rem;
+  font-size: clamp(1.5rem, 3vw, 1.9rem);
+}
+
+.article-content p + p {
+  margin-top: 1rem;
+}
+
+.article-content p {
+  color: var(--paper-300);
+}
+
+.article-content .eyebrow {
+  color: var(--amber-500);
+}
+
+.article-content a {
+  color: var(--amber-400);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.article-content a:hover,
+.article-content a:focus-visible {
+  color: var(--paper-100);
+}
+
+.article-content h3 {
+  margin-block: 1.8rem 0.6rem;
+  font-size: 1.25rem;
+}
+
+.article-content :is(ul, ol) {
+  margin-block: 1rem;
+  padding-left: 1.4rem;
+  color: var(--paper-300);
+}
+
+.article-content li + li {
+  margin-top: 0.4rem;
+}
+
+.article-content :is(ul, ol) + p,
+.article-content :is(h3, figure, blockquote) + p {
+  margin-top: 1rem;
+}
+
+.article-content code {
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: var(--ink-800);
+  font-size: 0.9em;
+}
+
+.article-content blockquote {
+  margin: 1.5rem 0;
+  padding-left: 1.2rem;
+  border-left: 2px solid var(--accent);
+}
+
+.article-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: 1.5rem;
+  border-radius: var(--radius-md);
+}
+
+.article-list {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--ink-700);
+}
+
+.article-row {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 1.5rem;
+  padding-block: 1.5rem;
+  border-bottom: 1px solid var(--ink-700);
+}
+
+.article-row time {
+  color: var(--paper-500);
+  font-size: 0.9rem;
+}
+
+.article-row h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.4rem;
+}
+
+.article-row h2 a {
+  color: var(--paper-100);
+  text-decoration: none;
+}
+
+.article-row h2 a:hover,
+.article-row h2 a:focus-visible {
+  color: var(--amber-400);
+}
+
+.article-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+@media (max-width: 640px) {
+  .article-row {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}
+
+/* Journal posts: a wide cover under the title, then a narrower reading column. */
+.journal-post-header {
+  max-width: 46rem;
+}
+
+.journal-post-header h1 {
+  margin-block: 0.9rem 1.25rem;
+  line-height: 1.02;
+}
+
+.journal-post-lede {
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.journal-post-cover {
+  margin-block: 3rem 3.5rem;
+}
+
+.journal-post-cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+}
+
+.journal-post-cover figcaption {
+  margin-top: 0.7rem;
+  color: var(--paper-500);
+  font-size: 0.85rem;
+}
+
+.article-body {
+  max-width: 46rem;
+  font-size: 1.08rem;
+}
+
+.article-body > * + * {
+  margin-top: 1.2rem;
+}
+
+.article-body > h2 {
+  margin-top: 3.5rem;
+  margin-bottom: 0;
+}
+
+.article-body > h2 + * {
+  margin-top: 0.9rem;
+}
+
+.article-body > p:has(> img) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 2rem;
+}
+
+.article-body > p:has(> img:only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.article-body > p:has(> img:nth-child(3):last-child) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.article-body > p:has(> img) img {
+  width: 100%;
+  margin: 0;
+  border-radius: var(--radius-md);
+}
+
+.article-body > p:has(> img) + p:has(> em:only-child) {
+  margin-top: 0.6rem;
+  color: var(--paper-500);
+  font-size: 0.85rem;
+}
+
+.article-body > blockquote {
+  margin-block: 1.8rem;
+  padding: 1.1rem 1.4rem;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--ink-850);
+}
+
+.article-body > blockquote p {
+  color: var(--paper-100);
+}
+
+.article-body > blockquote strong {
+  color: var(--amber-400);
+  font-weight: 600;
+}
+
+.article-body > p:last-of-type a:only-child {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.article-body > p:has(> img:nth-child(3):last-child) img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: top;
+}
+
+.article-row-cover {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.article-row-cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: var(--radius-md);
+}

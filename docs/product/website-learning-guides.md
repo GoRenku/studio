@@ -13,7 +13,9 @@ instruction so that downloading Renku remains a focused task.
 - `/quick-start/` first explains the agent-first working model: ask the agent to
   act or explain, review the result in Studio, then give feedback. It also covers
   device-wide provider credentials, Project creation, screenplay import or
-  authoring, and the Codex/Studio review loop.
+  authoring, and the Codex/Studio review loop. It ends with a first generated
+  image: a Location hero image, made with Codex's built-in image tool in Codex
+  or with a keyed provider in other agents.
 - `/tutorials/` is a visual course overview. Eight individual chapter routes
   cover Inspiration, Lookbooks, Cast and world design, Scene Beats, Beat
   Storyboards, Shot List planning, Blender Previs, and video generation.
@@ -21,11 +23,19 @@ instruction so that downloading Renku remains a focused task.
   a path into video generation; completing both is not required.
 - The optional sample project guide explains how to clone the Basilica project
   directly into the configured Project Library and open it from Projects.
+- Recipes work through one technique on a real scene, using media from
+  recorded Renku runs. The first is "Previs a dialogue scene in Blender",
+  built on Basilica Scene 2. A recipe makes no time claim it has not measured
+  and describes no step Renku does not support.
+- `/journal/` (with `/journal/rss.xml`) holds notes on how films and Renku are
+  made. `/changelog/` shows the Renku Studio releases that have written notes,
+  read from GitHub Releases when the website is built.
 
 ## Content ownership
 
 All implementation lives in `packages/website`. `src/data/tutorials.ts` owns
-the ordered editorial chapter content. `src/pages/tutorials/[slug].astro`
+the ordered editorial content of chapters, recipes and practical guides; each
+entry's `kind` decides its group, labels, sidebar and previous/next links. `src/pages/tutorials/[slug].astro`
 generates the chapter pages and previous/next navigation. `LearnLayout.astro`
 and `styles/learn.css` own shared reading presentation. `LearnNav.astro` owns
 the three learning destinations. `CodexPrompt.astro` only displays and copies

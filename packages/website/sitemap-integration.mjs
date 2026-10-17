@@ -3,7 +3,8 @@ import { writeFile } from 'node:fs/promises';
 
 /**
  * Writes sitemap.xml from the pages Astro actually built, so new pages are
- * listed without maintaining a page list by hand. The 404 page is excluded.
+ * listed without maintaining a page list by hand. The 404 page and non-page
+ * files such as the journal's rss.xml are excluded.
  *
  * @returns {import('astro').AstroIntegration}
  */
@@ -24,6 +25,7 @@ export function sitemapIntegration() {
         const locations = pages
           .map(({ pathname }) => pathname)
           .filter((pathname) => pathname !== '404/' && pathname !== '404')
+          .filter((pathname) => !/\.[a-z0-9]+\/?$/i.test(pathname))
           .map((pathname) => new URL(pathname.endsWith('/') || pathname === '' ? pathname : `${pathname}/`, siteUrl).href)
           .sort();
         const entries = locations.map((location) => `  <url><loc>${location}</loc></url>`).join('\n');

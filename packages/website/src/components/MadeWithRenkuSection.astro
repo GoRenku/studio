@@ -1,0 +1,230 @@
+---
+import { getImage, Image } from 'astro:assets';
+
+import { madeWithRenkuFilms } from '../data/made-with-renku';
+
+const films = await Promise.all(
+  madeWithRenkuFilms.map(async (film) => ({
+    ...film,
+    previsPoster: film.previs ? (await getImage({ src: film.previs.poster, width: 1280, format: 'jpg' })).src : undefined,
+    takePoster: film.take ? (await getImage({ src: film.take.poster, width: 1600, format: 'jpg' })).src : undefined,
+  })),
+);
+---
+
+<section class="made-with-renku" id="made-with-renku">
+  <div class="container">
+    <header class="mwr-head" data-reveal>
+      <div>
+        <p class="eyebrow">Made with Renku</p>
+        <h2>One scene, from the page to the take.</h2>
+        <p class="mwr-intro">Every image and clip here came out of a real Renku project. Follow one scene through each stage, and see what the video model was actually given.</p>
+      </div>
+      <div class="mwr-films" role="tablist" aria-label="Film">
+        {films.map((film, index) => (
+          <button class="mwr-film" id={`mwr-tab-${film.id}`} type="button" role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`mwr-panel-${film.id}`} tabindex={index === 0 ? 0 : -1}>
+            {film.title}<small>{film.form}</small>
+          </button>
+        ))}
+      </div>
+    </header>
+
+    {films.map((film, index) => (
+      <div class="mwr-story" id={`mwr-panel-${film.id}`} role="tabpanel" aria-labelledby={`mwr-tab-${film.id}`} hidden={index !== 0}>
+        <div class="mwr-row">
+          <div class="mwr-copy">
+            <span class="mwr-number">01</span>
+            <h3>{film.scene.title}</h3>
+            <p>{film.scene.description}</p>
+            <p class="mwr-note">{film.scene.note}</p>
+          </div>
+          <div class="mwr-page">
+            <p class="mwr-slug">{film.scene.heading}</p>
+            {film.scene.lines.map((line) => line.kind === 'action'
+              ? <p class="mwr-action">{line.text}</p>
+              : <div class="mwr-dialogue"><p class="mwr-speaker">{line.speaker}</p><p>{line.text}</p></div>)}
+          </div>
+        </div>
+
+        {film.storyboard && (
+          <div class="mwr-row mwr-flip">
+            <div class="mwr-copy">
+              <span class="mwr-number">02</span>
+              <h3>{film.storyboard.title}</h3>
+              <p>{film.storyboard.description}</p>
+              <p class="mwr-note">{film.storyboard.note}</p>
+            </div>
+            <div class="mwr-boards">
+              {film.storyboard.frames.map((frame) => (
+                <figure>
+                  <Image src={frame.image} alt={frame.alt} widths={[480, 820]} sizes="(min-width: 1000px) 22rem, 45vw" />
+                  <figcaption>{frame.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {film.previs && (
+          <div class="mwr-row">
+            <div class="mwr-copy">
+              <span class="mwr-number">03</span>
+              <h3>{film.previs.title}</h3>
+              <p>{film.previs.description}</p>
+              <p class="mwr-note">{film.previs.note}</p>
+            </div>
+            <div class="mwr-previs">
+              <figure>
+                <video controls muted playsinline preload="none" poster={film.previsPoster} aria-label={film.previs.label} src={film.previs.video}></video>
+                <figcaption>{film.previs.caption}</figcaption>
+              </figure>
+              <figure>
+                <Image src={film.previs.earlierRevision.image} alt={film.previs.earlierRevision.alt} widths={[480, 960]} sizes="(min-width: 1000px) 16rem, 30vw" />
+                <figcaption>{film.previs.earlierRevision.caption}</figcaption>
+              </figure>
+            </div>
+          </div>
+        )}
+
+        {film.take && (
+          <div class="mwr-take">
+            <div class="mwr-copy">
+              <span class="mwr-number">04</span>
+              <h3>{film.take.title}</h3>
+              <p>{film.take.description} {film.take.note}</p>
+            </div>
+            <video controls playsinline preload="none" poster={film.takePoster} aria-label={film.take.label} src={film.take.video}>
+              <track kind="captions" srclang="en" label="English" src={film.take.captions} />
+            </video>
+            {film.given && (
+              <div class="mwr-given">
+                <p class="mwr-label">What the take was given</p>
+                <div class="mwr-references">
+                  {film.given.references.map((reference) => (
+                    <figure>
+                      <Image src={reference.image} alt={reference.alt} widths={[400, 800]} sizes="(min-width: 1000px) 16rem, 45vw" />
+                      <figcaption>{reference.caption}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+                {film.given.audio && (
+                  <figure class="mwr-audio">
+                    <audio controls preload="none" aria-label={film.given.audio.label} src={film.given.audio.src}></audio>
+                    <figcaption>{film.given.audio.caption}</figcaption>
+                  </figure>
+                )}
+                <details class="mwr-direction">
+                  <summary>{film.given.directionLabel}</summary>
+                  <p>{film.given.direction}</p>
+                </details>
+              </div>
+            )}
+          </div>
+        )}
+
+        {film.credit && <p class="mwr-credit">{film.credit}</p>}
+        {film.links && (
+          <nav class="mwr-links" aria-label={`More about ${film.title}`}>
+            {film.links.map((link) => <a href={link.href}>{link.label} →</a>)}
+          </nav>
+        )}
+      </div>
+    ))}
+
+  </div>
+</section>
+
+<style>
+  .made-with-renku { padding-block: clamp(5rem, 10vw, 8rem); scroll-margin-top: 5rem; }
+  .mwr-head { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: clamp(3rem, 6vw, 4.5rem); }
+  .mwr-head h2 { margin-block: 0.9rem 1rem; font-size: clamp(1.8rem, 3.4vw, 2.6rem); }
+  .mwr-intro { max-width: 40rem; color: var(--paper-300); }
+  .mwr-films { display: inline-flex; flex-shrink: 0; padding: 4px; border: 1px solid var(--ink-700); border-radius: 999px; background: var(--ink-850); }
+  .mwr-film { padding: 0.5rem 1.2rem; border: 0; border-radius: 999px; background: none; color: var(--paper-300); font: inherit; font-size: 0.92rem; text-align: left; cursor: pointer; }
+  .mwr-film small { display: block; color: var(--paper-700); font-size: 0.72rem; line-height: 1.2; }
+  .mwr-film[aria-selected='true'] { background: var(--ink-700); color: var(--paper-100); }
+  .mwr-film:focus-visible { outline: 2px solid var(--amber-400); outline-offset: 2px; }
+
+  .mwr-story { display: flex; flex-direction: column; gap: clamp(3.5rem, 7vw, 5rem); }
+  .mwr-story[hidden] { display: none; }
+  .mwr-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: clamp(2rem, 5vw, 3.5rem); align-items: center; }
+  .mwr-flip { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+  .mwr-flip .mwr-copy { order: 2; }
+  .mwr-number { font-family: var(--font-display); color: var(--amber-500); }
+  .mwr-copy h3 { margin-block: 0.2rem 0.7rem; font-family: var(--font-display); font-size: 1.7rem; font-weight: 400; line-height: 1.2; }
+  .mwr-copy p { color: var(--paper-300); }
+  .mwr-copy p + p { margin-top: 0.8rem; }
+  .mwr-copy .mwr-note { color: var(--paper-500); font-size: 0.92rem; }
+
+  .mwr-page { padding: 1.6rem 1.5rem; border-radius: var(--radius-md); background: #f2ede3; color: #1b1813; font-family: 'Courier Prime', 'Courier New', Courier, monospace; font-size: 0.8rem; line-height: 1.45; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
+  .mwr-page p { margin: 0 0 0.8em; }
+  .mwr-slug { font-weight: 700; text-transform: uppercase; }
+  .mwr-dialogue { padding-inline: 18% 8%; margin-bottom: 0.8em; }
+  .mwr-dialogue p { margin: 0; }
+  .mwr-dialogue .mwr-speaker { text-align: center; text-transform: uppercase; }
+
+  .mwr-boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+  .mwr-boards figure, .mwr-previs figure, .mwr-references figure { margin: 0; }
+  .made-with-renku :is(img, video) { display: block; width: 100%; height: auto; border-radius: var(--radius-md); background: var(--ink-900); }
+  .made-with-renku figcaption { margin-top: 0.35rem; color: var(--paper-500); font-size: 0.78rem; line-height: 1.35; }
+  .mwr-previs { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0.7rem; align-items: end; }
+  .mwr-previs video { aspect-ratio: 16 / 9; }
+
+  .mwr-take > .mwr-copy { max-width: 44rem; margin-bottom: 1.5rem; }
+  .mwr-take > video { aspect-ratio: 960 / 548; }
+  .mwr-given { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--ink-700); }
+  .mwr-label { margin-bottom: 0.8rem; color: var(--paper-500); font-size: 0.75rem; font-weight: 650; letter-spacing: 0.14em; text-transform: uppercase; }
+  .mwr-references { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 0.8rem; }
+  .mwr-audio { display: flex; align-items: center; gap: 1rem; margin: 1.2rem 0 0; }
+  .mwr-audio audio { flex: 0 0 22rem; max-width: 100%; }
+  .mwr-audio figcaption { margin-top: 0; }
+  .mwr-references img { aspect-ratio: 4 / 3; object-fit: cover; }
+  .mwr-direction { margin-top: 1.2rem; border: 1px solid var(--ink-700); border-radius: var(--radius-md); background: var(--ink-850); }
+  .mwr-direction summary { padding: 0.9rem 1.2rem; color: var(--paper-300); font-size: 0.95rem; cursor: pointer; }
+  .mwr-direction summary:focus-visible { outline: 2px solid var(--amber-400); outline-offset: -4px; }
+  .mwr-direction p { max-height: 24rem; overflow: auto; padding: 0 1.2rem 1.2rem; color: var(--paper-300); font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; }
+
+  .mwr-credit { margin-top: 0.5rem; color: var(--paper-700); font-size: 0.85rem; }
+  .mwr-links { display: flex; flex-wrap: wrap; gap: 1.6rem; font-size: 0.95rem; }
+  .mwr-links a { color: var(--amber-400); }
+
+  @media (max-width: 860px) {
+    .mwr-head { flex-direction: column; align-items: start; }
+    .mwr-row, .mwr-flip { grid-template-columns: minmax(0, 1fr); }
+    .mwr-flip .mwr-copy { order: 0; }
+    .mwr-references { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row; }
+    .mwr-audio { flex-direction: column; align-items: start; }
+  }
+</style>
+
+<script>
+  const filmTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#made-with-renku .mwr-film'));
+  const filmPanels = Array.from(document.querySelectorAll<HTMLElement>('#made-with-renku .mwr-story'));
+  const sectionVideos = Array.from(document.querySelectorAll<HTMLMediaElement>('#made-with-renku video, #made-with-renku audio'));
+
+  function selectFilm(tab: HTMLButtonElement) {
+    filmTabs.forEach((item) => {
+      const selected = item === tab;
+      item.setAttribute('aria-selected', String(selected));
+      item.tabIndex = selected ? 0 : -1;
+    });
+    filmPanels.forEach((panel) => { panel.hidden = panel.id !== tab.getAttribute('aria-controls'); });
+    sectionVideos.forEach((video) => video.pause());
+  }
+
+  filmTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => selectFilm(tab));
+    tab.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+      event.preventDefault();
+      const step = event.key === 'ArrowRight' ? 1 : -1;
+      const destination = filmTabs[(index + step + filmTabs.length) % filmTabs.length];
+      destination.focus();
+      selectFilm(destination);
+    });
+  });
+
+  sectionVideos.forEach((video) => {
+    video.addEventListener('play', () => sectionVideos.forEach((other) => { if (other !== video) other.pause(); }));
+  });
+</script>

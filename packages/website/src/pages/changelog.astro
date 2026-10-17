@@ -1,0 +1,46 @@
+---
+import { getCollection, render } from 'astro:content';
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { formatArticleDate } from '../data/article-dates';
+import { site } from '../data/site';
+import '../styles/article.css';
+
+function compareVersionsNewestFirst(a: string, b: string): number {
+  const left = a.split('.').map(Number);
+  const right = b.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) return right[index] - left[index];
+  }
+  return 0;
+}
+
+const releases = await Promise.all(
+  (await getCollection('releaseNotes'))
+    .sort((a, b) => compareVersionsNewestFirst(a.data.version, b.data.version))
+    .map(async (release) => ({ release, Notes: (await render(release)).Content })),
+);
+---
+
+<BaseLayout title="Changelog — Renku" description="What changed in each Renku Studio release.">
+  <SiteHeader />
+  <main class="article-page" id="top">
+    <div class="container article-content">
+      <p class="eyebrow">Changelog</p>
+      <h1>What’s new in Renku</h1>
+      <p>Renku Studio is in beta, and new releases come out often. Update an existing installation with <code>renku update</code>, or <a href={site.downloadUrl}>download Renku</a>. Follow releases with the <a href={`${site.githubUrl}/releases.atom`}>GitHub release feed</a>.</p>
+      {releases.map(({ release, Notes }) => (
+        <section id={`v${release.data.version}`} aria-labelledby={`v${release.data.version}-title`}>
+          <h2 id={`v${release.data.version}-title`}>v{release.data.version}</h2>
+          <p class="article-date"><time datetime={release.data.date}>{formatArticleDate(release.data.date)}</time>{release.data.prerelease && ' · Pre-release'}</p>
+          <Notes />
+          <p><a href={release.data.url}>View on GitHub</a></p>
+        </section>
+      ))}
+      <p class="article-footer-links"><a href={`${site.githubUrl}/releases`}>Earlier releases on GitHub</a></p>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>

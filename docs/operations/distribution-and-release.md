@@ -214,7 +214,9 @@ Closing a browser tab does not stop Studio. Start a new agent conversation to
 load the installed skills; they invoke the separately installed `renku` command
 through the agent's local shell capability.
 
-Website publishing remains separate from runtime and skills releases.
+Website publishing remains separate from runtime and skills releases. The
+website's `/changelog/` reads GitHub Releases when it is built, so redeploy the
+website after a release to show its notes there.
 
 ## Studio Release
 
