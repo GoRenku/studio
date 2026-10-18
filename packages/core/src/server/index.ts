@@ -461,6 +461,11 @@ export { updateRenku } from './installation/renku-update.js';
 export { checkRenkuUpdate } from './installation/renku-release-check.js';
 export type { RenkuUpdateStatus } from '../client/renku-update.js';
 export { startRenkuUpdateFromStudio } from './installation/renku-update-handoff.js';
+export { installSampleFilm } from './sample-film/install-sample-film.js';
+export { readSampleFilm, startSampleFilmInstallation } from './sample-film/studio-installation.js';
+export type { SampleFilm, SampleFilmInstallation, SampleFilmInstallationReport } from '../client/sample-film.js';
+export { offerStarNote } from './star-note/star-note.js';
+export type { StarNoteOffer } from '../client/star-note.js';
 export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate } from './screenplay/index.js';
 export { listMediaModels, readMediaModel, importPersonalMediaModel, removePersonalMediaModel } from './media-model-library/index.js';
 export type { MediaModelRoute, PersonalMediaModelLibrary, MediaModelDiscoveryRoute,

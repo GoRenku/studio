@@ -114,6 +114,21 @@ journal entries, and snapshots are not rewritten or renumbered.
 Urban Basilica remains an internal development project. It is never a release
 input, migration fixture, installer input, or public sample project.
 
+## Sample Film
+
+The public Basilica sample film is released separately from
+`GoRenku/sample-project` and is never inside a Studio archive. A fresh install
+resolves the latest published sample release without a Studio source change.
+When Studio or `renku sample-film install` places the sample in the
+Project Library, Core opens it through the same `openProjectStore` path as any
+other Project, so an older sample database is upgraded on first open after a
+verified backup. A sample made by a newer Renku is checked after unpacking and
+kept out of the Library with `SAMPLE_FILM_REQUIRES_NEWER_RENKU`. There is
+no sample-specific migration or repair code. See
+[the sample film decision](../decisions/0122-offer-a-pinned-sample-film-and-a-one-time-star-note.md)
+and the release procedure in
+[Distribution And Release](../operations/distribution-and-release.md#sample-film-release).
+
 ## New Project Creation In An Installed CLI
 
 When a user runs:

@@ -50,7 +50,8 @@ function statusForStructuredError(code: string): 400 | 404 | 500 {
     code.startsWith('PROJECT_SETUP') ||
     code.startsWith('STUDIO_SERVER') ||
     code.startsWith('SCREENPLAY_') ||
-    code.startsWith('STUDIO_FOLDER_')
+    code.startsWith('STUDIO_FOLDER_') ||
+    code.startsWith('SAMPLE_FILM_')
   ) {
     return 400;
   }

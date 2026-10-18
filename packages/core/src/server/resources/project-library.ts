@@ -69,7 +69,7 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
       counts: null,
       validationError:
         error instanceof ProjectDataError
-          ? { code: error.code, message: error.message }
+          ? { code: error.code, message: error.message, suggestion: error.suggestion }
           : {
               code: 'PROJECT_DATA022',
               message: error instanceof Error ? error.message : String(error),

@@ -139,6 +139,43 @@ Core reports `CORE_MEDIA_MODEL_LIBRARY_INVALID` for malformed/oversized envelope
 `CORE_MEDIA_MODEL_LIBRARY_IO_FAILED` for storage IO failures.
 Missing optional guidance has no diagnostic. Provider execution retains Engines codes.
 
+## Sample film and star note
+
+Core reports sample film installation failures with `SAMPLE_FILM_` codes; Studio
+HTTP maps the prefix to 400:
+
+- `SAMPLE_FILM_FOLDER_IN_USE`: `sample-project` in the Project Library exists
+  and is not a Renku project; nothing is touched.
+- `SAMPLE_FILM_INSUFFICIENT_SPACE`: less than twice the download size is free;
+  reports the needed and available megabytes.
+- `SAMPLE_FILM_DOWNLOAD_FAILED`: release lookup failure, missing release asset,
+  network error, non-2xx HTTP status, no data for 60 seconds, or a download
+  larger or smaller than the size reported by GitHub when available.
+- `SAMPLE_FILM_UNPACK_FAILED`: the system `tar` is missing or failed, or the
+  archive lacks the expected project folder.
+- `SAMPLE_FILM_REQUIRES_NEWER_RENKU`: the downloaded sample was made by a newer
+  Renku; it is not placed in the Library. Its suggestion says how to update:
+  the update button in the Studio header or `renku update`, then open the
+  sample film again.
+
+`PROJECT_DATA044` for a project database saved by a newer Renku carries the
+same update suggestion. The Project Library card shows it under the error.
+- `SAMPLE_FILM_STORAGE_FAILED`: a filesystem error while staging or placing
+  the folder (error), or a staging folder that could not be removed after a
+  successful install (warning in the report).
+- `SAMPLE_FILM_INSTALLATION_FAILED`: an unexpected failure in Studio's
+  background attempt, reported in its `failed` state.
+
+Opening and upgrading the placed sample keep their existing `PROJECT_DATA`
+codes and backup details.
+
+The star note reports `STAR_NOTE_STATE_INVALID` when `star-note.json` is
+unreadable or invalid (the note then never shows) and
+`STAR_NOTE_STATE_WRITE_FAILED` when it cannot be written; Core never offers the
+note without a successful write. `STUDIO_SERVER042` rejects a star note request
+body other than `{ "projectName": string }`. `CLI168` rejects a missing or
+unknown `renku sample-film` subcommand.
+
 ## Generation CLI handoff
 
 `CLI_GENERATION_REQUEST_HASH_INVALID` rejects a malformed expected SHA-256 digest.

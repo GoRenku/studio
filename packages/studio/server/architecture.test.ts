@@ -41,6 +41,11 @@ const routeForbiddenImports: ForbiddenSourcePattern[] = [
     pattern: /^better-sqlite3$/,
     reason: 'routes must not use SQLite drivers directly',
   },
+  {
+    label: 'child process import',
+    pattern: /^(?:node:)?child_process$/,
+    reason: 'routes must not start processes; downloads, archives and installers belong in packages/core',
+  },
 ];
 
 describe('Studio server architecture', () => {

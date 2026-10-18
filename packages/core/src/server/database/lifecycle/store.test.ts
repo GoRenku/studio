@@ -8,6 +8,7 @@ import {
   closeProjectStore,
   openProjectStore,
 } from './store.js';
+import { currentProjectStoreSchemaGeneration } from './project-store-schema-generation.js';
 
 describe('openProjectStore', () => {
   it('keeps project-lifetime SQLite sessions open until explicitly closed', async () => {
@@ -93,6 +94,25 @@ describe('openProjectStore', () => {
     ).toThrow(
       expect.objectContaining({
         code: 'PROJECT_DATA044',
+      })
+    );
+  });
+
+  it('tells the user to update Renku for a database saved by a newer Renku', async () => {
+    const projectFolder = await createProjectFolder();
+    createProjectDatabaseWithSchemaGeneration(projectFolder, currentProjectStoreSchemaGeneration() + 1);
+
+    expect(() =>
+      openProjectStore({
+        projectFolder,
+        create: false,
+      })
+    ).toThrow(
+      expect.objectContaining({
+        code: 'PROJECT_DATA044',
+        message: expect.stringContaining('saved by a newer version of Renku'),
+        suggestion:
+          'Update Renku with the update button in the Studio header, or run `renku update` in a terminal. Then open the project again.',
       })
     );
   });

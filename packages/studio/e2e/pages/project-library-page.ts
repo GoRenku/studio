@@ -44,7 +44,8 @@ export class ProjectLibraryPage {
   async createEmptyProject(
     project: Pick<StudioE2eProject, 'title' | 'projectName' | 'projectPath'>
   ): Promise<void> {
-    await this.page.getByRole('button', { name: 'Create Project' }).click();
+    // The Library header trigger comes first; an empty Library repeats it in its starts.
+    await this.page.getByRole('button', { name: 'Create Project', exact: true }).first().click();
     await this.page.getByLabel('Project title *').fill(project.title);
     await expect(this.page.getByLabel('Folder name *')).toHaveValue(
       project.projectName

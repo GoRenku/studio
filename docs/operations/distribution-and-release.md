@@ -467,6 +467,62 @@ pnpm release:publish
 The release tooling does not change the marketplace catalogs, plugin manifest
 shape, hooks, skills, references, prompts, examples, or evals.
 
+## Sample Film Release
+
+The Basilica sample film is released from its own repository,
+`GoRenku/sample-project`, by the maintainer. Studio and the sample never share
+a version, and Studio release archives never contain the sample. A fresh
+installation resolves the latest published sample release when the user starts
+it, through Core's `sample-film-release.ts`
+([ADR 0122](../decisions/0122-offer-a-pinned-sample-film-and-a-one-time-star-note.md)).
+
+Tag rules:
+
+- the sample version is an annotated tag `vX.Y.Z` on the sample repository;
+- the GitHub Release of that tag carries one asset,
+  `sample-project-X.Y.Z.tar.gz`, built from the tag with `git archive`, so
+  uncommitted files never ship;
+- the archive holds one top-level `sample-project/` folder containing
+  `sample-project/.renku/project.sqlite`;
+- an asset is never replaced or re-uploaded. New or fixed content means a new
+  tag and a new release.
+
+From a clean checkout of `GoRenku/sample-project` with the new content
+committed (shown for 1.0.0):
+
+```bash
+git tag -a v1.0.0 -m "Sample film 1.0.0"
+git archive --format=tar.gz --prefix=sample-project/ -o sample-project-1.0.0.tar.gz v1.0.0
+git push origin v1.0.0
+gh release create v1.0.0 sample-project-1.0.0.tar.gz -R GoRenku/sample-project \
+  --title "Sample film 1.0.0" --notes "Basilica sample film for Renku Studio."
+```
+
+Publish it as the latest release, not a draft or prerelease. No Studio source
+edit, size entry, checksum entry or Studio release is needed. Core uses GitHub's
+latest-release API to get the version, asset download URL and reported size.
+The reported size supports progress and an upfront free-space check when
+available; installation also works without it. Opening the Library makes no
+GitHub request, and existing samples are opened locally without being replaced.
+
+The existing Core database store upgrades older databases after a verified
+backup. An older Studio that downloads a newer sample stops before placing it
+and asks the user to update Renku (`SAMPLE_FILM_REQUIRES_NEWER_RENKU`). Test a new sample
+with the Studio versions you intend it to support; there is no separate sample
+schema manifest or Studio release gate.
+
+After publishing a sample release:
+
+1. Run `pnpm build`, then
+   `node packages/cli/dist/cli.js sample-film install --storage-root <scratch> --json`.
+   Confirm outcome `installed`, title **Basilica**, a database that opens at
+   the runtime generation (with an upgrade backup in
+   `.renku/project-database-backups/` when the sample generation is older),
+   and no `.sample-project-download-*` folder left in `<scratch>`.
+2. Run the same command again and confirm outcome `alreadyInLibrary` with no
+   GitHub requests. Its report has `version: null` because an existing local
+   project does not record a downloaded release version.
+
 ## Current Codex Evidence
 
 Implementation was checked on 2026-08-10 against:

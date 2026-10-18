@@ -6,10 +6,13 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import type { ProjectLibraryWithHttp } from '@/services/studio-project-contracts';
 import { deleteProject } from '@/services/studio-projects-api';
-import { EmptyProjectLibrary } from './empty-project-library';
 import { CreateProjectDialog } from './create-project-dialog';
+import { NoMatchingProjects } from './no-matching-projects';
 import { ProjectLibraryCard } from './project-library-card';
+import { ProjectLibraryStarts } from './project-library-starts';
+import { SampleFilmTileStart } from './sample-film-start';
 import { useProjectLibrarySearch } from './use-project-library-search';
+import { useSampleFilmInstallation } from './use-sample-film-installation';
 
 interface ProjectLibraryScreenProps {
   update: StudioUpdateController;
@@ -32,6 +35,14 @@ export function ProjectLibraryScreen({
 }: ProjectLibraryScreenProps) {
   const [query, setQuery] = useState('');
   const filteredProjects = useProjectLibrarySearch(library?.projects ?? [], query);
+  const sampleFilm = useSampleFilmInstallation({
+    libraryVersion: library,
+    onReady: async (projectName) => {
+      await onRefresh();
+      await onSelectProject(projectName);
+    },
+  });
+  const hasQuery = query.trim() !== '';
   const handleDeleteProject = async (
     projectName: string,
     confirmationProjectName: string
@@ -117,8 +128,16 @@ export function ProjectLibraryScreen({
                 Loading projects...
               </div>
             </div>
+          ) : library && library.projects.length === 0 ? (
+            <div className='h-full flex'>
+              <ProjectLibraryStarts
+                storageRoot={library.storageRoot}
+                sampleFilm={sampleFilm}
+                onCreated={onSelectProject}
+              />
+            </div>
           ) : filteredProjects.length === 0 ? (
-            <EmptyProjectLibrary hasQuery={query.trim() !== ''} />
+            <NoMatchingProjects />
           ) : (
             <div className='grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3'>
               {filteredProjects.map((project) => (
@@ -130,6 +149,9 @@ export function ProjectLibraryScreen({
                   onDeleteProject={handleDeleteProject}
                 />
               ))}
+              {!hasQuery && sampleFilm.inLibrary === false ? (
+                <SampleFilmTileStart controller={sampleFilm} />
+              ) : null}
             </div>
           )}
         </div>

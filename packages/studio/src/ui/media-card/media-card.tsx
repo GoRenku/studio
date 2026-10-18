@@ -243,9 +243,16 @@ function MediaCardSummaryBodyView({ body }: { body: MediaCardSummaryBody }) {
         </p>
       ) : null}
       {body.issue ? (
-        <p className='line-clamp-2 text-xs leading-relaxed text-red-700 dark:text-red-300'>
-          {body.issue.code}: {body.issue.message}
-        </p>
+        <div className='flex flex-col gap-1'>
+          <p className='line-clamp-2 text-xs leading-relaxed text-red-700 dark:text-red-300'>
+            {body.issue.code}: {body.issue.message}
+          </p>
+          {body.issue.suggestion ? (
+            <p className='text-xs leading-relaxed text-foreground'>
+              {body.issue.suggestion}
+            </p>
+          ) : null}
+        </div>
       ) : body.metrics?.length ? (
         <div className='flex flex-wrap gap-1.5'>
           {body.metrics.map((metric) => (

@@ -288,6 +288,43 @@ applicable, and removes the complete Project folder. The HTTP route does not
 inspect or delete filesystem content. It returns `{ "report": ... }` only after
 Core completes the deletion.
 
+### Sample film
+
+`GET /studio-api/sample-film` needs no token and returns
+`{ "sampleFilm": ... }` with `Cache-Control: no-store`: Core's reported download
+size (null before lookup or when unavailable), whether the sample is already in
+the Project Library, and the state of this server process's installation
+attempt. This read makes no network requests.
+
+`POST /studio-api/sample-film` is a token-protected local mutation that reads
+no body. It asks Core to start the installation and returns the current
+`{ "sampleFilm": ... }`. Core resolves the latest published GitHub sample release
+after checking for an existing local project. Core runs at most one attempt at
+a time per Studio process, so a second `POST` while one runs returns that
+attempt's state. Preflight errors,
+such as `SAMPLE_FILM_FOLDER_IN_USE` or `SAMPLE_FILM_INSUFFICIENT_SPACE`, are
+serialized as structured errors, and the `SAMPLE_FILM_` prefix maps to HTTP
+400. Failures after the download starts arrive as a `failed` state in later
+`GET` responses.
+
+Neither route accepts a URL, path or checksum, and neither downloads, unpacks
+or touches the filesystem itself. Route files may not import
+`node:child_process`; the server architecture test enforces this.
+
+### Star note
+
+`POST /studio-api/star-note` is token-protected. Its exact request envelope is:
+
+```json
+{
+  "projectName": "the-glass-harbor"
+}
+```
+
+Any other body fails with `STUDIO_SERVER042`. The route delegates to Core's
+`offerStarNote` and returns `{ "offer": { "show": boolean } }`. Core decides
+eligibility and records the shown note; the route adds no rule of its own.
+
 ## Route Naming
 
 Use plural resource names for route module files:

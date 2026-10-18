@@ -4,6 +4,7 @@ import { ProjectLibraryScreen } from '@/features/project-library/project-library
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
+import { useStarNote } from '@/app/use-star-note';
 import type { StudioUpdateController } from './use-studio-update';
 
 const defaultStudioSelection: StudioSelection = {
@@ -20,6 +21,7 @@ export function ConfiguredStudioApp({ update }: { update: StudioUpdateController
         projectSession.studioRouteSelection ?? defaultStudioSelection,
     },
   });
+  useStarNote(projectSession.project?.project.projectName ?? null);
 
   if (projectSession.isLoadingProjectRoute) {
     return (

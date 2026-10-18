@@ -41,6 +41,40 @@ existing Project-selection path so the new empty Project opens on Project
 Information. Importing an FDX or authoring a screenplay remains a later agent
 workflow rather than a creation-dialog branch.
 
+An empty Project Library shows **Start your first film** instead of a bare
+empty state (`project-library-starts.tsx`). It leads with the sample film
+start, followed by three equal starts: **Start an empty project** opens the
+same Create Project dialog; **Import a screenplay** and **Write a scene with
+your agent** each show a read-only agent request with a Copy button
+(`agent-prompt.tsx`). Studio adds no import or authoring path of its own for
+these; the user pastes the request into their agent. A search that matches no
+projects shows **No matching projects** instead. A Library that has projects
+shows a sample tile at the end of the grid while Core reports the sample as not
+in the Library and no search is active.
+
+The sample film start (`sample-film-start.tsx`, with
+`use-sample-film-installation.ts`) is a projection of Core's `SampleFilm`
+resource from `src/services/sample-film-api.ts`. The button asks the server to
+start the installation; while it runs, the start polls and shows the download
+progress with the local `Progress` primitive when a total is available, or
+received megabytes alone otherwise, then "Preparing the sample
+film…". A failure shows Core's message and suggestion with **Try again**. When
+Core reports `ready`, the screen refreshes the Library and opens the reported
+project through the existing Project-selection path. The download runs in the
+Studio server, so leaving the Library does not stop it and returning shows the
+current progress. Before the user starts, the offer needs no size estimate or
+GitHub lookup. React never checks folders, project names or download validity;
+Core owns every installation rule.
+
+The one-time star note is asked for by a single app-level hook,
+`src/app/use-star-note.ts`, mounted in `configured-studio-app.tsx`. It asks the
+server when a project opens and on any resource change for the open project,
+because most generation happens through the agent. Core alone decides whether
+the note is shown and records that it was; the hook only decides when to ask,
+and stops asking after a yes. When Core says yes, `src/app/star-note.tsx`
+shows a toast that stays until closed, with a **Star on GitHub** link. A failed
+request shows nothing.
+
 Project Library cards expose the shared Media Card trash action. Project
 deletion is permanent, so its shared confirmation dialog requires the user to
 type the immutable Project name exactly; the human-readable title is not an

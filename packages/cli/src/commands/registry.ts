@@ -399,6 +399,16 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
       homeDir: homeDir,
     });
   },
+  'sample-film': async ({ input, flags, io, homeDir }) => {
+    const { runSampleFilmCommand } = await loadCommand('sample-film', () => import('./sample-film-command.js'));
+    return runSampleFilmCommand({
+      input,
+      storageRoot: flags.storageRoot,
+      json: flags.json,
+      io,
+      homeDir,
+    });
+  },
   'update': async ({ input, flags, io }) => {
     const { runUpdateCommand } = await loadCommand('update', () => import('./update.js'));
     return runUpdateCommand(input, flags.json, io);

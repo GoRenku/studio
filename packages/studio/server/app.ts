@@ -6,7 +6,9 @@ import { createStudioBootstrapRoute } from './routes/bootstrap.js';
 import { createDefaultModelsRoute } from './routes/default-models.js';
 import { createProjectsRoute } from './routes/projects.js';
 import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
+import { createSampleFilmRoute } from './routes/sample-film.js';
 import { createSetupRoute } from './routes/setup.js';
+import { createStarNoteRoute } from './routes/star-note.js';
 import { createStudioEventsRoute } from './routes/studio-events.js';
 import { createStudioShutdownRoute } from './routes/studio-shutdown.js';
 import { createStudioUpdateRoute } from './routes/studio-update.js';
@@ -38,6 +40,14 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
       createSetupRoute({ token, homeDir: options.homeDir })
     )
     .route('/studio-api/projects', createProjectsRoute({ token }))
+    .route(
+      '/studio-api/sample-film',
+      createSampleFilmRoute({ token, homeDir: options.homeDir })
+    )
+    .route(
+      '/studio-api/star-note',
+      createStarNoteRoute({ token, homeDir: options.homeDir })
+    )
     .route(
       '/studio-api/provider-credentials',
       createProviderCredentialsRoute({ token, homeDir: options.homeDir })

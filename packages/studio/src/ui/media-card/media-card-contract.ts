@@ -133,6 +133,8 @@ export interface MediaCardSummaryBody {
   issue?: {
     code: string;
     message: string;
+    /** What the user can do about the issue. */
+    suggestion?: string;
   };
   metrics?: Array<{
     label: string;

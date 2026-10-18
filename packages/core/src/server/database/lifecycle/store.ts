@@ -9,6 +9,7 @@ import {
   migrateProjectDatabase,
 } from './migrator.js';
 import { currentProjectStoreSchemaGeneration } from './project-store-schema-generation.js';
+import { UPDATE_RENKU_SUGGESTION } from './project-database-compatibility.js';
 import { completeAssetFileBackfill } from './asset-file-backfill/index.js';
 import type { ProjectDatabasePreMigrationBackupReport } from './project-database-backups.js';
 
@@ -158,10 +159,11 @@ function assertProjectStoreSchema(
   sqlite: Database.Database,
   databasePath: string
 ): void {
-  const invalidSchema = (message: string) =>
+  const invalidSchema = (message: string, suggestion?: string) =>
     new ProjectDataError(
       'PROJECT_DATA044',
-      `${message}: ${databasePath}.`
+      `${message}: ${databasePath}.`,
+      { suggestion }
     );
 
   try {
@@ -181,6 +183,14 @@ function assertProjectStoreSchema(
       simple: true,
     });
     const currentGeneration = currentProjectStoreSchemaGeneration();
+    if (typeof schemaGeneration === 'number' && schemaGeneration > currentGeneration) {
+      throw invalidSchema(
+        `This project was saved by a newer version of Renku (database schema generation ${String(
+          schemaGeneration
+        )}; this Renku supports ${currentGeneration})`,
+        `${UPDATE_RENKU_SUGGESTION} Then open the project again.`
+      );
+    }
     if (schemaGeneration !== currentGeneration) {
       throw invalidSchema(
         `Project database schema generation ${String(

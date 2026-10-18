@@ -43,6 +43,7 @@ export function ProjectLibraryCard({
             ? {
                 code: project.validationError.code,
                 message: project.validationError.message,
+                suggestion: project.validationError.suggestion,
               }
             : undefined,
           metrics: project.validationError

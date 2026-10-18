@@ -3,7 +3,7 @@ import { Info, Loader2, Plus } from 'lucide-react';
 import { createProject } from '@/services/studio-projects-api';
 import { StudioApiError } from '@/services/studio-api-errors';
 import { Alert, AlertDescription } from '@/ui/alert';
-import { Button } from '@/ui/button';
+import { Button, type ButtonProps } from '@/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -14,11 +14,14 @@ import {
   DialogTrigger,
 } from '@/ui/dialog';
 import { Input } from '@/ui/input';
+import { cn } from '@/lib/utils';
 import { suggestProjectName } from './project-name-suggestion';
 
 interface CreateProjectDialogProps {
   storageRoot: string;
   onCreated: (projectName: string) => Promise<void>;
+  triggerVariant?: ButtonProps['variant'];
+  triggerClassName?: string;
 }
 
 const PROJECT_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -26,6 +29,8 @@ const PROJECT_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export function CreateProjectDialog({
   storageRoot,
   onCreated,
+  triggerVariant,
+  triggerClassName,
 }: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -124,7 +129,12 @@ export function CreateProjectDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type='button' size='sm' className='gap-2 shadow-sm'>
+        <Button
+          type='button'
+          size='sm'
+          variant={triggerVariant}
+          className={cn('gap-2 shadow-sm', triggerClassName)}
+        >
           <Plus className='h-3.5 w-3.5' />
           Create Project
         </Button>

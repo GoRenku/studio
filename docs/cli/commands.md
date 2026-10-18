@@ -168,6 +168,7 @@ without escalating:
 | `studio-events.jsonl` | Resource-changed events that refresh open Studio windows |
 | `cache/provider-metadata/` | Engines' cache of provider input schemas, prices and recorded price entries |
 | `default-models.json` | Copy of the Skill's Default Model List |
+| `star-note.json` | When the one-time GitHub star note was shown |
 
 Old state files under the config directory are not read; select the current
 Project again after upgrading.
@@ -214,6 +215,50 @@ Behavior:
   succeeds.
 - The JSON output includes a `currentProject` descriptor for the project that
   was just opened.
+
+## `renku sample-film install`
+
+Download the Basilica sample film into the Project Library.
+
+```bash
+renku sample-film install
+renku sample-film install --json
+renku sample-film install --storage-root <path>
+```
+
+Options:
+
+- `--storage-root`: override the configured storage root for this command.
+- `--json`: print only the installation report as JSON.
+
+Behavior:
+
+- Downloads the latest published sample release from
+  `GoRenku/sample-project` on GitHub, unpacks it
+  and places it in the Project Library as `sample-project`. Core opens it,
+  upgrading an older sample database after a verified backup. No API keys or
+  provider calls are needed. Publishing a new sample needs no Studio release.
+  A sample made by a newer Renku is not placed in the Library; the command
+  fails with `SAMPLE_FILM_REQUIRES_NEWER_RENKU` and suggests updating Renku.
+- Never overwrites. If `sample-project` already holds a Renku project, nothing
+  is downloaded and the outcome is `alreadyInLibrary`. Any other folder or file
+  at that path fails with `SAMPLE_FILM_FOLDER_IN_USE` and is left untouched.
+- Checks for free space of twice the download size when GitHub reports it.
+  The download is staged in a hidden `.sample-project-download-<random>` folder
+  in the Project Library,
+  which is removed on success or failure.
+- Human output prints a line at each 10% of the download, such as
+  `Downloading the sample film: 40% (150 of 375 MB)`, then
+  `Preparing the sample film…`, then the outcome with the title, the project
+  name, the project path and the downloaded sample version. Without a reported
+  total it prints download activity without a percentage.
+- The JSON report is `{ "outcome", "projectName", "projectPath", "title",
+  "version", "warnings" }`, where `outcome` is `installed` or
+  `alreadyInLibrary`; `version` is null when opening an existing local sample.
+- Asks a running Studio to refresh its Project Library, like `renku create`;
+  a `CLI027` warning means the refresh request could not be written.
+- Does not change the current authoring project.
+- A missing or unknown subcommand fails with `CLI168`.
 
 ## `renku about`
 

@@ -6,6 +6,30 @@ import { TooltipProvider } from '@/ui/tooltip';
 import { ProjectLibraryCard } from './project-library-card';
 
 describe('ProjectLibraryCard', () => {
+  it('shows what to do about a Project that cannot be opened', () => {
+    render(
+      <TooltipProvider>
+        <ProjectLibraryCard
+          project={{
+            ...projectSummary(),
+            counts: null,
+            validationError: {
+              code: 'PROJECT_DATA044',
+              message: 'This project was saved by a newer version of Renku.',
+              suggestion: 'Update Renku, then open the project again.',
+            },
+          }}
+          isSelectingProject={false}
+          onSelectProject={vi.fn()}
+          onDeleteProject={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+
+    expect(screen.getByText('PROJECT_DATA044: This project was saved by a newer version of Renku.')).not.toBeNull();
+    expect(screen.getByText('Update Renku, then open the project again.')).not.toBeNull();
+  });
+
   it('requires the Project name rather than its title before deletion', async () => {
     const onDeleteProject = vi.fn().mockResolvedValue(undefined);
     const onSelectProject = vi.fn().mockResolvedValue(undefined);
