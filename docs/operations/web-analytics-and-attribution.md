@@ -23,8 +23,9 @@ Every event carries a `surface` property, added in PostHog's `before_send`:
 | `website` | gorenku.com (`packages/website`) |
 | `matinee` | latentmatinee.com (`ai-films` repository) |
 
-Plan 0237 adds `studio` for Renku Studio statistics. GitHub numbers from plan
-0235 are told apart by their event names.
+Plan 0237 adds `studio` for Renku Studio statistics. GitHub and download
+numbers from the [growth report](growth-report.md) are told apart by their
+event names.
 
 ## Consent states
 
@@ -153,7 +154,7 @@ server hash mode must be on before either site ships its analytics code.
 | Autocapture, heatmaps, dead clicks, web vitals | Off in code (`autocapture`, `enable_heatmaps`, `capture_dead_clicks`, `capture_performance` set to `false`), because project settings can switch them on remotely |
 | Session recording | Off (`disable_session_recording: true` in code) |
 | Survey | One open-text question on `gorenku.com/download`, shown once, after 45 seconds, to Yes visitors |
-| Dashboard | "Renku growth": website visits by channel, website install path, Latent Matinee referrals; filtered to `$host` and `surface` so local test traffic is excluded |
+| Dashboard | "Renku growth", published by `pnpm growth:dashboard` (see [growth report](growth-report.md#dashboard)); website charts are filtered to `$host` and `surface` so local test traffic is excluded |
 | Retention | One year (free plan) |
 
 Each page view sends about two events (`$pageview` and `$pageleave`), so the

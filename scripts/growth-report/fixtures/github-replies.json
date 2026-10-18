@@ -1,0 +1,37 @@
+{
+  "repository": { "stargazers_count": 7 },
+  "starHistoryPages": [
+    [
+      { "week": 1791676800, "total": 3, "days": [0, 1, 0, 2, 0, 0, 0] },
+      { "week": 1791072000, "total": 1, "days": [0, 0, 0, 1, 0, 0, 0] }
+    ],
+    [
+      { "week": 1790467200, "total": 3, "days": [3, 0, 0, 0, 0, 0, 0] }
+    ]
+  ],
+  "views": {
+    "count": 30,
+    "uniques": 12,
+    "views": [
+      { "timestamp": "2026-10-16T00:00:00Z", "count": 5, "uniques": 2 },
+      { "timestamp": "2026-10-17T00:00:00Z", "count": 9, "uniques": 4 },
+      { "timestamp": "2026-10-18T00:00:00Z", "count": 1, "uniques": 1 }
+    ]
+  },
+  "clones": {
+    "count": 40,
+    "uniques": 15,
+    "clones": [
+      { "timestamp": "2026-10-16T00:00:00Z", "count": 7, "uniques": 3 },
+      { "timestamp": "2026-10-17T00:00:00Z", "count": 11, "uniques": 5 }
+    ]
+  },
+  "referrers": [
+    { "referrer": "github.com", "count": 6, "uniques": 3 },
+    { "referrer": "gorenku.com", "count": 4, "uniques": 2 }
+  ],
+  "paths": [
+    { "path": "/GoRenku/studio", "title": "Overview", "count": 20, "uniques": 8 },
+    { "path": "/gorenku/studio", "title": "Overview", "count": 2, "uniques": 1 }
+  ]
+}

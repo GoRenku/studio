@@ -1,0 +1,16 @@
+{
+  "data": {
+    "viewer": {
+      "zones": [
+        {
+          "httpRequestsAdaptiveGroups": [
+            { "count": 12, "dimensions": { "clientRequestPath": "/install.sh", "clientCountryName": "DE" } },
+            { "count": 3, "dimensions": { "clientRequestPath": "/studio/channels/beta/release.json", "clientCountryName": "US" } },
+            { "count": 2, "dimensions": { "clientRequestPath": "/wp-login.php", "clientCountryName": "NL" } }
+          ]
+        }
+      ]
+    }
+  },
+  "errors": null
+}
