@@ -274,13 +274,14 @@ describe('projects Hono route', () => {
   });
 
   it('reads one project through ProjectDataService', async () => {
-    const app = createProjectsRoute({
-      projectData: fakeProjectDataService(),
-    });
+    const projectData = fakeProjectDataService();
+    const openProjectInStudio = vi.spyOn(projectData, 'openProjectInStudio');
+    const app = createProjectsRoute({ projectData });
 
     const response = await app.request('/constantinople');
 
     expect(response.status).toBe(200);
+    expect(openProjectInStudio).toHaveBeenCalledWith({ projectName: 'constantinople' });
     const body = await response.json();
     expect(body).toMatchObject({
       project: {

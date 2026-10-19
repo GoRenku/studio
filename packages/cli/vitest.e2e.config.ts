@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Tests never send usage statistics, even on a machine that opted in.
+    env: { RENKU_TELEMETRY_DISABLED: '1' },
     include: ['tests/e2e/**/*.e2e.test.ts'],
     exclude: ['node_modules/**', 'dist/**'],
     testTimeout: 180000,

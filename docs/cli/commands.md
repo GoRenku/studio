@@ -260,6 +260,45 @@ Behavior:
 - Does not change the current authoring project.
 - A missing or unknown subcommand fails with `CLI168`.
 
+## `renku telemetry`
+
+Show or change whether Renku sends usage statistics. They are off until the
+user turns them on; the full field list is at
+<https://gorenku.com/privacy#app-usage-statistics>.
+
+```bash
+renku telemetry status [--json]
+renku telemetry enable [--json]
+renku telemetry disable [--json]
+```
+
+Behavior:
+
+- `enable` creates `telemetry.json` with a random install ID in the Renku
+  configuration folder, or keeps the existing ID. `disable` sends one last
+  `telemetry_opted_out` event (unless blocked), then deletes the file;
+  `disable` also removes an invalid file without sending anything.
+- All three print the status afterwards:
+
+  ```text
+  Usage statistics: on
+  Install ID: 0b6f6c1e-8a7d-4f0e-9c55-2f1d1c7a9e10
+  Sending: no (DO_NOT_TRACK is set)
+  Debug printing: off
+  Every field Renku sends: https://gorenku.com/privacy#app-usage-statistics
+  ```
+
+- `--json` prints `{ "enabled", "installId", "blockedBy", "debug" }`.
+- Environment variables, read by every Renku process:
+  - `DO_NOT_TRACK`, `RENKU_TELEMETRY_DISABLED`, `CI`: any value except empty,
+    `0` or `false` blocks every send; the saved choice is unchanged.
+  - `RENKU_TELEMETRY_DEBUG`: prints each event to stderr instead of sending
+    it.
+- An invalid `telemetry.json` fails `status` and `enable` with
+  `CORE_TELEMETRY_FILE_INVALID`; file system failures use
+  `CORE_TELEMETRY_FILE_IO_FAILED`.
+- A missing or unknown subcommand fails with `CLI169`.
+
 ## `renku about`
 
 Show released Studio product and CLI package information.

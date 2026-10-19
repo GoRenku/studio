@@ -15,7 +15,9 @@ import { pathExists } from '../files/path-existence.js';
 import { readProjectFromSession } from '../resources/full-project.js';
 import { ARCHIVE_STALL_TIMEOUT_MS, downloadArchive } from './archive-download.js';
 import { systemTarExecutable, unpackArchive } from './archive-unpack.js';
+import { recordTelemetryEvent } from '../telemetry/service.js';
 import {
+  sampleFilmFailureCode,
   sampleFilmFolderInUseError,
   sampleFilmInsufficientSpaceError,
   sampleFilmRequiresNewerRenkuError,
@@ -59,9 +61,20 @@ export async function installSampleFilmWithOptions(
     return openPlacedSampleFilm(preparation, 'alreadyInLibrary', []);
   }
   const onProgress = input.onProgress;
-  return await completeSampleFilmInstallation(preparation, options, (installation) => {
-    onProgress?.({ archiveBytes: preparation.release.archiveBytes, inLibrary: false, installation });
-  });
+  void recordTelemetryEvent({ name: 'sample_film_download_started' }, input);
+  try {
+    const report = await completeSampleFilmInstallation(preparation, options, (installation) => {
+      onProgress?.({ archiveBytes: preparation.release.archiveBytes, inLibrary: false, installation });
+    });
+    void recordTelemetryEvent({ name: 'sample_film_download_finished', result: 'installed' }, input);
+    return report;
+  } catch (error) {
+    void recordTelemetryEvent(
+      { name: 'sample_film_download_finished', result: 'failed', errorCode: sampleFilmFailureCode(error) },
+      input
+    );
+    throw error;
+  }
 }
 
 /** Checks the local target, then resolves the latest release and checks space. */

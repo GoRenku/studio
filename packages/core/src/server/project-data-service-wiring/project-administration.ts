@@ -14,6 +14,8 @@ import {
   updateGenerationLaneSettings,
 } from '../project-settings/index.js';
 import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
+import { SAMPLE_FILM_PROJECT_NAME } from '../sample-film/sample-film-release.js';
+import { recordTelemetryEvent } from '../telemetry/service.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createProjectAdministrationServiceWiring(): Pick<
@@ -25,6 +27,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'listLibrary'
   | 'readProject'
   | 'readProjectShell'
+  | 'openProjectInStudio'
   | 'readDirectorContext'
   | 'readProjectInformationResource'
   | 'readProjectSettings'
@@ -35,12 +38,23 @@ export function createProjectAdministrationServiceWiring(): Pick<
 > {
   return {
     cleanProjectTemporaryFiles,
-    createMovieProject,
+    async createMovieProject(input) {
+      const report = await createMovieProject(input);
+      void recordTelemetryEvent({ name: 'project_created' }, input);
+      return report;
+    },
     deleteProject,
     migrateProjectDatabase: migrateProjectDatabaseForProject,
     listLibrary,
     readProject,
     readProjectShell,
+    async openProjectInStudio(input) {
+      const shell = await readProjectShell(input);
+      if (input.projectName === SAMPLE_FILM_PROJECT_NAME) {
+        void recordTelemetryEvent({ name: 'sample_film_opened' }, input);
+      }
+      return shell;
+    },
     readDirectorContext,
     readProjectInformationResource: readProjectInformationResourceForProject,
     readProjectSettings,

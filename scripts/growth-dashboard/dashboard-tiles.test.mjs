@@ -38,8 +38,16 @@ test('growth report charts take the highest stored value per reading', () => {
   }
 });
 
-test('website charts are limited to the live site', () => {
+test('trends charts are limited to the live sites or to Studio usage statistics', () => {
   for (const chart of charts.filter(({ query }) => query.kind === 'InsightVizNode')) {
-    assert.match(JSON.stringify(chart.query.source.properties), /gorenku\.com|latentmatinee\.com/, chart.name);
+    assert.match(JSON.stringify(chart.query.source.properties), /gorenku\.com|latentmatinee\.com|"value":\["studio"\]/, chart.name);
+  }
+});
+
+test('Studio SQL charts read only Studio usage statistics', () => {
+  const studioSql = charts.filter((chart) => /'studio_started'|properties\.surface = 'studio'/.test(sqlOf(chart)));
+  assert.ok(studioSql.length > 0);
+  for (const chart of studioSql) {
+    assert.match(sqlOf(chart), /properties\.surface = 'studio'/, chart.name);
   }
 });

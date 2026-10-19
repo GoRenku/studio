@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  // Tests never send usage statistics, even on a machine that opted in.
+  test: { environment: 'node', env: { RENKU_TELEMETRY_DISABLED: '1' }, include: ['src/**/*.test.ts'] },
   resolve: {
     alias: [
       { find: '@gorenku/studio-core/server/project-selection', replacement: new URL('../core/src/server/project-selection/index.ts', import.meta.url).pathname },

@@ -7,7 +7,7 @@ import '../styles/article.css';
 
 <BaseLayout
   title="Privacy Notice — Renku"
-  description="How Renku handles local project data, provider requests, website hosting, and website analytics."
+  description="How Renku handles local project data, optional app usage statistics, provider requests, website hosting, and website analytics."
 >
   <SiteHeader />
   <main class="article-page" id="top">
@@ -20,7 +20,36 @@ import '../styles/article.css';
 
       <section aria-labelledby="privacy-studio">
         <h2 id="privacy-studio">Renku Studio runs locally</h2>
-        <p>Renku Studio stores your projects, screenplays, media, settings, and provider API keys on your computer. It does not require a Renku account, and we do not collect app usage analytics, project files, prompts, or API keys through the app. We cannot access your local project data unless you choose to share it with us, such as in a support request.</p>
+        <p>Renku Studio stores your projects, screenplays, media, settings, and provider API keys on your computer. It does not require a Renku account. It never sends us your project files, file paths, prompts, screenplay text, media, project names or API keys. If you turn on usage statistics, it sends only the events listed in <a href="#app-usage-statistics">Optional app usage statistics</a>. We cannot access your local project data unless you choose to share it with us, such as in a support request.</p>
+      </section>
+
+      <section aria-labelledby="app-usage-statistics">
+        <h2 id="app-usage-statistics">Optional app usage statistics</h2>
+        <p>Renku Studio can send a few usage statistics so we can see which versions people run and whether projects and generations work. They are off until you turn them on: on the last first-run screen, in Studio Settings under <strong>Usage statistics</strong>, or with <code>renku telemetry enable</code>.</p>
+        <p>Turning them on creates a random install ID and saves it in <code>telemetry.json</code> in Renku’s configuration folder on your computer. Every event carries that ID, so events from one computer can be linked, but the ID is not linked to your name, email or projects. Turning them off deletes the file and its ID; turning them on again creates a new one.</p>
+        <p>Every event contains these fields:</p>
+        <ul>
+          <li><strong>Install ID</strong>: the random ID described above.</li>
+          <li><strong>Time</strong>: when the event happened.</li>
+          <li><strong>Surface</strong>: always <code>studio</code>, to tell app events apart from website events.</li>
+          <li><strong>Version</strong>: the installed Renku version, or <code>development</code> for a source checkout.</li>
+          <li><strong>System</strong>: the operating system (<code>darwin</code>, <code>win32</code> or <code>linux</code>) and chip type (<code>arm64</code> or <code>x64</code>).</li>
+        </ul>
+        <p>These are the only events, and the only extra field each one has:</p>
+        <ul>
+          <li><code>studio_started</code>: Studio started.</li>
+          <li><code>project_created</code>: a new project was created.</li>
+          <li><code>fdx_imported</code>: a Final Draft (FDX) screenplay was imported into a project.</li>
+          <li><code>sample_film_download_started</code>: the sample film started downloading.</li>
+          <li><code>sample_film_download_finished</code>: that download ended, with <code>result</code> (<code>installed</code> or <code>failed</code>) and, when it failed, Renku’s error code (for example <code>SAMPLE_FILM_DOWNLOAD_FAILED</code>), never the error message.</li>
+          <li><code>sample_film_opened</code>: Studio opened the sample film project.</li>
+          <li><code>generation_completed</code>: a generated file was saved into a project, with <code>media_kind</code> (<code>image</code>, <code>video</code> or <code>audio</code>).</li>
+          <li><code>heard_about</code>: your optional answer to “Where did you hear about Renku?” at first run, as one of a fixed list of choices. There is no free-text answer.</li>
+          <li><code>telemetry_opted_out</code>: you turned usage statistics off. This is the last event sent with your install ID.</li>
+        </ul>
+        <p>Renku never sends file names, file paths, project names, titles, loglines, screenplay or prompt text, media or reference files, API keys, which provider or model you used, error messages, or any text you type. The events have no field that could hold them.</p>
+        <p>Events go directly from your computer to PostHog’s EU service, which receives your network address with each request, as with any web request. Renku asks PostHog not to work out a location from it. Events go to the same PostHog project as the website analytics.</p>
+        <p>To stop sending, turn usage statistics off in Settings or run <code>renku telemetry disable</code>. Renku also sends nothing while the <code>DO_NOT_TRACK</code> or <code>RENKU_TELEMETRY_DISABLED</code> environment variable is set, or while it runs in CI. To see exactly what would be sent without sending anything, set <code>RENKU_TELEMETRY_DEBUG=1</code>: Renku then prints each event instead. <code>renku telemetry status</code> shows your choice and your install ID.</p>
       </section>
 
       <section aria-labelledby="privacy-providers">
@@ -51,12 +80,12 @@ import '../styles/article.css';
       <section aria-labelledby="privacy-sharing">
         <h2 id="privacy-sharing">Sharing and retention</h2>
         <p>We do not sell your personal information. Website request data is handled by Cloudflare, which operates a global network; website analytics is handled through PostHog’s EU endpoint. Their linked policies describe their service providers and any international transfers. Model providers and AI agents that you choose to use receive information through your requests and apply their own retention rules.</p>
-        <p>Renku’s local copies of your project files and API keys remain on your device until you remove them. Your website analytics choice remains in your browser until you change it or clear site data. We keep analytics information only while needed to understand website use and improve the site, then delete or aggregate it. PostHog deletes analytics events after one year under our current plan. If you email us, we use your address and message to reply, based on our legitimate interest in handling your request, and keep them only as long as needed for that request or a legal obligation.</p>
+        <p>Renku’s local copies of your project files and API keys remain on your device until you remove them. Your website analytics choice remains in your browser until you change it or clear site data. Your app usage statistics install ID remains on your computer until you turn usage statistics off. App usage statistics follow the same retention as website analytics. We keep analytics information only while needed to understand website use and improve the site, then delete or aggregate it. PostHog deletes analytics events after one year under our current plan. If you email us, we use your address and message to reply, based on our legitimate interest in handling your request, and keep them only as long as needed for that request or a legal obligation.</p>
       </section>
 
       <section aria-labelledby="privacy-rights">
         <h2 id="privacy-rights">Your rights</h2>
-        <p>Depending on where you live, you may ask to access, correct, delete, or limit the use of personal information we hold about you, and you may have rights to object or receive a copy of it. You can withdraw website analytics consent at any time without affecting earlier lawful processing. Email <a href="mailto:support@codingventures.com">support@codingventures.com</a> with a request. If applicable, you may also complain to your local data protection authority.</p>
+        <p>Depending on where you live, you may ask to access, correct, delete, or limit the use of personal information we hold about you, and you may have rights to object or receive a copy of it. You can withdraw website analytics consent or app usage statistics consent at any time without affecting earlier lawful processing. To have past app usage statistics deleted, send us the install ID shown by <code>renku telemetry status</code> before you turn usage statistics off, because turning them off deletes the ID from your computer. Email <a href="mailto:support@codingventures.com">support@codingventures.com</a> with a request. If applicable, you may also complain to your local data protection authority.</p>
       </section>
 
       <section aria-labelledby="privacy-changes">

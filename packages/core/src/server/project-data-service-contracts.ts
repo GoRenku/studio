@@ -189,6 +189,8 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   listLibrary(input?: RenkuConfigPathOptions): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
   readProjectShell(input: ReadProjectInput): Promise<ProjectShell>;
+  /** The shell Studio shows when it opens a Project; records usage statistics for the sample film. */
+  openProjectInStudio(input: ReadProjectInput): Promise<ProjectShell>;
   readDirectorContext(input?: ReadDirectorContextInput): Promise<DirectorContextReport>;
   readProjectInformationResource(
     input: ReadProjectInput

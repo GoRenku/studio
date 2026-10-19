@@ -13,7 +13,10 @@ import {
   DialogTrigger,
 } from '@/ui/dialog';
 import { ProviderCredentialsFields } from './provider-credentials-fields';
+import { TelemetryChoiceFields } from './telemetry-choice-fields';
+import { TelemetryInstallId } from './telemetry-install-id';
 import { useProviderCredentialsDraft } from './use-provider-credentials-draft';
+import { useTelemetryChoiceDraft } from './use-telemetry-choice-draft';
 
 export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
   trigger?: ReactElement;
@@ -26,13 +29,17 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
   );
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const controller = useProviderCredentialsDraft();
+  const usageStatistics = useTelemetryChoiceDraft();
   const loadCredentials = controller.load;
+  const loadUsageStatistics = usageStatistics.load;
+  const saving = controller.saving || usageStatistics.saving;
 
   useEffect(() => {
     if (handlesSettingsLink && new URL(window.location.href).searchParams.get('settings') === 'provider-credentials') {
       void loadCredentials();
+      void loadUsageStatistics();
     }
-  }, [handlesSettingsLink, loadCredentials]);
+  }, [handlesSettingsLink, loadCredentials, loadUsageStatistics]);
 
   const clearSettingsLink = () => {
     const url = new URL(window.location.href);
@@ -44,15 +51,17 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (controller.saving) {
+    if (saving) {
       return;
     }
     if (nextOpen) {
       setOpen(true);
       void controller.load();
+      void usageStatistics.load();
       return;
     }
     controller.resetDraft();
+    usageStatistics.resetDraft();
     setOpen(false);
     clearSettingsLink();
     onClose?.();
@@ -60,12 +69,16 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (await controller.save()) {
-      setOpen(false);
-      clearSettingsLink();
-      onClose?.();
-      toast.success('Settings saved.');
+    if (controller.dirty && !(await controller.save())) {
+      return;
     }
+    if (usageStatistics.dirty && !(await usageStatistics.save())) {
+      return;
+    }
+    setOpen(false);
+    clearSettingsLink();
+    onClose?.();
+    toast.success('Settings saved.');
   };
 
   return (
@@ -85,7 +98,7 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
       <DialogContent
         ref={dialogContentRef}
         className='max-h-[calc(100vh-2rem)] max-w-[660px] gap-0 overflow-hidden p-0'
-        showCloseButton={!controller.saving}
+        showCloseButton={!saving}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           dialogContentRef.current?.focus();
@@ -95,22 +108,25 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
           returnFocusRef.current?.focus();
         } : undefined}
         onEscapeKeyDown={(event) =>
-          controller.saving && event.preventDefault()
+          saving && event.preventDefault()
         }
         onPointerDownOutside={(event) =>
-          controller.saving && event.preventDefault()
+          saving && event.preventDefault()
         }
       >
         <form onSubmit={submit} className='flex min-h-0 flex-col'>
           <DialogHeader className='px-8 py-5'>
             <DialogTitle>Settings</DialogTitle>
             <DialogDescription className='sr-only'>
-              Manage provider API keys.
+              Manage provider API keys and usage statistics.
             </DialogDescription>
           </DialogHeader>
 
-          <div className='min-h-0 flex-1 overflow-y-auto px-8 py-8'>
-            <div className='space-y-4'>
+          <div className='min-h-0 flex-1 space-y-8 overflow-y-auto px-8 py-8'>
+            <section className='space-y-4'>
+              <h3 className='text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground'>
+                Provider API keys
+              </h3>
               {controller.error ? (
                 <Alert variant='destructive'>
                   <AlertCircle />
@@ -143,19 +159,42 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
                 <ProviderCredentialsFields
                   providers={controller.providers}
                   draftValues={controller.draftValues}
-                  disabled={controller.loading || controller.saving}
+                  disabled={controller.loading || saving}
                   autoFocusFirst
                   onValueChange={controller.setValue}
                 />
               )}
-            </div>
+            </section>
+
+            <section className='space-y-4'>
+              <h3 className='text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground'>
+                Usage statistics
+              </h3>
+              {usageStatistics.error ? (
+                <Alert variant='destructive'>
+                  <AlertCircle />
+                  <AlertDescription>
+                    <p>{usageStatistics.error}</p>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <TelemetryChoiceFields
+                enabled={usageStatistics.enabled}
+                blockedBy={usageStatistics.status?.blockedBy ?? null}
+                disabled={usageStatistics.status === null || saving}
+                onEnabledChange={usageStatistics.setEnabled}
+              />
+              {usageStatistics.status?.enabled && usageStatistics.status.installId ? (
+                <TelemetryInstallId installId={usageStatistics.status.installId} />
+              ) : null}
+            </section>
           </div>
 
           <DialogFooter className='px-8 py-5'>
             <Button
               type='button'
               variant='outline'
-              disabled={controller.saving}
+              disabled={saving}
               className='h-10 min-w-[88px]'
               onClick={() => handleOpenChange(false)}
             >
@@ -165,16 +204,17 @@ export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
               type='submit'
               disabled={
                 controller.loading ||
-                controller.saving ||
-                !controller.dirty ||
-                !controller.valid
+                usageStatistics.loading ||
+                saving ||
+                (!controller.dirty && !usageStatistics.dirty) ||
+                (controller.dirty && !controller.valid)
               }
               className='h-10 min-w-[104px] gap-2 disabled:border-border/40 disabled:bg-muted/70 disabled:text-muted-foreground/65 disabled:opacity-100 disabled:shadow-none'
             >
-              {controller.saving ? (
+              {saving ? (
                 <Loader2 className='h-4 w-4 animate-spin' />
               ) : null}
-              {controller.saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving…' : 'Save'}
             </Button>
           </DialogFooter>
         </form>

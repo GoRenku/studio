@@ -7,6 +7,7 @@ import { createDefaultModelsRoute } from './routes/default-models.js';
 import { createProjectsRoute } from './routes/projects.js';
 import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
 import { createSampleFilmRoute } from './routes/sample-film.js';
+import { createTelemetryRoute } from './routes/telemetry.js';
 import { createSetupRoute } from './routes/setup.js';
 import { createStarNoteRoute } from './routes/star-note.js';
 import { createStudioEventsRoute } from './routes/studio-events.js';
@@ -51,6 +52,10 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
     .route(
       '/studio-api/provider-credentials',
       createProviderCredentialsRoute({ token, homeDir: options.homeDir })
+    )
+    .route(
+      '/studio-api/telemetry',
+      createTelemetryRoute({ token, homeDir: options.homeDir })
     )
     .route(
       '/studio-api/default-models',

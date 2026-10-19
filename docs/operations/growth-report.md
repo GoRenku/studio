@@ -159,7 +159,9 @@ count machines rather than people.
 
 The **Renku growth** dashboard in the Renku Website PostHog project shows
 everything collected so far: website visits and actions (gorenku.com),
-downloads, GitHub, and Latent Matinee. Its charts are defined in
+downloads, Renku Studio usage statistics, GitHub, and Latent Matinee. The
+Renku Studio section counts only installs that turned usage statistics on
+(ADR 0120). Its charts are defined in
 `scripts/growth-dashboard/`, one file per section, and follow the counting
 rule above.
 

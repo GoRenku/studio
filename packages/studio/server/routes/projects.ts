@@ -45,6 +45,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'listLibrary'
   | 'readProject'
   | 'readProjectShell'
+  | 'openProjectInStudio'
   | 'readProjectInformationResource'
   | 'readProjectSettings'
   | 'replaceProjectSettings'
@@ -184,7 +185,7 @@ export function createProjectsRoute(
       try {
         const projectName = c.req.param('projectName') as string;
         const [project, library] = await Promise.all([
-          projectData.readProjectShell({ projectName }),
+          projectData.openProjectInStudio({ projectName }),
           projectData.listLibrary(),
         ]);
         return c.json({

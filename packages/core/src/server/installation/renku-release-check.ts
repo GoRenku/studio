@@ -1,8 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { RenkuUpdateStatus } from '../../client/renku-update.js';
-import { readRenkuInstallation } from './installation-paths.js';
+import { RENKU_VERSION_PATTERN, readInstalledRenkuRelease } from './installed-release.js';
 
 interface RenkuReleaseCheckOptions {
   executable?: string;
@@ -11,44 +9,14 @@ interface RenkuReleaseCheckOptions {
   fetcher?: typeof fetch;
 }
 
-const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const targetPattern = /^(darwin-(arm64|x64)|win32-x64)$/;
-
 export function checkRenkuUpdate(): Promise<RenkuUpdateStatus> {
   return checkRenkuUpdateWithOptions({});
 }
 
 export async function checkRenkuUpdateWithOptions(options: RenkuReleaseCheckOptions): Promise<RenkuUpdateStatus> {
-  const executable = options.executable ?? process.execPath;
-  const platform = options.platform ?? process.platform;
-  if (platform !== 'darwin' && platform !== 'win32') {
+  const installedRelease = readInstalledRenkuRelease(options);
+  if (!installedRelease) {
     return { state: 'notInstalled' };
-  }
-
-  const productRoot = path.resolve(path.dirname(executable), platform === 'win32' ? '../..' : '../../..');
-  const releasePath = path.join(productRoot, 'RELEASE.json');
-  if (!existsSync(releasePath)) {
-    if (existsSync(path.join(productRoot, 'INSTALLATION.json'))) {
-      throw updateCheckError('UPDATE005', 'Installed Renku release metadata is missing.');
-    }
-    return { state: 'notInstalled' };
-  }
-  readRenkuInstallation(executable, platform);
-
-  let installed: unknown;
-  try {
-    installed = JSON.parse(readFileSync(releasePath, 'utf8'));
-  } catch {
-    throw updateCheckError('UPDATE005', 'Installed Renku release metadata cannot be read.');
-  }
-  if (!installed || typeof installed !== 'object' || Array.isArray(installed)) {
-    throw updateCheckError('UPDATE005', 'Installed Renku release metadata is invalid.');
-  }
-  const installedRelease = installed as Record<string, unknown>;
-  if (installedRelease.product !== 'renku' || !validVersion(installedRelease.version) ||
-      typeof installedRelease.target !== 'string' || !targetPattern.test(installedRelease.target) ||
-      !installedRelease.target.startsWith(`${platform}-`)) {
-    throw updateCheckError('UPDATE005', 'Installed Renku release metadata is invalid.');
   }
 
   const origin = resolveDownloadOrigin(options.downloadBaseUrl ?? process.env.RENKU_DOWNLOAD_BASE_URL);
@@ -82,7 +50,7 @@ export async function checkRenkuUpdateWithOptions(options: RenkuReleaseCheckOpti
 }
 
 function validVersion(value: unknown): value is string {
-  return typeof value === 'string' && versionPattern.test(value);
+  return typeof value === 'string' && RENKU_VERSION_PATTERN.test(value);
 }
 
 function validManifest(value: unknown, target: string): value is { version: string } {

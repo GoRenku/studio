@@ -130,7 +130,8 @@ root folder for movie projects. These are the defaults implemented in core:
 | Linux | `$HOME/.config/renku`, or `$XDG_CONFIG_HOME/renku` when `XDG_CONFIG_HOME` is an absolute path | `$HOME/Videos/Renku` |
 | Windows | `%LOCALAPPDATA%\Renku\Studio` | `%USERPROFILE%\Videos\Renku` |
 
-The configuration folder contains `config.yaml` and provider credentials.
+The configuration folder contains `config.yaml` and provider credentials, and
+`telemetry.json` while optional usage statistics are on.
 Mutable state (the current Project, Studio runtime and events, provider
 metadata and price caches, and the Default Model List copy) lives in the Renku
 state directory: `${XDG_STATE_HOME:-$HOME/.local/state}/renku` on macOS and

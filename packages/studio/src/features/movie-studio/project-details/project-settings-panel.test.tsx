@@ -21,9 +21,19 @@ vi.mock('@/services/studio-provider-credentials-api', () => ({
   readProviderCredentials: vi.fn(),
   updateProviderCredentials: vi.fn(),
 }));
+vi.mock('@/services/studio-telemetry-api', () => ({
+  readTelemetryStatus: vi.fn(async () => ({ enabled: false, installId: null, blockedBy: null, debug: false })),
+  updateTelemetryChoice: vi.fn(),
+}));
 
 beforeAll(() => {
   HTMLElement.prototype.scrollIntoView = vi.fn();
+  // The Settings dialog's usage statistics Switch measures itself inside a form.
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 });
 
 describe('ProjectSettingsPanel', () => {

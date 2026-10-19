@@ -176,6 +176,19 @@ note without a successful write. `STUDIO_SERVER042` rejects a star note request
 body other than `{ "projectName": string }`. `CLI168` rejects a missing or
 unknown `renku sample-film` subcommand.
 
+## Usage statistics
+
+Core reports `CORE_TELEMETRY_CHOICE_INVALID` when `heardAbout` is not in the
+closed answer list or is sent with `enabled: false`,
+`CORE_TELEMETRY_FILE_INVALID` when `telemetry.json` is not exactly
+`{ formatVersion: 1, installId: <UUID> }` (suggesting `renku telemetry disable`),
+and `CORE_TELEMETRY_FILE_IO_FAILED` when the file cannot be read, written or
+deleted. Studio HTTP maps them to 400 by the `CORE` prefix. `STUDIO_SERVER362`
+rejects a usage statistics request body other than
+`{ enabled: boolean, heardAbout?: string }`. `CLI169` rejects a missing or
+unknown `renku telemetry` subcommand. Recording an event never reports an
+error (ADR 0120).
+
 ## Generation CLI handoff
 
 `CLI_GENERATION_REQUEST_HASH_INVALID` rejects a malformed expected SHA-256 digest.

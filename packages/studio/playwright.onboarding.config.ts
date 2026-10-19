@@ -37,6 +37,8 @@ export default defineConfig({
       HOME: runtime.isolatedHomeDirectory,
       RENKU_MOVIE_STUDIO_ROOT: runtime.projectStorageRoot,
       RENKU_STUDIO_E2E_SERVER_ENABLED: '1',
+      // The opt-in path runs, but events are printed instead of sent.
+      RENKU_TELEMETRY_DEBUG: '1',
     },
   },
 });

@@ -10,6 +10,8 @@ const alias = [
 const sharedProjectSettings = {
   globals: true,
   environment: 'node' as const,
+  // Tests never send usage statistics, even on a machine that opted in.
+  env: { RENKU_TELEMETRY_DISABLED: '1' },
   testTimeout: 20000,
   hookTimeout: 20000,
   pool: 'threads',

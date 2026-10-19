@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { RenkuSetup } from '@gorenku/studio-core/client';
 import { ProjectLibraryStep } from './project-library-step';
 import { ProviderCredentialsStep } from './provider-credentials-step';
+import { TelemetryStep } from './telemetry-step';
 
 export interface OnboardingScreenProps {
   setup: Extract<RenkuSetup, { status: 'setupRequired' }>;
@@ -12,6 +13,7 @@ export function OnboardingScreen({ setup, onConfigured }: OnboardingScreenProps)
   const [initializedStorageRoot, setInitializedStorageRoot] = useState<
     string | null
   >(null);
+  const [providerKeysDone, setProviderKeysDone] = useState(false);
 
   return (
     <main className='flex min-h-screen items-center justify-center bg-background px-8 py-12 text-foreground'>
@@ -24,7 +26,9 @@ export function OnboardingScreen({ setup, onConfigured }: OnboardingScreenProps)
           <p className='text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground'>
             {initializedStorageRoot === null
               ? 'Project Library'
-              : 'Provider API keys'}
+              : providerKeysDone
+                ? 'Usage statistics'
+                : 'Provider API keys'}
           </p>
         </div>
 
@@ -33,8 +37,12 @@ export function OnboardingScreen({ setup, onConfigured }: OnboardingScreenProps)
             recommendedStorageRoot={setup.recommendedStorageRoot}
             onInitialized={setInitializedStorageRoot}
           />
-        ) : (
+        ) : !providerKeysDone ? (
           <ProviderCredentialsStep
+            onComplete={() => setProviderKeysDone(true)}
+          />
+        ) : (
+          <TelemetryStep
             onComplete={() => onConfigured(initializedStorageRoot)}
           />
         )}

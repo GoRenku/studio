@@ -4,6 +4,10 @@ Date: 2026-08-22
 
 Status: accepted
 
+Extended by [ADR 0120](0120-collect-opt-in-usage-statistics.md): first-run
+setup adds an optional usage-statistics step; config existence remains the
+only setup marker.
+
 ## Context
 
 Renku previously required every user to create

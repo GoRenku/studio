@@ -57,6 +57,7 @@ export default defineConfig({
       HOME: runtime.isolatedHomeDirectory,
       RENKU_MOVIE_STUDIO_ROOT: runtime.projectStorageRoot,
       RENKU_STUDIO_E2E_SERVER_ENABLED: '1',
+      RENKU_TELEMETRY_DISABLED: '1',
     },
   },
 });

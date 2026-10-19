@@ -464,6 +464,7 @@ export { startRenkuUpdateFromStudio } from './installation/renku-update-handoff.
 export { installSampleFilm } from './sample-film/install-sample-film.js';
 export { readSampleFilm, startSampleFilmInstallation } from './sample-film/studio-installation.js';
 export type { SampleFilm, SampleFilmInstallation, SampleFilmInstallationReport } from '../client/sample-film.js';
+export * from './telemetry/index.js';
 export { offerStarNote } from './star-note/star-note.js';
 export type { StarNoteOffer } from '../client/star-note.js';
 export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate } from './screenplay/index.js';

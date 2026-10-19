@@ -7,6 +7,7 @@ import {
   validateCastVoiceAttachment,
 } from '../cast-voices/index.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
+import { recordGenerationCompleted } from '../telemetry/service.js';
 
 export function createCastVoiceServiceWiring(): Pick<
   ProjectDataService,
@@ -21,7 +22,11 @@ export function createCastVoiceServiceWiring(): Pick<
     listCastVoices,
     readCastVoice,
     validateCastVoiceAttachment,
-    attachCastVoice,
+    async attachCastVoice(input) {
+      const report = await attachCastVoice(input);
+      recordGenerationCompleted([report.voice.sample], input);
+      return report;
+    },
     selectDefaultCastVoice,
     removeCastVoice,
   };

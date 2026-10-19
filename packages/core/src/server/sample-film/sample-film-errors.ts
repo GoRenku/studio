@@ -1,4 +1,4 @@
-import { createDiagnosticWarning, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import { createDiagnosticWarning, isStructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import { UPDATE_RENKU_SUGGESTION } from '../database/lifecycle/project-database-compatibility.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -75,6 +75,11 @@ export function sampleFilmInstallationFailedError(error: unknown): ProjectDataEr
     `The sample film installation failed: ${error instanceof Error ? error.message : String(error)}`,
     { suggestion: 'Try again.' }
   );
+}
+
+/** The structured code of an installation failure; unexpected errors report SAMPLE_FILM_INSTALLATION_FAILED. */
+export function sampleFilmFailureCode(error: unknown): string {
+  return isStructuredError(error) ? error.code : sampleFilmInstallationFailedError(error).code;
 }
 
 function describeFileSystemError(error: unknown): string {

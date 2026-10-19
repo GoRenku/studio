@@ -8,7 +8,8 @@ import {
   prepareSampleFilmInstallation,
   type SampleFilmInstallationOptions,
 } from './install-sample-film.js';
-import { sampleFilmInstallationFailedError } from './sample-film-errors.js';
+import { recordTelemetryEvent } from '../telemetry/service.js';
+import { sampleFilmFailureCode, sampleFilmInstallationFailedError } from './sample-film-errors.js';
 import { SAMPLE_FILM_PROJECT_NAME } from './sample-film-release.js';
 
 export interface StudioSampleFilmInstallation {
@@ -61,14 +62,20 @@ export function createStudioSampleFilmInstallation(
     archiveBytes = preparation.release.archiveBytes;
     running = true;
     installation = { state: 'downloading', receivedBytes: 0 };
+    void recordTelemetryEvent({ name: 'sample_film_download_started' }, input);
     void completeSampleFilmInstallation(preparation, options, (progress) => {
       installation = progress;
     })
       .then((report) => {
         installation = { state: 'ready', projectName: report.projectName };
+        void recordTelemetryEvent({ name: 'sample_film_download_finished', result: 'installed' }, input);
       })
       .catch((error: unknown) => {
         installation = { state: 'failed', error: serializeInstallationError(error) };
+        void recordTelemetryEvent(
+          { name: 'sample_film_download_finished', result: 'failed', errorCode: sampleFilmFailureCode(error) },
+          input
+        );
       })
       .finally(() => {
         running = false;

@@ -259,3 +259,4 @@ export * from './shot-plan-clips.js';
 export type { RenkuUpdateStatus } from './renku-update.js';
 export type { SampleFilm, SampleFilmInstallation, SampleFilmInstallationReport } from './sample-film.js';
 export type { StarNoteOffer } from './star-note.js';
+export * from './telemetry.js';

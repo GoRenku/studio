@@ -35,6 +35,21 @@ describe('Core server architecture boundaries', () => {
     expect(clientSources.join('\n')).not.toMatch(/screenplay\/fdx/);
   });
 
+  it('sends usage statistics only from the Core telemetry module', async () => {
+    const packagesFolder = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+    const telemetryFolder = join(dirname(fileURLToPath(import.meta.url)), 'telemetry');
+    const senders: string[] = [];
+    for (const packageName of ['core', 'cli', 'codex', 'studio']) {
+      for (const file of await packageSourceFiles(join(packagesFolder, packageName))) {
+        if ((await readFile(file, 'utf8')).includes('i.posthog.com')) {
+          senders.push(file);
+        }
+      }
+    }
+    expect(senders.length).toBeGreaterThan(0);
+    expect(senders.filter((file) => !file.startsWith(telemetryFolder))).toEqual([]);
+  });
+
   it('keeps Core independent from Engines and provider SDKs', async () => {
     const coreFolder = join(dirname(fileURLToPath(import.meta.url)), '..');
     const sources = await Promise.all(
@@ -64,6 +79,18 @@ describe('Core server architecture boundaries', () => {
     expect(source).not.toMatch(/provider-credentials|provider-registry|supported-models/);
   });
 });
+
+async function packageSourceFiles(folder: string): Promise<string[]> {
+  const entries = await readdir(folder, { withFileTypes: true });
+  const nested = await Promise.all(entries.map((entry) => {
+    const path = join(folder, entry.name);
+    if (entry.isDirectory()) {
+      return ['node_modules', 'dist', 'dist-server', 'dist-codex'].includes(entry.name) ? [] : packageSourceFiles(path);
+    }
+    return /\.(?:ts|tsx|mjs)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
+  }));
+  return nested.flat();
+}
 
 async function sourceFiles(folder: string): Promise<string[]> {
   const entries = await readdir(folder, { withFileTypes: true });

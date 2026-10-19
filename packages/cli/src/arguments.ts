@@ -48,6 +48,9 @@ Commands
   shot-plan clip take update Set the short --title of --take
   media import --clip      Atomically attach and register a raw take; optional --take-title/--source-take
   sample-film install  Download the Basilica sample film into the Project Library
+  telemetry status     Show whether usage statistics are on and being sent
+  telemetry enable     Turn on usage statistics for this computer
+  telemetry disable    Turn off usage statistics and delete the install ID
   studio current       Show current Studio focus and context
   studio start         Start the local Renku Studio web application
   studio stop          Stop the local Renku Studio server

@@ -13,6 +13,7 @@ import {
   claimStudioRuntimeDescriptor,
   createStudioCliNotificationToken,
   heartbeatStudioRuntimeDescriptor,
+  recordTelemetryEvent,
   releaseStudioRuntimeDescriptor,
   type StudioRuntimeDescriptor,
 } from '@gorenku/studio-core/server';
@@ -101,6 +102,7 @@ export async function startMovieStudioServer(
             }
           }, STUDIO_RUNTIME_HEARTBEAT_INTERVAL_MS);
           log(`Renku Studio server listening on ${url}`);
+          void recordTelemetryEvent({ name: 'studio_started' });
           resolve({
             url,
             host,

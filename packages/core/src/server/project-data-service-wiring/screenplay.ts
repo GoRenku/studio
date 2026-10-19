@@ -34,6 +34,7 @@ import {
   selectSceneStoryboardImageCandidate,
 } from '../scene-beats/storyboard-image-candidates.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
+import { recordTelemetryEvent } from '../telemetry/service.js';
 import { uploadScreenplaySupportingMaterial } from '../screenplay/supporting-material/uploads.js';
 import { listProjectSupportingFiles, readProjectSupportingFileInformation, resolveProjectSupportingFile, discardProjectSupportingFile } from '../screenplay/supporting-files/index.js';
 
@@ -68,7 +69,13 @@ export function createScreenplayServiceWiring(): Pick<
     readScreenplayStatus, readScreenplayStructure,
     readScreenplaySection, readScreenplayScene,
     listSceneProductionNumbers, resolveSceneProductionNumber,
-    createScreenplay, importFdxScreenplay, importScreenplaySupportingMaterial,
+    createScreenplay,
+    async importFdxScreenplay(input) {
+      const report = await importFdxScreenplay(input);
+      void recordTelemetryEvent({ name: 'fdx_imported' }, input);
+      return report;
+    },
+    importScreenplaySupportingMaterial,
     applyScreenplayOperations,
     listScreenplayRevisions, readScreenplayRevision, restoreScreenplayRevision,
     readScreenplayAnalysisContext, listScreenplayAnalyses,

@@ -95,6 +95,9 @@ export function fakeProjectDataService(): NonNullable<
     async readProjectShell() {
       return makeProjectShell(project);
     },
+    async openProjectInStudio() {
+      return makeProjectShell(project);
+    },
     async readProjectInformationResource() {
       return {
         title: project.title,

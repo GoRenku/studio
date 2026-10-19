@@ -23,6 +23,7 @@ import {
 import { readMediaGenerationContext } from '../media-generation-context/index.js';
 import { readImageEditLineage, readImageEditTargets } from '../image-edit-targets/index.js';
 import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
+import { recordGenerationCompleted } from '../telemetry/service.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
@@ -56,7 +57,7 @@ export function createGenerationServiceWiring() {
       title?: string;
       assetFileMetadata?: AssetFileMetadataInput;
     }) {
-      return withProject(input, ({ session, projectFolder }) =>
+      const report = await withProject(input, ({ session, projectFolder }) =>
         attachShotPlanDialogueAudio({
           ...input,
           session,
@@ -64,6 +65,8 @@ export function createGenerationServiceWiring() {
           idGenerator: createRandomIdGenerator(),
         })
       );
+      recordGenerationCompleted([report.assetFile], input);
+      return report;
     },
     async discardShotPlanDialogueAudioTake(input: ProjectInput & {
       shotPlanId: string;
@@ -127,7 +130,7 @@ export function createGenerationServiceWiring() {
       takeTitle?: string;
       sourceTakeId?: string;
     }) {
-      return withProject(input, ({ session, projectFolder }) =>
+      const report = await withProject(input, ({ session, projectFolder }) =>
         attachGenerationMedia({
           ...input,
           session,
@@ -135,13 +138,15 @@ export function createGenerationServiceWiring() {
           idGenerator: createRandomIdGenerator(),
         })
       );
+      recordGenerationCompleted([report.assetFile], input);
+      return report;
     },
     async attachSceneStoryboardImages(input: ProjectInput & {
       sceneId: string;
       sceneBeatsRevisionId: string;
       document: SceneStoryboardImagesImportDocument;
     }) {
-      return withProject(input, ({ session, projectFolder }) =>
+      const report = await withProject(input, ({ session, projectFolder }) =>
         attachSceneStoryboardImages({
           ...input,
           session,
@@ -149,6 +154,8 @@ export function createGenerationServiceWiring() {
           idGenerator: createRandomIdGenerator(),
         })
       );
+      recordGenerationCompleted(report.imported, input);
+      return report;
     },
   };
 }

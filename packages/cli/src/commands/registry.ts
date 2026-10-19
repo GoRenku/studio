@@ -409,6 +409,10 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
       homeDir,
     });
   },
+  'telemetry': async ({ input, flags, io, homeDir }) => {
+    const { runTelemetryCommand } = await loadCommand('telemetry', () => import('./telemetry-command.js'));
+    return runTelemetryCommand({ input, json: flags.json, io, homeDir });
+  },
   'update': async ({ input, flags, io }) => {
     const { runUpdateCommand } = await loadCommand('update', () => import('./update.js'));
     return runUpdateCommand(input, flags.json, io);

@@ -1,17 +1,26 @@
 // @vitest-environment jsdom
 import React from 'react';
+import type { TelemetryStatus } from '@gorenku/studio-core/client';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppSettingsDialog } from './app-settings-dialog';
 import { Button } from '@/ui/button';
 
 const readProviderCredentialsMock = vi.hoisted(() => vi.fn());
 const updateProviderCredentialsMock = vi.hoisted(() => vi.fn());
 const toastSuccessMock = vi.hoisted(() => vi.fn());
+const readTelemetryStatusMock = vi.hoisted(() => vi.fn());
+const updateTelemetryChoiceMock = vi.hoisted(() => vi.fn());
+const INSTALL_ID = '0b6f6c1e-8a7d-4f0e-9c55-2f1d1c7a9e10';
 
 vi.mock('@/services/studio-provider-credentials-api', () => ({
   readProviderCredentials: readProviderCredentialsMock,
   updateProviderCredentials: updateProviderCredentialsMock,
+}));
+
+vi.mock('@/services/studio-telemetry-api', () => ({
+  readTelemetryStatus: readTelemetryStatusMock,
+  updateTelemetryChoice: updateTelemetryChoiceMock,
 }));
 
 vi.mock('sonner', () => ({
@@ -19,7 +28,22 @@ vi.mock('sonner', () => ({
 }));
 
 describe('AppSettingsDialog', () => {
+  beforeAll(() => {
+    // The usage statistics Switch measures itself inside a form.
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
+
+  beforeEach(() => {
+    readTelemetryStatusMock.mockResolvedValue(telemetryStatus());
+  });
+
   afterEach(() => {
+    readTelemetryStatusMock.mockReset();
+    updateTelemetryChoiceMock.mockReset();
     cleanup();
     window.history.replaceState(null, '', '/');
     readProviderCredentialsMock.mockReset();
@@ -70,6 +94,118 @@ describe('AppSettingsDialog', () => {
     expect(toastSuccessMock).toHaveBeenCalledWith('Settings saved.');
   });
 
+  it('turns usage statistics off on Save without touching provider keys', async () => {
+    window.history.replaceState(null, '', '/?settings=provider-credentials');
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    readTelemetryStatusMock.mockResolvedValue(telemetryStatus({ enabled: true }));
+    updateTelemetryChoiceMock.mockResolvedValue(telemetryStatus());
+    render(<AppSettingsDialog />);
+
+    const usageSwitch = await screen.findByRole('switch', { name: 'Share usage statistics' });
+    await waitFor(() => expect(usageSwitch.getAttribute('aria-checked')).toBe('true'));
+    expect(screen.queryByText('Where did you hear about Renku?', { exact: false })).toBeNull();
+    const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+
+    fireEvent.click(usageSwitch);
+    expect(save.disabled).toBe(false);
+    fireEvent.click(save);
+
+    await waitFor(() => expect(updateTelemetryChoiceMock).toHaveBeenCalledWith({ enabled: false }));
+    expect(updateProviderCredentialsMock).not.toHaveBeenCalled();
+    expect(toastSuccessMock).toHaveBeenCalledWith('Settings saved.');
+  });
+
+  it('shows why nothing is sent while statistics are on and blocked', async () => {
+    window.history.replaceState(null, '', '/?settings=provider-credentials');
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    readTelemetryStatusMock.mockResolvedValue(telemetryStatus({ enabled: true, blockedBy: 'CI' }));
+    render(<AppSettingsDialog />);
+
+    expect(await screen.findByText('Nothing is sent while Renku runs in CI.')).toBeTruthy();
+  });
+
+  it('disables provider controls and dismissal throughout a telemetry save', async () => {
+    const pending = deferred<TelemetryStatus>();
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    updateTelemetryChoiceMock.mockReturnValue(pending.promise);
+    render(<AppSettingsDialog />);
+
+    openDialog();
+    await screen.findByLabelText('ElevenLabs');
+    const usageSwitch = screen.getByRole('switch', { name: 'Share usage statistics' });
+    await waitFor(() => expect(usageSwitch).toHaveProperty('disabled', false));
+    fireEvent.click(usageSwitch);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    for (const provider of resource().providers) {
+      expect(screen.getByLabelText(provider.label)).toHaveProperty('disabled', true);
+    }
+    expect(screen.getByRole('button', { name: 'Replace fal.ai API key' })).toHaveProperty('disabled', true);
+    expect(usageSwitch).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', true);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('dialog')).toBeTruthy();
+
+    pending.resolve(telemetryStatus({ enabled: true }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(updateProviderCredentialsMock).not.toHaveBeenCalled();
+    expect(updateTelemetryChoiceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the saved install ID and deletion instructions visible through an opt-out draft', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    readTelemetryStatusMock.mockResolvedValue(telemetryStatus({ enabled: true }));
+    render(<AppSettingsDialog />);
+
+    openDialog();
+    const installId = await screen.findByRole('textbox', { name: 'Install ID' });
+    expect(installId).toHaveProperty('readOnly', true);
+    expect(installId).toHaveProperty('value', INSTALL_ID);
+    expect(screen.getByText(/To have statistics already sent deleted/).textContent)
+      .toContain('support@codingventures.com with this ID before you turn statistics off.');
+    expect(screen.getByText(/Turning off removes the ID from this computer/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Share usage statistics' }));
+    expect(installId).toHaveProperty('value', INSTALL_ID);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await screen.findByRole('button', { name: 'Copied' });
+    expect(writeText).toHaveBeenCalledWith(INSTALL_ID);
+  });
+
+  it('keeps the install ID selectable when clipboard access fails', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    readTelemetryStatusMock.mockResolvedValue(telemetryStatus({ enabled: true }));
+    render(<AppSettingsDialog />);
+
+    openDialog();
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }));
+    expect((await screen.findByRole('alert')).textContent)
+      .toBe('Unable to copy. Select the ID and copy it manually.');
+    expect(screen.getByRole('textbox', { name: 'Install ID' })).toHaveProperty('value', INSTALL_ID);
+  });
+
+  it('shows no saved install ID or deletion instructions for an opt-in draft', async () => {
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    render(<AppSettingsDialog />);
+
+    openDialog();
+    await screen.findByLabelText('ElevenLabs');
+    const usageSwitch = screen.getByRole('switch', { name: 'Share usage statistics' });
+    await waitFor(() => expect(usageSwitch).toHaveProperty('disabled', false));
+    fireEvent.click(usageSwitch);
+
+    expect(screen.queryByRole('textbox', { name: 'Install ID' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull();
+    expect(screen.queryByText(/To have statistics already sent deleted/)).toBeNull();
+  });
+
   it.each(['/', '/projects/urban-basilica?scene=scene-1'])(
     'opens the Settings link at %s and preserves other route state on Cancel',
     async (route) => {
@@ -102,6 +238,27 @@ describe('AppSettingsDialog', () => {
     expect(input.value).toBe('keep-this-test-secret');
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled)
       .toBe(false);
+  });
+
+  it('loads telemetry once in StrictMode and keeps an opt-out draft', async () => {
+    window.history.replaceState(null, '', '/?settings=provider-credentials');
+    const pending = deferred<TelemetryStatus>();
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    readTelemetryStatusMock.mockReturnValue(pending.promise);
+    render(
+      <React.StrictMode>
+        <AppSettingsDialog />
+      </React.StrictMode>
+    );
+
+    expect(readTelemetryStatusMock).toHaveBeenCalledTimes(1);
+    pending.resolve(telemetryStatus({ enabled: true }));
+    const usageSwitch = await screen.findByRole('switch', { name: 'Share usage statistics' });
+    await waitFor(() => expect(usageSwitch.getAttribute('aria-checked')).toBe('true'));
+    fireEvent.click(usageSwitch);
+
+    expect(usageSwitch.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', false);
   });
 
   it('opens only the header dialog for a deep link when a setup trigger is also mounted', async () => {
@@ -282,4 +439,8 @@ function deferred<T>(): {
     resolve = nextResolve;
   });
   return { promise, resolve };
+}
+
+function telemetryStatus(overrides: Partial<TelemetryStatus> = {}): TelemetryStatus {
+  return { enabled: false, installId: overrides.enabled ? INSTALL_ID : null, blockedBy: null, debug: false, ...overrides };
 }

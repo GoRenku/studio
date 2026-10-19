@@ -1,10 +1,11 @@
 import { DOWNLOAD_CHARTS } from './download-charts.mjs';
 import { GITHUB_CHARTS } from './github-charts.mjs';
 import { OVERVIEW_CHARTS } from './overview-charts.mjs';
+import { STUDIO_CHARTS } from './studio-charts.mjs';
 import { MATINEE_CHARTS, WEBSITE_CHARTS } from './website-charts.mjs';
 
 export const DASHBOARD_NAME = 'Renku growth';
-export const DASHBOARD_DESCRIPTION = 'Website visits, GitHub activity and Renku downloads in one place.';
+export const DASHBOARD_DESCRIPTION = 'Website visits, GitHub activity, Renku downloads and Studio usage statistics in one place.';
 
 const GRID_COLUMNS = 12;
 const CHART_HEIGHT = 5;
@@ -21,6 +22,11 @@ const SECTIONS = [
     heading: '## Downloads',
     note: 'Requests to downloads.gorenku.com. The free Cloudflare plan cannot tell bots from people, so these include scripts and crawlers.',
     charts: DOWNLOAD_CHARTS,
+  },
+  {
+    heading: '## Renku Studio',
+    note: 'Only installs that turned on usage statistics. Most installs never do, so treat these as a small slice, not totals.',
+    charts: STUDIO_CHARTS,
   },
   { heading: '## GitHub', charts: GITHUB_CHARTS },
   { heading: '## Latent Matinee', charts: MATINEE_CHARTS },

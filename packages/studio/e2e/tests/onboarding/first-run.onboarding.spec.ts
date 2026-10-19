@@ -21,7 +21,7 @@ test.beforeEach(async () => {
   await fs.rm(recommendedStorageRoot, { recursive: true, force: true });
 });
 
-test('initializes the recommended Project Library and allows provider setup to be skipped', async ({
+test('initializes the recommended Project Library, allows provider setup to be skipped and asks about usage statistics last', async ({
   page,
 }) => {
   await page.goto('/');
@@ -42,7 +42,27 @@ test('initializes the recommended Project Library and allows provider setup to b
     fullPage: true,
   });
   await page.getByRole('button', { name: 'Skip for now' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Help improve Renku' })).toBeVisible();
+  const usageSwitch = page.getByRole('switch', { name: 'Share usage statistics' });
+  await expect(usageSwitch).toHaveAttribute('aria-checked', 'false');
+  await page.screenshot({
+    path: path.join(runtime.runRoot, 'onboarding-usage-statistics.png'),
+    fullPage: true,
+  });
+  await usageSwitch.click();
+  await page.getByRole('combobox', { name: /Where did you hear about Renku/ }).click();
+  await page.screenshot({
+    path: path.join(runtime.runRoot, 'onboarding-usage-statistics-question.png'),
+    fullPage: true,
+  });
+  await page.getByRole('option', { name: 'Hacker News' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'Project Library' })).toBeVisible();
+
+  // The onboarding run prints events instead of sending them.
+  const usageStatistics = JSON.parse(await fs.readFile(path.join(configDirectory, 'telemetry.json'), 'utf8'));
+  expect(usageStatistics).toEqual({ formatVersion: 1, installId: expect.any(String) });
 
   expect(await fs.readFile(configPath, 'utf8')).toBe(
     `version: 0.1.0\nstorageRoot: ${recommendedStorageRoot}\n`

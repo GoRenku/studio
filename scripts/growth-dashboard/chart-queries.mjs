@@ -10,6 +10,10 @@ export const MATINEE = [
   { key: 'surface', value: ['matinee'], operator: 'exact', type: 'event' },
 ];
 
+export const STUDIO = [
+  { key: 'surface', value: ['studio'], operator: 'exact', type: 'event' },
+];
+
 export function eventSeries(event, { math = 'total', mathProperty, name, properties = [] } = {}) {
   return {
     kind: 'EventsNode',
