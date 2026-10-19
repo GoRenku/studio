@@ -58,7 +58,6 @@ in `__ph_opt_in_out_<token>`.
 | `install_command_copied` | gorenku | Copy button, or a manual copy, in an install command block | `os` | Yes |
 | `skills_install_copied` | gorenku | a manual copy in a skills command block | — | Yes |
 | `video_played` | gorenku | first `play` of a marked video per page load | `video` | Yes |
-| `newsletter_signup_submitted` | Latent Matinee | `submit` of a marked form | `placement` | Yes |
 
 Property values:
 
@@ -72,17 +71,16 @@ Property values:
   (`renku-launch`, `harbor-blender-previs`, `harbor-generation`,
   `first-patron-previs`, `first-patron-take`).
 
-`github_link_clicked` and `newsletter_signup_submitted` are sent with the
-`sendBeacon` transport because the page may navigate away.
+`github_link_clicked` is sent with the `sendBeacon` transport because the page
+may navigate away.
 
 ## Page attributes
 
 | Attribute | Where | Values |
 | --- | --- | --- |
-| `data-analytics-placement` | gorenku.com `SiteHeader.astro` `<header>` and `SiteFooter.astro` `<footer>`; Latent Matinee `Layout.astro` `<footer>` | `header`, `footer` |
+| `data-analytics-placement` | gorenku.com `SiteHeader.astro` `<header>` and `SiteFooter.astro` `<footer>` | `header`, `footer` |
 | `data-analytics-copy` | `download.astro` macOS and Windows install `.command-block`; both `<pre>` blocks in `agent-skills.astro` | `install-macos`, `install-windows`, `skills` |
 | `data-analytics-video` | user-started `<video>` elements: `LaunchFilm.astro`, `MadeWithRenkuSection.astro`, `tutorials/[slug].astro` | file base name, from `src/data/analytics-video.ts` |
-| `data-analytics-form` | Latent Matinee newsletter `<form>` | `newsletter` |
 
 The launch-command blocks on `/download` and the autoplaying
 `first-patron-shot-plan` video carry no attribute and send nothing. An unknown
@@ -108,12 +106,10 @@ Values use lowercase letters, digits and hyphens.
 | `github` | READMEs, organisation profile, release notes | `referral` | Referral |
 | `latentmatinee` | Latent Matinee pages | `referral` | Referral |
 | `gorenku` | gorenku.com pages linking to Latent Matinee | `referral` | Referral |
-| `newsletter` | The Latent Matinee newsletter | `email` | Email |
 
 - `utm_campaign` (required): `always-on` for permanent links (READMEs,
   repository About, Latent Matinee pages, profile bios); `YYYY-MM-<topic>` for
-  a dated push (`2026-10-show-hn`); the issue date `YYYY-MM-DD` for a
-  newsletter issue.
+  a dated push (`2026-10-show-hn`).
 - `utm_content` (optional): which link, when one place has several
   (`studio-readme`, `skills-readme`, `footer`, `film-page`).
 - `utm_term`: not used.

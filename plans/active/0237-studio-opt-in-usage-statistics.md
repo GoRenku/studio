@@ -1,6 +1,6 @@
 # 0237 Studio Opt-In Usage Statistics
 
-Status: proposed (D1–D4 answered 2026-10-18)
+Status: implemented 2026-10-18 (not committed; see Implementation Notes)
 Date: 2026-10-15
 
 ## Summary
@@ -255,8 +255,9 @@ exists). Statistics stay off.
 fields, unchanged) and "Usage statistics" (the same switch, link and blocked
 note; no heard-about question). The switch is part of the dialog's draft:
 **Save** applies provider key changes and the statistics change, and is enabled
-when either changed. Turning the switch off and saving sends one last
-`telemetry_opted_out` event (unless blocked), then deletes the install ID.
+when either changed. Turning the switch off and saving deletes the saved
+install ID before sending one last `telemetry_opted_out` event with the previous
+ID (unless blocked), so normal recording stops before the network request.
 
 While the saved choice is on, the section also shows the install ID so a user
 who never opens a terminal can ask for deletion (GDPR erasure):
@@ -393,9 +394,10 @@ not recorded.
    immediately.
 6. **heard_about.** Accepted only together with `enabled: true`; sent once,
    right after the choice is saved.
-7. **Opt-out event.** On `enabled: false` when the file existed and no switch
-   blocks: send `telemetry_opted_out` with the old ID (waiting at most
-   2 seconds), then delete the file whether or not the send succeeded.
+7. **Opt-out event.** On `enabled: false`, retain the old ID only for the final
+   event and delete the file before sending, so normal recording stops while
+   the request is pending. When the file existed and no switch blocks, send
+   `telemetry_opted_out` with the old ID (waiting at most 2 seconds).
 
 ## Requirement Ledger
 
@@ -773,8 +775,8 @@ Website PostHog project, which `pnpm growth:dashboard` builds from
 | Projects and screenplays | `project_created` and `fdx_imported` per week, 90 days | 6 |
 | Generations by media kind | `generation_completed` per week, broken down by `media_kind`, 90 days | 6 |
 | Where people heard about Renku | `heard_about` by `answer`, all time (bar) | 6 |
-| Versions in use | Distinct installs by `version` with `studio_started`, 30 days (table) | 3 |
-| Systems | Distinct installs by `platform` and `arch`, 30 days (table) | 3 |
+| Versions in use | Distinct installs by `version` with `studio_started`, 30 days (table) | 6 |
+| Systems | Distinct installs by `platform` and `arch`, 30 days (table) | 6 |
 | Opt-outs per week | `telemetry_opted_out` per week, 90 days | 6 |
 
 - `dashboard-tiles.mjs`: new section after "## Downloads":
@@ -801,7 +803,8 @@ Core (owns the full matrix):
 - `heardAbout`: every listed value accepted with `enabled: true`; unknown value
   and `enabled: false` with a value → `CORE_TELEMETRY_CHOICE_INVALID`;
   `heard_about` sent once after saving.
-- Opt-out: `telemetry_opted_out` sent with the old ID before deletion; deletion
+- Opt-out: saved choice deleted before `telemetry_opted_out` is sent with the
+  old ID; no normal events recorded while that request is pending; deletion
   still happens when the send fails or times out; nothing sent when blocked.
 - Environment: each switch blocks with values `1`, `true`, `yes`; does not block
   with empty, `0`, `false`; order of `blockedBy`; debug prints the body without
@@ -1009,6 +1012,26 @@ Manual, on the development machine with a throwaway home folder
   the Renku Studio section.
 - Release that Renku version with the existing release command.
 - Answer deletion requests by install ID.
+
+## Implementation Notes (2026-10-18)
+
+- `recordGenerationCompleted(assetFiles, options)` in `service.ts` combines
+  `generationCompletedEvent` and recording, so each media save method adds one
+  line.
+- `sampleFilmFailureCode(error)` in `sample-film-errors.ts` turns a failure
+  into its structured code (unexpected errors report
+  `SAMPLE_FILM_INSTALLATION_FAILED`).
+- The `startMovieStudioServer` runtime test was not added: the runtime has no
+  home-folder option and Vitest threads ignore a stubbed `HOME`, so the test
+  would touch the real Renku state folder. `studio_started` is covered by the
+  onboarding E2E run, which prints it in debug mode.
+- The dashboard's three number tiles and two tables use widths 4 and 6.
+- `pnpm growth:dashboard --check` passed against PostHog; the dashboard has
+  not been published.
+- The onboarding E2E reaches the Project Library through the new step, then
+  fails on an older assertion that `config.yaml` holds only `version` and
+  `storageRoot`; Studio also writes `codexGenerationReviewDisplayMode` there
+  since commit 3c506b0d.
 
 ## Completion Checklist
 
