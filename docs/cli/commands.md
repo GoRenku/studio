@@ -716,7 +716,10 @@ Input JSON shape:
         "handle": "control-room",
         "name": "Control Room",
         "timePeriod": "Late 1970s",
-        "description": "A cramped civic control room under budget pressure."
+        "description": {
+          "overview": "A cramped civic control room under budget pressure.",
+          "spaceAndLayout": "Banks of consoles face one wall of monitors."
+        }
       }
     }
   ]
@@ -724,6 +727,22 @@ Input JSON shape:
 ```
 
 New Locations use `key`, not `id`. Existing Locations use durable `id`.
+
+`description` is a sectioned object, not a string. Each value is plain text,
+and blank lines separate paragraphs. Studio owns the headings and their order.
+An empty object is invalid; omit `description` instead. Unknown keys fail
+with `PROJECT_DATA214`. Allowed keys:
+
+| Subject | Keys |
+|---|---|
+| Cast Member | `overview`, `appearance`, `behavior`, `wardrobe`, `performance`, `sourceNotes` |
+| Location | `overview`, `storyUse`, `spaceAndLayout`, `statesAndChanges`, `sourceNotes` |
+| Prop | `overview`, `storyUse`, `formAndMaterials`, `statesAndContinuity`, `sourceNotes` |
+
+`overview` is shown first, with no heading. `sourceNotes` is shown as a
+footnote saying which Scenes the facts come from and which statements are
+interpretation. The same `description` shape applies to `renku cast` and
+`renku prop` operation files.
 
 ## `renku prop`
 

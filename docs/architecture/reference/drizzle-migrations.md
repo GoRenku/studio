@@ -313,6 +313,17 @@ version-3 document, changes only `$.version` through `json_set`, preserves every
 other JSON value exactly, succeeds for a fresh database with no Settings row,
 and does not change `PRAGMA user_version`.
 
+`0092_sectioned_profile_descriptions.sql` (plan 0239) is a data-only custom
+migration. It changes no tables or columns:
+
+- It rewrites each non-blank `cast_member`, `location` and `prop`
+  `description` to `json_object('overview', <existing text>)`, keeping the
+  text word for word.
+- Blank or whitespace-only text becomes `NULL`.
+- It never guesses sections from the existing text.
+- It sets `PRAGMA user_version = 74`, because runtime reads now require the
+  sectioned shape.
+
 ## Project Store Schema Generation
 
 Renku Studio project databases use SQLite's `PRAGMA user_version` as the

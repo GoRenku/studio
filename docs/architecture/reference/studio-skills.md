@@ -108,6 +108,8 @@ operational companions that teach agents how to use those contracts.
   refresh, reads the complete canonical Screenplay and all active supporting
   material to enrich Cast descriptions and `CastMember.arc`, then keeps raw
   files out of media handoffs.
+- Writes Cast descriptions into the fixed description sections (decision
+  0124), never as one block of text with improvised headings.
 
 `production-designer`
 
@@ -125,6 +127,8 @@ operational companions that teach agents how to use those contracts.
   source-driven refresh, reads the complete canonical Screenplay and all active
   supporting material to enrich descriptions, then keeps raw files out of media
   handoffs.
+- Writes Location and Prop descriptions into their fixed description sections
+  (decision 0124).
 
 `media-producer`
 

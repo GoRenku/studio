@@ -1,3 +1,5 @@
+import type { LocationDescription } from './profile-descriptions/model.js';
+
 export type LocationId = string;
 
 export interface Location {
@@ -5,6 +7,6 @@ export interface Location {
   handle: string;
   name: string;
   timePeriod?: string;
-  description?: string;
+  description?: LocationDescription;
   visualNotes?: string;
 }

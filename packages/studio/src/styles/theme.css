@@ -403,7 +403,7 @@
   --color-dialogue-audio-tag: var(--dialogue-audio-tag);
 
   --font-sans: Montserrat, sans-serif;
-  --font-mono: Geist Mono, Geist Mono Fallback, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-serif: Geist, Geist Fallback, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);

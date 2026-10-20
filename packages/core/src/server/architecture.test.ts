@@ -50,6 +50,20 @@ describe('Core server architecture boundaries', () => {
     expect(senders.filter((file) => !file.startsWith(telemetryFolder))).toEqual([]);
   });
 
+  it('reads stored profile descriptions only through the database access layer', async () => {
+    const serverFolder = dirname(fileURLToPath(import.meta.url));
+    const importers: string[] = [];
+    for (const file of await sourceFiles(serverFolder)) {
+      if (/from ['"][./]*profile-descriptions\/validator\.js['"]/.test(await readFile(file, 'utf8'))) {
+        importers.push(file);
+      }
+    }
+    expect(importers.length).toBeGreaterThan(0);
+    expect(
+      importers.filter((file) => !file.startsWith(join(serverFolder, 'database', 'access'))),
+    ).toEqual([]);
+  });
+
   it('keeps Core independent from Engines and provider SDKs', async () => {
     const coreFolder = join(dirname(fileURLToPath(import.meta.url)), '..');
     const sources = await Promise.all(

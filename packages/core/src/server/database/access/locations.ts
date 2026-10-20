@@ -7,17 +7,26 @@ import {
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
+import type { LocationDescription } from '../../../client/profile-descriptions/model.js';
+import {
+  parseStoredLocationDescription,
+  serializeProfileDescription,
+} from '../../profile-descriptions/validator.js';
 
-export type LocationRecord = typeof locations.$inferSelect;
+export type LocationRecord = Omit<typeof locations.$inferSelect, 'description'> & {
+  description: LocationDescription | null;
+};
+
+function toLocationRecord(row: typeof locations.$inferSelect): LocationRecord {
+  return { ...row, description: parseStoredLocationDescription(row.description, row.id) ?? null };
+}
 
 export function readLocationRecord(
   session: DatabaseSession,
   locationId: string
 ): LocationRecord | null {
-  return (
-    session.db.select().from(locations).where(eq(locations.id, locationId)).get() ??
-    null
-  );
+  const row = session.db.select().from(locations).where(eq(locations.id, locationId)).get();
+  return row ? toLocationRecord(row) : null;
 }
 
 export function listLocationRecords(session: DatabaseSession): LocationRecord[] {
@@ -25,7 +34,8 @@ export function listLocationRecords(session: DatabaseSession): LocationRecord[] 
     .select()
     .from(locations)
     .orderBy(asc(locations.position), asc(locations.id))
-    .all();
+    .all()
+    .map(toLocationRecord);
 }
 
 export interface LocationAuthoringRecord {
@@ -33,7 +43,7 @@ export interface LocationAuthoringRecord {
   handle: string;
   name: string;
   timePeriod?: string;
-  description?: string;
+  description?: LocationDescription;
   visualNotes?: string;
 }
 
@@ -54,7 +64,7 @@ export function replaceLocationAuthoringRecords(
       handle: record.handle,
       name: record.name,
       timePeriod: record.timePeriod ?? null,
-      description: record.description ?? null,
+      description: serializeProfileDescription(record.description),
       visualNotes: record.visualNotes ?? null,
       position,
     };

@@ -7,6 +7,11 @@ import {
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
+import type { CastMemberDescription } from '../../../client/profile-descriptions/model.js';
+import {
+  parseStoredCastMemberDescription,
+  serializeProfileDescription,
+} from '../../profile-descriptions/validator.js';
 
 export interface CastMemberRecord {
   id: string;
@@ -19,47 +24,9 @@ export interface CastMemberRecord {
   need: string | null;
   arc: string | null;
   voiceNotes: string | null;
-  description: string | null;
+  description: CastMemberDescription | null;
   position: number;
   kind: string;
-  shortDescription: string | null;
-}
-
-export interface InsertCastMemberRecord {
-  id: string;
-  name: string;
-  kind?: string;
-  role?: string;
-  isVoiceOver?: boolean;
-  shortDescription?: string;
-  position: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export function insertCastMemberRecords(
-  session: DatabaseSession,
-  records: InsertCastMemberRecord[]
-): void {
-  for (const record of records) {
-    session.db.insert(castMembers).values({
-      id: record.id,
-      handle: toHandle(record.name, record.id),
-      name: record.name,
-      role: record.role ?? null,
-      isVoiceOver: record.isVoiceOver ?? false,
-      description: record.shortDescription ?? null,
-      position: record.position,
-    }).run();
-  }
-}
-
-function toHandle(name: string, id: string): string {
-  const normalized = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return /^[a-z]/.test(normalized) ? normalized : `cast-${id.replace(/[^a-z0-9]+/gi, '').toLowerCase()}`;
 }
 
 export function listCastMemberRecords(session: DatabaseSession): CastMemberRecord[] {
@@ -68,11 +35,7 @@ export function listCastMemberRecords(session: DatabaseSession): CastMemberRecor
     .from(castMembers)
     .orderBy(asc(castMembers.position))
     .all()
-    .map((row) => ({
-      ...row,
-      kind: row.role ?? 'character',
-      shortDescription: row.description,
-    }));
+    .map(toCastMemberRecord);
 }
 
 export function readCastMemberRecord(
@@ -85,7 +48,15 @@ export function readCastMemberRecord(
       .from(castMembers)
       .where(eq(castMembers.id, castMemberId))
       .get() ?? null;
-  return row ? { ...row, kind: row.role ?? 'character', shortDescription: row.description } : null;
+  return row ? toCastMemberRecord(row) : null;
+}
+
+function toCastMemberRecord(row: typeof castMembers.$inferSelect): CastMemberRecord {
+  return {
+    ...row,
+    description: parseStoredCastMemberDescription(row.description, row.id) ?? null,
+    kind: row.role ?? 'character',
+  };
 }
 
 export interface CastMemberAuthoringRecord {
@@ -99,7 +70,7 @@ export interface CastMemberAuthoringRecord {
   need?: string;
   arc?: string;
   voiceNotes?: string;
-  description?: string;
+  description?: CastMemberDescription;
 }
 
 export interface CastMemberDeleteDependencySummary {
@@ -124,7 +95,7 @@ export function replaceCastMemberAuthoringRecords(
       need: record.need ?? null,
       arc: record.arc ?? null,
       voiceNotes: record.voiceNotes ?? null,
-      description: record.description ?? null,
+      description: serializeProfileDescription(record.description),
       position,
     };
     const existing = session.db

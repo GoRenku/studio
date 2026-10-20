@@ -291,7 +291,7 @@ describe('Screenplay supporting material import', () => {
             handle: 'mara',
             name: 'Mara',
             role: 'protagonist',
-            description: 'Durable accepted description.',
+            description: { overview: 'Durable accepted description.' },
           },
         }],
       },

@@ -8,6 +8,11 @@ import type {
   MediaGenerationLookbookContext,
   MediaGenerationReferenceSuggestion,
 } from '../media-generation-context.js';
+import type {
+  CastMemberDescription,
+  LocationDescription,
+  PropDescription,
+} from '../profile-descriptions/model.js';
 
 export interface BeatInput {
   title: string;
@@ -85,9 +90,9 @@ export interface SceneBeatsContextReport extends SceneBeatsCommandReport {
   >;
   sections: ScreenplaySection[];
   scene: Pick<Scene, 'id' | 'productionNumber' | 'heading' | 'title' | 'blocks'>;
-  cast: Array<{ id: string; name: string; isVoiceOver: boolean; role?: string; description?: string }>;
-  locations: Array<{ id: string; name: string; timePeriod?: string; description?: string; visualNotes?: string }>;
-  props: Array<{ id: string; name: string; description?: string; visualNotes?: string }>;
+  cast: Array<{ id: string; name: string; isVoiceOver: boolean; role?: string; description?: CastMemberDescription }>;
+  locations: Array<{ id: string; name: string; timePeriod?: string; description?: LocationDescription; visualNotes?: string }>;
+  props: Array<{ id: string; name: string; description?: PropDescription; visualNotes?: string }>;
   activeLookbook: {
     id: string;
     name: string;

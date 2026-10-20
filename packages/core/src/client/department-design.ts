@@ -3,6 +3,11 @@ import type { AssetFile } from './asset-files.js';
 import type { CastMember } from './cast-members.js';
 import type { Location } from './locations.js';
 import type { Prop } from './props.js';
+import type {
+  CastMemberDescription,
+  LocationDescription,
+  PropDescription,
+} from './profile-descriptions/model.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type {
   ScreenplayBlock,
@@ -56,7 +61,7 @@ export interface CastMemberInput {
   need?: string;
   arc?: string;
   voiceNotes?: string;
-  description?: string;
+  description?: CastMemberDescription;
 }
 
 export type CastOperation =
@@ -76,7 +81,7 @@ export interface LocationInput {
   handle: string;
   name: string;
   timePeriod?: string;
-  description?: string;
+  description?: LocationDescription;
   visualNotes?: string;
 }
 
@@ -96,7 +101,7 @@ export interface PropInput {
   key?: string;
   handle: string;
   name: string;
-  description?: string;
+  description?: PropDescription;
   visualNotes?: string;
 }
 

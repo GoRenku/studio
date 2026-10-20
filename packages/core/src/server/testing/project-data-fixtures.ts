@@ -152,7 +152,7 @@ export async function createCommandBuiltSampleMovieProject(input: {
             key: 'council-chamber',
             handle: 'council-chamber',
             name: "Mehmed's council chamber",
-            description: 'Formal Ottoman planning room with maps and oil lamps.',
+            description: { overview: 'Formal Ottoman planning room with maps and oil lamps.' },
           },
         },
       ],

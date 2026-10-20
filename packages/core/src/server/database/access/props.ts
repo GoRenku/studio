@@ -6,15 +6,27 @@ import {
   props,
 } from '../../schema/index.js';
 import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
+import type { PropDescription } from '../../../client/profile-descriptions/model.js';
+import {
+  parseStoredPropDescription,
+  serializeProfileDescription,
+} from '../../profile-descriptions/validator.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
-export type PropRecord = typeof props.$inferSelect;
+export type PropRecord = Omit<typeof props.$inferSelect, 'description'> & {
+  description: PropDescription | null;
+};
+
+function toPropRecord(row: typeof props.$inferSelect): PropRecord {
+  return { ...row, description: parseStoredPropDescription(row.description, row.id) ?? null };
+}
 
 export function readPropRecord(
   session: DatabaseSession,
   propId: string
 ): PropRecord | null {
-  return session.db.select().from(props).where(eq(props.id, propId)).get() ?? null;
+  const row = session.db.select().from(props).where(eq(props.id, propId)).get();
+  return row ? toPropRecord(row) : null;
 }
 
 export function listPropRecords(session: DatabaseSession): PropRecord[] {
@@ -22,14 +34,15 @@ export function listPropRecords(session: DatabaseSession): PropRecord[] {
     .select()
     .from(props)
     .orderBy(asc(props.position), asc(props.id))
-    .all();
+    .all()
+    .map(toPropRecord);
 }
 
 export interface PropAuthoringRecord {
   id: string;
   handle: string;
   name: string;
-  description?: string;
+  description?: PropDescription;
   visualNotes?: string;
 }
 
@@ -49,7 +62,7 @@ export function replacePropAuthoringRecords(
       id: record.id,
       handle: record.handle,
       name: record.name,
-      description: record.description ?? null,
+      description: serializeProfileDescription(record.description),
       visualNotes: record.visualNotes ?? null,
       position,
     };

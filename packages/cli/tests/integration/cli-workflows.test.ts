@@ -430,6 +430,50 @@ describe('renku CLI', () => {
     expect(stderr).toEqual([]);
   });
 
+  it('applies and shows a sectioned cast member description', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    const description = {
+      overview: 'A Hungarian cannon founder.',
+      wardrobe: 'Leather apron scorched at the hem.\n\nSoot on both forearms.',
+      sourceNotes: 'Scenes 1–10.',
+    };
+    const castPath = path.join(homeDir, 'sectioned-cast-operations.json');
+    await fs.writeFile(
+      castPath,
+      JSON.stringify({
+        kind: 'castOperations',
+        operations: [{
+          operation: 'castMember.add',
+          castMember: { key: 'urban', handle: 'urban', name: 'Urban', description },
+        }],
+      }),
+      'utf8'
+    );
+    stdout = [];
+    stderr = [];
+    const applyExitCode = await runRenkuCli(
+      ['cast', 'apply', '--file', castPath, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(applyExitCode).toBe(0);
+    const castMemberId = JSON.parse(stdout.join('\n')).generatedIds[0].id as string;
+
+    stdout = [];
+    stderr = [];
+    const showExitCode = await runRenkuCli(
+      ['cast', 'show', castMemberId, '--json'],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+    expect(showExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({ id: castMemberId, description });
+  });
+
   it('validates, writes, lists, and activates Screenplay Analysis through the CLI', async () => {
     await initializeStorageRoot();
     const createExitCode = await createProject();

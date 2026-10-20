@@ -22,6 +22,11 @@ import {
   propDesignSchema,
   propOperationsSchema,
 } from '../../client/department-design-json-schemas.js';
+import {
+  castMemberDescriptionSchema,
+  locationDescriptionSchema,
+  propDescriptionSchema,
+} from '../../client/profile-descriptions/schemas.js';
 
 let cachedAjv: Ajv2020 | undefined;
 
@@ -39,6 +44,9 @@ function getAjv(): Ajv2020 {
   });
 
   ajv.addSchema(departmentPlacementSchema);
+  ajv.addSchema(castMemberDescriptionSchema);
+  ajv.addSchema(locationDescriptionSchema);
+  ajv.addSchema(propDescriptionSchema);
   ajv.addSchema(castOperationsSchema);
   ajv.addSchema(locationOperationsSchema);
   ajv.addSchema(propOperationsSchema);

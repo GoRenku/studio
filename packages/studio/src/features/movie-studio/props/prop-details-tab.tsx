@@ -9,6 +9,13 @@ import {
   continuityPreviewImage,
 } from '../continuity/continuity-image-assets';
 import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
+import { PROP_DESCRIPTION_HEADINGS } from '../continuity/profile-description-headings';
+import {
+  ProfileDescriptionSections,
+  ProfileSourceNote,
+} from '../continuity/profile-description-sections';
+import { ProfileMissingFields } from '../continuity/profile-missing-fields';
+import { ProfileSideNote } from '../continuity/profile-side-note';
 import {
   ImagePreviewDialog,
   type PreviewImage,
@@ -33,40 +40,37 @@ export function PropDetailsTab({
   const heroPreview = hero
     ? continuityPreviewImage(projectName, hero, 'Prop Hero')
     : null;
+  const missingFields = [
+    ['Description', prop.description],
+    ['Visual notes', prop.visualNotes],
+  ].filter(([, value]) => !value).map(([label]) => label as string);
 
   return (
     <>
-      <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
-        <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(260px,390px)_minmax(0,1fr)] lg:gap-8'>
-          <ContinuityFeatureImage
-            image={heroPreview}
-            aspectRatio={hero ? continuityImageAspectRatio(hero, 16 / 9) : 16 / 9}
-            emptyLabel='No prop hero image yet'
-            onOpenImage={setPreviewImage}
-          />
-          <div className='flex min-w-0 flex-col justify-end'>
-            <h1 className='max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+      <article className='min-h-full bg-panel-bg px-8 pb-16 pt-7 text-foreground'>
+        <div className='grid gap-11 lg:grid-cols-[340px_minmax(0,1fr)]'>
+          <aside className='flex flex-col gap-4 self-start lg:sticky lg:top-6'>
+            <ContinuityFeatureImage
+              image={heroPreview}
+              aspectClassName='aspect-video'
+              aspectRatio={hero ? continuityImageAspectRatio(hero, 16 / 9) : 16 / 9}
+              emptyLabel='No prop hero image yet'
+              onOpenImage={setPreviewImage}
+            />
+            <ProfileSideNote label='Visual notes' text={prop.visualNotes} />
+          </aside>
+          <div className='min-w-0'>
+            <h1 className='text-balance text-[40px] font-extrabold leading-[1.05] tracking-[-0.02em] text-foreground'>
               {prop.name}
             </h1>
-            {prop.description ? (
-              <p className='mt-6 max-w-[780px] whitespace-pre-wrap text-base font-semibold leading-8 text-foreground/82 lg:text-lg'>
-                {prop.description}
-              </p>
-            ) : null}
-            {prop.visualNotes ? (
-              <dl className='mt-7 grid gap-3 sm:grid-cols-2'>
-                <div className='border-t border-border/40 pt-4'>
-                  <dt className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                    Visual Notes
-                  </dt>
-                  <dd className='mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/78'>
-                    {prop.visualNotes}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
+            <ProfileDescriptionSections
+              description={prop.description}
+              headings={PROP_DESCRIPTION_HEADINGS}
+            />
+            <ProfileSourceNote text={prop.description?.sourceNotes} />
+            <ProfileMissingFields fields={missingFields} />
           </div>
-        </header>
+        </div>
       </article>
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}

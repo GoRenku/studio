@@ -100,7 +100,7 @@ export function PropPanel({
       className='flex min-h-0 flex-1 flex-col'
       items={[
         { value: 'details', label: 'Details' },
-        { value: 'assetFiles', label: 'AssetFiles' },
+        { value: 'assetFiles', label: 'Assets' },
       ]}
     >
       <LineTabsContent value='details' className='min-h-0 flex-1'>

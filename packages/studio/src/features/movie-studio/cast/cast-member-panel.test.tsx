@@ -134,10 +134,51 @@ describe('CastMemberPanel', () => {
     );
 
     expect(await screen.findByText('Arc')).toBeTruthy();
-    expect(screen.getByText('Voice Notes')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Voice' })).toBeTruthy();
     expect(screen.queryByText('Visual Anchor')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Voice Design' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Assets' })).toBeTruthy();
+  });
+
+  it('shows description sections in order, the overview without a heading and the source as a footnote', async () => {
+    vi.mocked(readCastMemberResource).mockResolvedValue(
+      castMemberResource({
+        want: 'To find Pup.',
+        description: {
+          overview: 'A young survivor.',
+          performance: 'Guarded hunger, then tenderness.',
+          appearance: 'Slender, clad in leather.\n\nNo stated age.',
+          sourceNotes: 'Scenes 1–14.',
+        },
+      })
+    );
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([], null));
+
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
+
+    expect(await screen.findByText('A young survivor.')).toBeTruthy();
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)
+    ).toEqual(['Identity and appearance', 'Performance and story continuity']);
+    expect(screen.getByText('Slender, clad in leather.')).toBeTruthy();
+    expect(screen.getByText('No stated age.')).toBeTruthy();
+    expect(screen.getByText('Scenes 1–14.')).toBeTruthy();
+    expect(screen.getByText('Need · Arc · Voice notes')).toBeTruthy();
+  });
+
+  it('lists every missing field for an empty profile and keeps the Voice-over setting when voice-over hides the portrait', async () => {
+    vi.mocked(readCastMemberResource).mockResolvedValue(
+      castMemberResource({ description: undefined, isVoiceOver: true })
+    );
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([], null));
+
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
+
+    expect(
+      await screen.findByText('Want · Need · Arc · Description · Voice notes')
+    ).toBeTruthy();
+    expect(screen.queryByText('No profile image yet')).toBeNull();
+    expect(screen.getByRole('switch', { name: 'Voice-over only' })).toBeTruthy();
   });
 
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {
@@ -258,7 +299,7 @@ function castMemberResource(
       name: 'Urban',
       role: 'protagonist',
       isVoiceOver,
-      description: 'An engineer under pressure.',
+      description: { overview: 'An engineer under pressure.' },
       ...castMemberOverrides,
     },
     voices,

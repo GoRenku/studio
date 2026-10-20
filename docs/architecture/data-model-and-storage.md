@@ -86,6 +86,12 @@ Use the focused documents below for current direction.
   descriptions and `CastMember.arc`; downstream workflows read those durable
   outputs rather than receiving the raw files again. FDX-backed Screenplays
   remain source-authoritative.
+- Cast Member, Location and Prop `description` columns store a sectioned JSON
+  object validated by the JSON Schemas in
+  `packages/core/src/client/profile-descriptions/` on every write and read
+  (decision 0124). The section keys are fixed per subject. Their text is opaque
+  authored prose that Studio shows as written under Studio-owned headings.
+  Only `packages/core/src/server/database/access/` parses the stored value.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as hierarchy-independent JSON in
   `screenplay_analysis`, with one active analysis tracked in

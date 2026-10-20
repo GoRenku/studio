@@ -103,7 +103,11 @@ describe('LocationPanel', () => {
       <LocationPanel projectName='constantinople' locationId='location_gate' />
     );
 
-    expect(await screen.findByText('No location hero image yet')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Gate' })).toBeTruthy();
+    expect(screen.queryByText('No location hero image yet')).toBeNull();
+    expect(screen.getByText('A stone gate facing the road.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'In the story' })).toBeTruthy();
+    expect(screen.getByText('Weathered masonry and wind-bent grass.')).toBeTruthy();
     expect(
       screen.queryByRole('button', {
         name: /Gate Location Sheet/i,
@@ -266,7 +270,10 @@ function locationResource(): LocationResourceResponse {
       handle: 'gate',
       name: 'Gate',
       timePeriod: '1453',
-      description: 'A stone gate facing the road.',
+      description: {
+        storyUse: 'Where the attack begins.',
+        overview: 'A stone gate facing the road.',
+      },
       visualNotes: 'Weathered masonry and wind-bent grass.',
     },
   };

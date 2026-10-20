@@ -1,3 +1,5 @@
+import type { CastMemberDescription } from './profile-descriptions/model.js';
+
 export type CastMemberId = string;
 
 export interface CastMember {
@@ -11,5 +13,5 @@ export interface CastMember {
   need?: string;
   arc?: string;
   voiceNotes?: string;
-  description?: string;
+  description?: CastMemberDescription;
 }

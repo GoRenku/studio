@@ -3,15 +3,19 @@ import type {
   LocationResourceResponse,
   StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
+import { Button } from '@/ui/button';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
+import { continuityPreviewImage } from '../continuity/continuity-image-assets';
+import { LOCATION_DESCRIPTION_HEADINGS } from '../continuity/profile-description-headings';
 import {
-  continuityImageAspectRatio,
-  continuityPreviewImage,
-} from '../continuity/continuity-image-assets';
-import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
+  ProfileDescriptionSections,
+  ProfileSourceNote,
+} from '../continuity/profile-description-sections';
+import { ProfileMissingFields } from '../continuity/profile-missing-fields';
+import { ProfileSideNote } from '../continuity/profile-side-note';
 
 interface LocationDetailsTabProps {
   projectName: string;
@@ -34,50 +38,51 @@ export function LocationDetailsTab({
   const heroPreview = heroAssetFile
     ? continuityPreviewImage(projectName, heroAssetFile, 'Location Hero')
     : null;
-  const heroAspectRatio = heroAssetFile
-    ? continuityImageAspectRatio(heroAssetFile, 16 / 9)
-    : 16 / 9;
+  const missingFields = [
+    ['Description', location.description],
+    ['Visual notes', location.visualNotes],
+  ].filter(([, value]) => !value).map(([label]) => label as string);
 
   return (
     <>
-      <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
-        <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(260px,390px)_minmax(0,1fr)] lg:gap-8'>
-          <ContinuityFeatureImage
-            image={heroPreview}
-            aspectRatio={heroAspectRatio}
-            emptyLabel='No location hero image yet'
-            onOpenImage={setPreviewImage}
-          />
-          <div className='flex min-w-0 flex-col justify-end'>
-            <div className='flex flex-wrap items-center gap-2'>
-              {location.timePeriod ? (
-                <span className='rounded-full border border-border/50 bg-muted/45 px-3 py-1 text-xs font-semibold text-foreground/75'>
-                  {location.timePeriod}
-                </span>
-              ) : null}
-            </div>
-            <h1 className='mt-4 max-w-[920px] text-4xl font-black leading-none text-foreground sm:text-5xl lg:text-6xl'>
+      <article className='min-h-full bg-panel-bg text-foreground'>
+        {heroPreview ? (
+          <Button
+            type='button'
+            variant='ghost'
+            className='block h-[380px] w-full rounded-none border-b border-border/40 p-0 hover:bg-transparent'
+            onClick={() => setPreviewImage(heroPreview)}
+          >
+            <img
+              src={heroPreview.src}
+              alt={heroPreview.alt}
+              className='h-full w-full object-cover'
+            />
+          </Button>
+        ) : null}
+        <div className='grid gap-12 px-8 pb-16 pt-7 lg:grid-cols-[minmax(0,1fr)_300px]'>
+          <div className='min-w-0'>
+            <h1 className='text-balance text-[40px] font-extrabold leading-[1.05] tracking-[-0.02em] text-foreground'>
               {location.name}
             </h1>
-            {location.description ? (
-              <p className='mt-6 max-w-[780px] whitespace-pre-wrap text-base font-semibold leading-8 text-foreground/82 lg:text-lg'>
-                {location.description}
+            {location.timePeriod ? (
+              <p className='mt-2.5 text-[15px] font-medium text-muted-foreground'>
+                {location.timePeriod}
               </p>
             ) : null}
-            {location.visualNotes ? (
-              <dl className='mt-7 grid gap-3 sm:grid-cols-2'>
-                <div className='border-t border-border/40 pt-4'>
-                  <dt className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                    Visual Notes
-                  </dt>
-                  <dd className='mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/78'>
-                    {location.visualNotes}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
+            <ProfileDescriptionSections
+              description={location.description}
+              headings={LOCATION_DESCRIPTION_HEADINGS}
+            />
+            <ProfileSourceNote text={location.description?.sourceNotes} />
+            <ProfileMissingFields fields={missingFields} />
           </div>
-        </header>
+          <ProfileSideNote
+            label='Visual notes'
+            text={location.visualNotes}
+            className='self-start lg:sticky lg:top-6'
+          />
+        </div>
       </article>
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}
