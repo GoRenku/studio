@@ -82,6 +82,45 @@ describe('character arcs', () => {
       .rejects.toMatchObject({ code: 'CHARACTER_ARC_NOT_FOUND' });
   });
 
+  it.each(['validateCharacterArcs', 'writeCharacterArcs'] as const)('%s reports malformed documents before reading project references', async (command) => {
+    await projectData.writeCharacterArcs({
+      homeDir,
+      document: writeDocument([{ castMemberId: castIds.mehmed, arc: changeArc() }]),
+    });
+    const stored = await projectData.readCharacterArc({ homeDir, castMemberId: castIds.mehmed });
+    const malformedLook = changeArc();
+    const documents: Array<{ document: unknown; issuePath: string[] }> = [
+      { document: null, issuePath: [] },
+      { document: [], issuePath: [] },
+      { document: { kind: 'characterArcs', arcs: null }, issuePath: ['arcs'] },
+      { document: { kind: 'characterArcs', arcs: [null] }, issuePath: ['arcs', '0'] },
+      {
+        document: writeDocument([{
+          castMemberId: castIds.mehmed,
+          arc: {
+            ...malformedLook,
+            turningPoints: [{ ...malformedLook.turningPoints[0]!, lookAssetFileId: {} }, malformedLook.turningPoints[1]!],
+          } as CharacterArc,
+        }]),
+        issuePath: ['arcs', '0', 'arc', 'turningPoints', '0', 'lookAssetFileId'],
+      },
+    ];
+    for (const { document, issuePath } of documents) {
+      await expect(projectData[command]({
+        homeDir,
+        document: document as CharacterArcsWriteDocument,
+        filePath: 'character-arcs.json',
+      })).rejects.toMatchObject({
+        code: 'CHARACTER_ARC_INVALID',
+        issues: expect.arrayContaining([expect.objectContaining({
+          code: 'CHARACTER_ARC_INVALID',
+          location: { filePath: 'character-arcs.json', path: issuePath },
+        })]),
+      });
+    }
+    expect(await projectData.readCharacterArc({ homeDir, castMemberId: castIds.mehmed })).toEqual(stored);
+  });
+
   it('collects every structural issue before writing', async () => {
     const flatWithBelief = { ...flatArc(), spine: { ...flatArc().spine, falseBelief: { text: 'x', sceneIds: [sceneIds[0]!] } } };
     const changeWithoutNeed = { ...changeArc(), spine: { want: changeArc().spine.want } };

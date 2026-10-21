@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CastMemberResourceResponse,
@@ -12,8 +12,9 @@ import {
   selectCastProfileAssetFile,
   clearSelectedCastProfile,
 } from '@/services/studio-project-assets-api';
-import { readCastMemberResource } from '@/services/studio-continuity-api';
+import { readCastMemberCharacterArc, readCastMemberResource } from '@/services/studio-continuity-api';
 import { CastMemberPanel } from './cast-member-panel';
+import { characterArcResource } from './arc/character-arc-test-fixtures';
 import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
@@ -56,6 +57,7 @@ describe('CastMemberPanel', () => {
     vi.mocked(clearSelectedCastProfile).mockReset();
     vi.mocked(deleteCastVoice).mockReset();
     vi.mocked(readCastMemberResource).mockReset();
+    vi.mocked(readCastMemberCharacterArc).mockReset();
     vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue();
     vi.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
   });
@@ -203,6 +205,44 @@ describe('CastMemberPanel', () => {
 
     await screen.findByRole('tab', { name: 'Assets' });
     expect(screen.queryByRole('tab', { name: 'Arc' })).toBeNull();
+  });
+
+  it.each(['Arc', 'Assets'] as const)('handles an arc being cleared while viewing %s', async (selectedTab) => {
+    const withArc: CastMemberResourceResponse = { ...castMemberResource(), characterArc: { kind: 'own' } };
+    vi.mocked(readCastMemberResource)
+      .mockResolvedValueOnce(withArc)
+      .mockResolvedValueOnce(castMemberResource())
+      .mockResolvedValueOnce(withArc);
+    vi.mocked(readCastMemberCharacterArc).mockResolvedValue(characterArcResource());
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
+    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    activateTab(await screen.findByRole('tab', { name: selectedTab }));
+    if (selectedTab === 'Arc') {
+      await screen.findByRole('heading', { name: 'Ada' });
+    }
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
+        detail: { projectName: 'constantinople', resourceKeys: ['surface:castMember:cast_urban'] },
+      }));
+    });
+
+    const expectedTab = selectedTab === 'Arc' ? 'Details' : 'Assets';
+    await waitFor(() => expect(screen.queryByRole('tab', { name: 'Arc' })).toBeNull());
+    expect(screen.getByRole('tab', { name: expectedTab }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tabpanel')).toBeTruthy();
+    if (selectedTab === 'Arc') {
+      expect(screen.getByText('An engineer under pressure.')).toBeTruthy();
+    }
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
+        detail: { projectName: 'constantinople', resourceKeys: ['surface:castMember:cast_urban'] },
+      }));
+    });
+
+    await screen.findByRole('tab', { name: 'Arc' });
+    expect(screen.getByRole('tab', { name: expectedTab }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {

@@ -66,13 +66,15 @@ export function parseCharacterArcsJson(input: { contents: string; filePath?: str
 
 export function assertCharacterArcsWriteDocument(input: {
   document: CharacterArcsWriteDocument;
-  context: CharacterArcValidationContext;
+  readContext: () => CharacterArcValidationContext;
   filePath?: string;
 }): void {
   const shapeIssues = validateShape(characterArcsWriteDocumentSchema.$id, input.document, [], input.filePath);
-  const issues = shapeIssues.length > 0
-    ? shapeIssues
-    : SEMANTIC_CHECKS.flatMap((check) => check(input.document, input.context, input.filePath));
+  if (shapeIssues.length > 0) {
+    throwInvalid(shapeIssues);
+  }
+  const context = input.readContext();
+  const issues = SEMANTIC_CHECKS.flatMap((check) => check(input.document, context, input.filePath));
   if (issues.length > 0) {
     throwInvalid(issues);
   }

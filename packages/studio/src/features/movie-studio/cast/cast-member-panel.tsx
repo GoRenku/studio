@@ -39,6 +39,7 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
     useState<StudioAssetFileCollection>({ items: [], selectedAssetFileId: null });
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
+  const [selectedTab, setSelectedTab] = useState('details');
 
   const refreshCastMember = useCallback(async () => {
     const [nextResource, nextAssetFiles] = await Promise.all([
@@ -139,6 +140,10 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
     }
   };
 
+  if (selectedTab === 'arc' && resource && !resource.characterArc) {
+    setSelectedTab('details');
+  }
+
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -148,7 +153,8 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
 
   return (
     <LineTabs
-      defaultValue='details'
+      value={selectedTab}
+      onValueChange={setSelectedTab}
       items={[
         { value: 'details', label: 'Details' },
         ...(resource.characterArc ? [{ value: 'arc', label: 'Arc' }] : []),

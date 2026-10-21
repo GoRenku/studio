@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readCastMemberCharacterArc } from '@/services/studio-continuity-api';
 import { CastMemberArcTab } from './cast-member-arc-tab';
@@ -74,5 +74,51 @@ describe('CastMemberArcTab', () => {
     await screen.findByRole('heading', { name: 'Ada' });
     expect(screen.queryByText('IN SCENE')).toBeNull();
     expect(screen.queryByText('Speaks')).toBeNull();
+  });
+
+  it.each(['screenplay', 'screenplay:structure', 'screenplay-analysis', 'screenplay-analysis:analysis_next', 'surface:castMember:cast_ada'])('refreshes the arc after %s changes', async (resourceKey) => {
+    const updated = characterArcResource({
+      presence: [],
+      structure: null,
+      freshness: 'needsRefresh',
+      freshnessHelp: 'Screenplay or analysis changed since these arcs were written.',
+    });
+    updated.scenes[3]!.productionNumber = '4A';
+    vi.mocked(readCastMemberCharacterArc)
+      .mockResolvedValueOnce(characterArcResource())
+      .mockResolvedValueOnce(updated);
+    render(<CastMemberArcTab projectName='grid' castMemberId='cast_ada' onOpenCastMember={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'Ada' });
+    expect(screen.getByText('STRUCTURE')).toBeTruthy();
+    expect(screen.getByText('IN SCENE')).toBeTruthy();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
+        detail: { projectName: 'grid', resourceKeys: [resourceKey] },
+      }));
+    });
+
+    expect(await screen.findByText('Needs refresh')).toBeTruthy();
+    expect(screen.getByText('4A')).toBeTruthy();
+    expect(screen.queryByText('STRUCTURE')).toBeNull();
+    expect(screen.queryByText('IN SCENE')).toBeNull();
+    await waitFor(() => expect(readCastMemberCharacterArc).toHaveBeenCalledTimes(2));
+  });
+
+  it('ignores changes to other projects and unrelated Cast Members', async () => {
+    vi.mocked(readCastMemberCharacterArc).mockResolvedValue(characterArcResource());
+    render(<CastMemberArcTab projectName='grid' castMemberId='cast_ada' onOpenCastMember={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'Ada' });
+
+    await act(async () => {
+      for (const detail of [
+        { projectName: 'other', resourceKeys: ['screenplay'] },
+        { projectName: 'grid', resourceKeys: ['surface:castMember:cast_other'] },
+      ]) {
+        window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', { detail }));
+      }
+    });
+
+    expect(readCastMemberCharacterArc).toHaveBeenCalledTimes(1);
   });
 });

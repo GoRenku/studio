@@ -15,6 +15,7 @@ const PRESENCE_ROW_HEIGHT = 36;
 const ARC_TOP_GAP = 40;
 export const ARC_HEIGHT = 210;
 const MARKER_MIN_GAP = 26;
+const MARKER_INSET = 12;
 const BEAT_LABEL_MIN_GAP = 110;
 const TICK_MIN_GAP = 26;
 const ACT_LABELS: Record<string, string> = { actOne: 'Act I', actTwo: 'Act II', actThree: 'Act III' };
@@ -81,15 +82,18 @@ export function buildCharacterArcTimeline(resource: Resource): CharacterArcTimel
 
   const arcTop = presenceY + (hasPresence ? PRESENCE_ROW_HEIGHT : 0) + ARC_TOP_GAP;
   const yOf = (position: number) => arcTop + ((5 - position) / 10) * ARC_HEIGHT;
-  const points = resource.arc.turningPoints.map((point, index) => ({
-    number: index + 1,
-    trueX: xOf(sceneIndex.get(point.sceneIds[0]!) ?? 0),
-    y: yOf(point.position),
-    title: `${index + 1}. ${point.label}: ${point.state}`,
-  }));
+  const points = resource.arc.turningPoints.flatMap((point, index) => {
+    const anchor = sceneIndex.get(point.sceneIds[0]!);
+    return anchor === undefined ? [] : [{
+      number: index + 1,
+      trueX: xOf(anchor),
+      y: yOf(point.position),
+      title: `${index + 1}. ${point.label}: ${point.state}`,
+    }];
+  });
   const markers = dodge(points);
   const plotRight = TIMELINE_GUTTER + PLOT_WIDTH;
-  const path = markers
+  const path = markers.length === 0 ? '' : markers
     .map((marker, index) => (index === 0 ? `M${marker.x},${marker.y}` : `H${marker.x} V${marker.y}`))
     .join(' ') + ` H${plotRight}`;
   const beatLineBottom = arcTop + ARC_HEIGHT + 8;
@@ -107,14 +111,24 @@ export function buildCharacterArcTimeline(resource: Resource): CharacterArcTimel
   };
 }
 
-/** Nudges markers apart so numbered circles never overlap; keeps scene order. */
+/** Spreads markers in both directions, preserving order and keeping circles inside the plot. */
 export function dodge<T extends { trueX: number }>(points: T[]): Array<T & { x: number }> {
-  let previous = -Infinity;
-  return points.map((point) => {
-    const x = Math.max(point.trueX, previous + MARKER_MIN_GAP);
+  const left = TIMELINE_GUTTER + MARKER_INSET;
+  const right = TIMELINE_GUTTER + PLOT_WIDTH - MARKER_INSET;
+  const gap = Math.min(MARKER_MIN_GAP, (right - left) / Math.max(points.length - 1, 1));
+  let previous = left - gap;
+  const markers = points.map((point) => {
+    const x = Math.max(point.trueX, previous + gap);
     previous = x;
     return { ...point, x };
   });
+  let next = right + gap;
+  for (let index = markers.length - 1; index >= 0; index -= 1) {
+    const marker = markers[index]!;
+    marker.x = Math.min(marker.x, next - gap);
+    next = marker.x;
+  }
+  return markers;
 }
 
 function stackLabels(labels: Array<{ label: string; x: number }>): Array<{ label: string; x: number; level: number }> {
@@ -139,7 +153,7 @@ function buildTicks(
     const indices = act.sceneIds.flatMap((id) => sceneIndex.has(id) ? [sceneIndex.get(id)!] : []);
     return indices.length > 0 ? [Math.min(...indices)] : [];
   });
-  const indices = [...new Set([0, last, ...actStarts, ...beatIndices])].filter((index) => index >= 0).sort((a, b) => a - b);
+  const indices = [...new Set([0, last, ...actStarts, ...beatIndices])].filter((index) => index >= 0 && index <= last).sort((a, b) => a - b);
   let lastX = -Infinity;
   return indices.flatMap((index) => {
     const x = xOf(index);

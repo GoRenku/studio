@@ -38,7 +38,7 @@ describe('character arc scene order', () => {
         { sceneIds: ['scene_5', 'scene_31'], label: 'Rupture', state: 'Furious.', position: -5 },
         { sceneIds: ['scene_5'], label: 'Silence', state: 'Withdrawn.', position: -4 },
       ]),
-      context,
+      readContext: () => context,
     })).not.toThrow();
     expect(() => assertCharacterArcsWriteDocument({
       document: arcWithTurningPoints([
@@ -46,7 +46,7 @@ describe('character arc scene order', () => {
         { sceneIds: ['scene_5', 'scene_31'], label: 'Rupture', state: 'Furious.', position: -5 },
         { sceneIds: ['scene_31'], label: 'True versions', state: 'Wants facts.', position: -4 },
       ]),
-      context,
+      readContext: () => context,
     })).not.toThrow();
   });
 
@@ -58,7 +58,7 @@ describe('character arc scene order', () => {
           { sceneIds: ['scene_118'], label: 'Confrontation', state: 'Lowest point.', position: -5 },
           { sceneIds: ['scene_31', 'scene_5'], label: 'True versions', state: 'Wants facts.', position: -4 },
         ]),
-        context,
+        readContext: () => context,
       });
     } catch (error) {
       issues = (error as { issues: Array<{ message: string }> }).issues;

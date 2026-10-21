@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { readCastMemberCharacterArc } from '@/services/studio-continuity-api';
 import {
   matchesCastMemberResource,
+  matchesStoryArcResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { useContinuityResource } from '../../continuity/use-continuity-resource';
@@ -28,7 +29,8 @@ export function CastMemberArcTab({
   });
   useStudioResourceRefresh({
     projectName,
-    matches: (resourceKeys) => matchesCastMemberResource(resourceKeys, castMemberId),
+    matches: (resourceKeys) =>
+      matchesCastMemberResource(resourceKeys, castMemberId) || matchesStoryArcResource(resourceKeys),
     onRefresh: refresh,
   });
 

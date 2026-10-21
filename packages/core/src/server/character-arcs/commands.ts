@@ -96,16 +96,16 @@ export async function readCharacterArc(input: ReadCharacterArcInput): Promise<Ch
 function assertDocument(session: DatabaseSession, input: { document: CharacterArcsWriteDocument; filePath?: string }): void {
   assertCharacterArcsWriteDocument({
     document: input.document,
-    context: readValidationContext(session, input.document),
+    readContext: () => readValidationContext(session, input.document),
     ...(input.filePath ? { filePath: input.filePath } : {}),
   });
 }
 
 function readValidationContext(session: DatabaseSession, document: CharacterArcsWriteDocument): CharacterArcValidationContext {
   const lookIds = new Set(
-    (Array.isArray(document.arcs) ? document.arcs : []).flatMap((entry) =>
-      entry?.arc?.kind === 'characterArc' && Array.isArray(entry.arc.turningPoints)
-        ? entry.arc.turningPoints.flatMap((point) => point?.lookAssetFileId ? [point.lookAssetFileId] : [])
+    document.arcs.flatMap((entry) =>
+      entry.arc.kind === 'characterArc'
+        ? entry.arc.turningPoints.flatMap((point) => point.lookAssetFileId ? [point.lookAssetFileId] : [])
         : [])
   );
   const assetFiles = new Map<string, { ownerKey: string; type: string }>();
