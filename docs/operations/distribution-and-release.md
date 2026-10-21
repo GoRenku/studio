@@ -83,6 +83,12 @@ Windows 10 version 1803 or newer (including Windows 11), with its built-in
 `tar.exe`. Unsupported systems are rejected before the runtime download.
 Renku includes its own runtime; it does not require a separate Node.js install.
 
+Release archives bundle Node 24.22.1, including the
+[October 21, 2026 security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases/).
+The CLI accepts Node `^22.23.4 || ^24.22.1`. Updating a system Node installation
+does not replace the private runtime inside an existing Renku archive; those
+installations need a Renku release containing the patched runtime.
+
 macOS:
 
 ```bash

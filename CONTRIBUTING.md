@@ -7,9 +7,12 @@ this guide covers working on the source.
 
 ## Set up a checkout
 
-You need Git, Node.js **22.12 or newer in the 22.x line, or 24.x**, and pnpm
+You need Git, Node.js **22.23.4 or newer in the 22.x line, or 24.22.1 or newer
+in the 24.x line**, and pnpm
 **11.7 or newer in the 11.x line**. The root [`package.json`](package.json)
 declares the supported ranges and pins pnpm 11.7.0 in `packageManager`.
+The `.node-version` and `.nvmrc` files pin Node 24.22.1, which includes the
+[October 21, 2026 security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases/).
 
 Fork the repository on GitHub, clone your fork, then run from its root:
 

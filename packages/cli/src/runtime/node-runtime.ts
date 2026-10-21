@@ -6,13 +6,17 @@ import {
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
 
-export const RENKU_NODE_RANGE = '^22.12.0 || ^24.0.0';
+export const RENKU_NODE_RANGE = '^22.23.4 || ^24.22.1';
 
 export function isSupportedNodeVersion(version = process.versions.node): boolean {
-  const [majorText, minorText = '0'] = version.split('.');
-  const major = Number.parseInt(majorText ?? '', 10);
-  const minor = Number.parseInt(minorText, 10);
-  return major === 24 || (major === 22 && minor >= 12);
+  const [major, minor, patch] = version.split('.').map(Number);
+  if (minor === undefined || patch === undefined) {
+    return false;
+  }
+  return (
+    (major === 24 && (minor > 22 || (minor === 22 && patch >= 1))) ||
+    (major === 22 && (minor > 23 || (minor === 23 && patch >= 4)))
+  );
 }
 
 export function isRenkuCliEntrypoint(argvPath: string | undefined): boolean {

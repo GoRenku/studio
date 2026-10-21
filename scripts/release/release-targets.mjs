@@ -6,8 +6,8 @@ export const RELEASE_TARGETS = Object.freeze([
   Object.freeze({ id: 'win32-x64', platform: 'win32', arch: 'x64', archive: 'zip' }),
 ]);
 
-export const SUPPORTED_NODE_RANGE = '^22.12.0 || ^24.0.0';
-export const BUNDLED_NODE_VERSION = '24.16.0';
+export const SUPPORTED_NODE_RANGE = '^22.23.4 || ^24.22.1';
+export const BUNDLED_NODE_VERSION = '24.22.1';
 
 export function requireReleaseTarget(id) {
   const target = RELEASE_TARGETS.find((candidate) => candidate.id === id);

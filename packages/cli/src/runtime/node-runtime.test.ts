@@ -9,13 +9,25 @@ import {
 } from './node-runtime.js';
 
 describe('Renku Node runtime', () => {
-  it('accepts the supported Node release lines', () => {
-    expect(isSupportedNodeVersion('22.12.0')).toBe(true);
-    expect(isSupportedNodeVersion('22.21.1')).toBe(true);
-    expect(isSupportedNodeVersion('24.0.0')).toBe(true);
+  it('accepts patched versions in the supported Node release lines', () => {
+    expect(isSupportedNodeVersion('22.23.4')).toBe(true);
+    expect(isSupportedNodeVersion('22.23.5')).toBe(true);
+    expect(isSupportedNodeVersion('22.24.0')).toBe(true);
+    expect(isSupportedNodeVersion('24.22.1')).toBe(true);
+    expect(isSupportedNodeVersion('24.22.2')).toBe(true);
+    expect(isSupportedNodeVersion('24.23.0')).toBe(true);
+    expect(isSupportedNodeVersion()).toBe(true);
+  });
+
+  it('rejects unpatched versions and unsupported Node release lines', () => {
+    expect(isSupportedNodeVersion('22.23.3')).toBe(false);
+    expect(isSupportedNodeVersion('22.22.99')).toBe(false);
+    expect(isSupportedNodeVersion('24.22.0')).toBe(false);
+    expect(isSupportedNodeVersion('24.21.99')).toBe(false);
     expect(isSupportedNodeVersion('20.19.0')).toBe(false);
-    expect(isSupportedNodeVersion('22.11.0')).toBe(false);
     expect(isSupportedNodeVersion('25.0.0')).toBe(false);
+    expect(isSupportedNodeVersion('26.12.1')).toBe(false);
+    expect(isSupportedNodeVersion('24.22')).toBe(false);
   });
 
   it('recognizes the built entrypoint using platform path semantics', () => {
