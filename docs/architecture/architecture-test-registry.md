@@ -235,3 +235,47 @@ Maintenance owner:
   `MediaEngine`. Core owns review/provenance and focused attachment. CLI is the
   thin composition root. Static tests protect stable import/public boundaries;
   runtime tests prove execution, cache, retry, request, and error behavior.
+
+### Stored Profile Descriptions Are Parsed Only By The Access Layer
+
+Owner docs:
+
+- `docs/decisions/0124-store-profile-descriptions-as-fixed-sections.md`
+- `docs/architecture/json-storage-validation.md`
+
+Static tests:
+
+- `packages/core/src/server/architecture.test.ts`
+
+Runtime tests:
+
+- `packages/core/src/server/profile-descriptions/profile-descriptions.test.ts`
+
+Forbidden capabilities:
+
+- importing the stored-description validator outside
+  `packages/core/src/server/database/access/`;
+- reading a Cast Member, Location or Prop description as free text.
+
+### Character Arcs Are Stored Only Through The Character Arcs Module
+
+Owner docs:
+
+- `docs/decisions/0125-store-character-arcs-as-one-json-document-per-cast-member.md`
+- `docs/architecture/json-storage-validation.md`
+
+Static tests:
+
+- `packages/core/src/server/architecture.test.ts`
+
+Runtime tests:
+
+- `packages/core/src/server/character-arcs/character-arcs.test.ts`
+- `packages/core/src/server/character-arcs/validation.test.ts`
+
+Forbidden capabilities:
+
+- reading or writing `cast_member.character_arc` outside
+  `packages/core/src/server/character-arcs/`;
+- route-, CLI- or React-local rules about who has an arc, reference
+  resolution, scene presence or arc validity.

@@ -4,6 +4,14 @@ import type { ReadShotPlanPrevisInput, RegisterShotPlanPrevisInput, ShotPlanPrev
 import type { CleanProjectTemporaryFilesInput, ProjectTemporaryFilesCleanupReport } from '../client/project-temporary-files.js';
 import type { FdxUpdateStatus, FdxUpdateReview } from '../client/screenplay/fdx-updates.js';
 import type {
+  CastMemberCharacterArcResource,
+  CharacterArcListReport,
+  CharacterArcReadReport,
+  CharacterArcsValidationReport,
+  CharacterArcsWriteDocument,
+  CharacterArcsWriteReport,
+} from '../client/character-arcs/model.js';
+import type {
   AssetFile,
   AssetFileLocaleContext,
   AssetFileOwner,
@@ -235,6 +243,9 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   readPropOverviewResource(input: ListNavigationInput): Promise<PropOverviewResource>;
   readPropResource(input: ReadPropResourceInput): Promise<PropResource>;
   readStoryArcResource(input: ReadProjectInput): Promise<StoryArcResource>;
+  readCastMemberCharacterArcResource(
+    input: ReadCastMemberResourceInput
+  ): Promise<CastMemberCharacterArcResource>;
   readSceneNarrativeResource(
     input: ReadSceneNarrativeResourceInput
   ): Promise<SceneNarrativeResource>;
@@ -406,6 +417,10 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   readScreenplayRevision(input: ReadScreenplayRevisionInput): Promise<ScreenplayRevisionReadReport>;
   restoreScreenplayRevision(input: RestoreScreenplayRevisionInput): Promise<ScreenplayMutationReport>;
   readScreenplayAnalysisContext(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisContextReport>;
+  validateCharacterArcs(input: ValidateCharacterArcsInput): Promise<CharacterArcsValidationReport>;
+  writeCharacterArcs(input: ValidateCharacterArcsInput): Promise<CharacterArcsWriteReport>;
+  listCharacterArcs(input?: CharacterArcsProjectInput): Promise<CharacterArcListReport>;
+  readCharacterArc(input: ReadCharacterArcInput): Promise<CharacterArcReadReport>;
   listScreenplayAnalyses(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisListReport>;
   readScreenplayAnalysis(input: ReadScreenplayAnalysisInput): Promise<ScreenplayAnalysisReadReport>;
   validateScreenplayAnalysis(input: ValidateScreenplayAnalysisInput): Promise<ScreenplayAnalysisValidationReport>;
@@ -717,6 +732,17 @@ export interface RestoreScreenplayRevisionInput extends ScreenplayProjectInput {
 }
 
 export interface ScreenplayAnalysisProjectInput extends RenkuConfigPathOptions {}
+
+export interface CharacterArcsProjectInput extends RenkuConfigPathOptions {}
+
+export interface ValidateCharacterArcsInput extends CharacterArcsProjectInput {
+  document: CharacterArcsWriteDocument;
+  filePath?: string;
+}
+
+export interface ReadCharacterArcInput extends CharacterArcsProjectInput {
+  castMemberId: string;
+}
 
 export interface ReadScreenplayAnalysisInput extends ScreenplayAnalysisProjectInput {
   active?: boolean;

@@ -64,6 +64,22 @@ describe('Core server architecture boundaries', () => {
     ).toEqual([]);
   });
 
+  it('reads and writes the stored character arc column only inside the character arcs module', async () => {
+    const serverFolder = dirname(fileURLToPath(import.meta.url));
+    const arcFolder = join(serverFolder, 'character-arcs');
+    const outside: string[] = [];
+    for (const file of await sourceFiles(serverFolder)) {
+      if (file.startsWith(arcFolder)) {
+        continue;
+      }
+      const source = await readFile(file, 'utf8');
+      if (/castMembers\.characterArc\b/.test(source) || /from ['"][./]*character-arcs\/validation\.js['"]/.test(source)) {
+        outside.push(file);
+      }
+    }
+    expect(outside).toEqual([]);
+  });
+
   it('keeps Core independent from Engines and provider SDKs', async () => {
     const coreFolder = join(dirname(fileURLToPath(import.meta.url)), '..');
     const sources = await Promise.all(

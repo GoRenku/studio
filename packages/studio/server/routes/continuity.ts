@@ -6,6 +6,7 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
+  toCastMemberCharacterArcResourceResponse,
   toCastMemberResourceResponse,
   toCastOverviewResourceResponse,
   toLocationOverviewResourceResponse,
@@ -46,6 +47,20 @@ export function createContinuityRoute(options: {
         });
         return c.json({
           resource: toCastMemberResourceResponse(projectName, resource),
+        });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/continuity/cast/:castMemberId/arc', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const resource = await projectData.readCastMemberCharacterArcResource({
+          projectName,
+          castMemberId: c.req.param('castMemberId') as string,
+        });
+        return c.json({
+          resource: toCastMemberCharacterArcResourceResponse(projectName, resource),
         });
       } catch (error) {
         return projectErrorResponse(c, error);

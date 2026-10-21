@@ -2,6 +2,7 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { AssetFilePage } from './asset-files.js';
 import type { AssetFile } from './asset-files.js';
 import type { CastMember } from './cast-members.js';
+import type { CastMemberCharacterArcSummary } from './character-arcs/model.js';
 import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
 import type { Prop } from './props.js';
@@ -90,6 +91,7 @@ export interface CastMemberResource {
   castMember: CastMember;
   firstImage?: ScreenplayImageReference;
   voices: CastVoice[];
+  characterArc: CastMemberCharacterArcSummary;
 }
 
 export interface LocationOverviewResource {

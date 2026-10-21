@@ -89,6 +89,11 @@ operational companions that teach agents how to use those contracts.
   counts are unsupported.
 - Suggests scene additions or revisions as critique only; it does not mutate the
   screenplay graph.
+- In the same request, writes Character Arcs for the protagonists and key
+  supporting roles through `renku cast arc write`, replacing the complete set.
+  - It reads the contract from `renku cast arc schema`.
+  - Age variants reference the main Cast Member's arc.
+  - Turning points may name a character sheet (`lookAssetFileId`).
 
 `casting-director`
 

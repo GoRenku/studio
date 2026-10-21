@@ -240,7 +240,10 @@ export function fakeProjectDataService(): NonNullable<
       return { cast: makeProjectShell(project).navigation.cast };
     },
     async readCastMemberResource() {
-      return { castMember: fixtureCastMember, voices: [] };
+      return { castMember: fixtureCastMember, voices: [], characterArc: null };
+    },
+    async readCastMemberCharacterArcResource() {
+      throw new Error('Character arc resource is not available in the fake project data service.');
     },
     async updateCastMemberVoiceOverStatus() {
       return fixtureCastMember;

@@ -39,6 +39,7 @@ describe('continuity Hono route', () => {
           },
           firstImage,
           voices: [],
+          characterArc: null,
         };
       },
       async readLocationResource() {
@@ -77,6 +78,41 @@ describe('continuity Hono route', () => {
         '/studio-api/projects/constantinople/asset-files/asset_file_reference'
       );
     }
+  });
+
+  it('reads a Cast Member character arc through the Core service', async () => {
+    const readCastMemberCharacterArcResource = vi.fn(async () => ({
+      castMember: { id: 'cast_ada', name: 'Ada' },
+      arc: {
+        kind: 'characterArc' as const,
+        arcType: 'flat' as const,
+        startState: 'Certain.',
+        endState: 'Still certain.',
+        ends: { high: 'Certain', low: 'Doubting' },
+        spine: {
+          want: { text: 'To be heard.', sceneIds: ['scene_1'] },
+          truthHeld: { text: 'Memory outlasts empires.', sceneIds: ['scene_1'] },
+        },
+        turningPoints: [],
+      },
+      sharedWith: null,
+      scenes: [],
+      presence: [],
+      structure: null,
+      looks: [],
+      freshness: 'current' as const,
+      freshnessHelp: null,
+    }));
+    const app = mount({ ...fakeProjectDataService(), readCastMemberCharacterArcResource });
+
+    const response = await app.request('/constantinople/continuity/cast/cast_ada/arc');
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).resource).toMatchObject({ castMember: { id: 'cast_ada' }, looks: [] });
+    expect(readCastMemberCharacterArcResource).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      castMemberId: 'cast_ada',
+    });
   });
 
   it('updates Cast Member voice-over status through the Core service', async () => {

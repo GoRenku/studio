@@ -14,6 +14,7 @@ import {
 } from './persistence.js';
 import { screenplayAnalysisMethod } from './eligibility.js';
 import { screenplayAnalysisFreshness } from './freshness.js';
+import { listStoredCharacterArcs } from '../character-arcs/persistence.js';
 
 export function projectScreenplayAnalysisContext(input: {
   session: DatabaseSession;
@@ -26,6 +27,9 @@ export function projectScreenplayAnalysisContext(input: {
   const activeAnalysisFreshness = active
     ? screenplayAnalysisFreshness(input.session, active)
     : 'current';
+  const arcsByCastMember = new Map(
+    listStoredCharacterArcs(input.session).map((record) => [record.castMemberId, record.arc])
+  );
   return {
     analysisMethod,
     project: {
@@ -69,6 +73,7 @@ export function projectScreenplayAnalysisContext(input: {
       ...(member.need ? { need: member.need } : {}),
       ...(member.arc ? { arc: member.arc } : {}),
       ...(member.description ? { description: member.description } : {}),
+      characterArc: arcsByCastMember.get(member.id) ?? null,
     })),
     locations: listLocationRecords(input.session).map((location) => ({
       id: location.id,

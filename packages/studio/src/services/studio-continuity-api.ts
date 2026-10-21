@@ -1,5 +1,6 @@
 import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
+  CastMemberCharacterArcResourceResponse,
   CastMemberResourceResponse,
   CastOverviewResourceResponse,
   LocationOverviewResourceResponse,
@@ -31,6 +32,15 @@ export async function readCastMemberResource(
 ): Promise<CastMemberResourceResponse> {
   return readResource(
     continuityPath(projectName, `/cast/${encodeURIComponent(castMemberId)}`)
+  );
+}
+
+export async function readCastMemberCharacterArc(
+  projectName: string,
+  castMemberId: string
+): Promise<CastMemberCharacterArcResourceResponse> {
+  return readResource(
+    continuityPath(projectName, `/cast/${encodeURIComponent(castMemberId)}/arc`)
   );
 }
 

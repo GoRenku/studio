@@ -92,6 +92,16 @@ Use the focused documents below for current direction.
   (decision 0124). The section keys are fixed per subject. Their text is opaque
   authored prose that Studio shows as written under Studio-owned headings.
   Only `packages/core/src/server/database/access/` parses the stored value.
+- A Character Arc is stored per Cast Member as validated JSON
+  (`{ writtenAt, arc }`) in `cast_member.character_arc`, validated on every
+  write and read (decision 0125).
+  - **Who writes it:** only the `screenplay-analyst` skill writes arcs,
+    replacing the complete set after each analysis.
+  - **Weak references:** scene references are checked when written and treated
+    as weak afterwards (decision 0073). A newer screenplay revision makes the
+    arcs `needsRefresh`.
+  - **Single owner:** only `packages/core/src/server/character-arcs/` reads or
+    writes the column.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as hierarchy-independent JSON in
   `screenplay_analysis`, with one active analysis tracked in

@@ -1,4 +1,5 @@
 import type {
+  CastMemberCharacterArcResource,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
@@ -91,6 +92,20 @@ export function toCastMemberResourceResponse(
       ...voice,
       sample: toStudioAssetFileResponse(projectName, voice.sample),
     })),
+  };
+}
+
+export type CastMemberCharacterArcResourceResponse = Omit<CastMemberCharacterArcResource, 'looks'> & {
+  looks: StudioAssetFileResponse[];
+};
+
+export function toCastMemberCharacterArcResourceResponse(
+  projectName: string,
+  resource: CastMemberCharacterArcResource
+): CastMemberCharacterArcResourceResponse {
+  return {
+    ...resource,
+    looks: resource.looks.map((look) => toStudioAssetFileResponse(projectName, look)),
   };
 }
 

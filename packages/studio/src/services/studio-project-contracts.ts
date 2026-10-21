@@ -1,5 +1,6 @@
 import type {
   AssetFile,
+  CastMemberCharacterArcResource,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
@@ -66,6 +67,10 @@ export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & 
     >;
     nextCursor: string | null;
   };
+};
+
+export type CastMemberCharacterArcResourceResponse = Omit<CastMemberCharacterArcResource, 'looks'> & {
+  looks: StudioAssetFileResponse[];
 };
 
 export type CastMemberResourceResponse = Omit<

@@ -597,6 +597,77 @@ Input JSON shape:
 }
 ```
 
+## `renku cast arc`
+
+Print the contract, validate, write, list and show Character Arcs for the
+current authoring project. Arcs are written by the `screenplay-analyst` skill
+right after a Screenplay Analysis.
+
+```bash
+renku cast arc schema --json
+renku cast arc validate --file <character-arcs-json> --json
+renku cast arc write --file <character-arcs-json> --json
+renku cast arc list --json
+renku cast arc show --cast <cast-member-id> --json
+```
+
+- **`schema`** prints the JSON Schemas for the write document and for one
+  arc.
+- **`write`** replaces the complete set: listed Cast Members get their arc,
+  and every other Cast Member's arc is cleared. Its report lists `written` and
+  `cleared` Cast Member ids and emits Studio resource events.
+- **`list` and `show`** report `freshness: "needsRefresh"` when the
+  screenplay changed after the arcs were written.
+
+Input JSON shape:
+
+```json
+{
+  "kind": "characterArcs",
+  "arcs": [
+    {
+      "castMemberId": "cast_edward",
+      "arc": {
+        "kind": "characterArc",
+        "arcType": "flat",
+        "startState": "Telling your life as a story is being yourself.",
+        "endState": "Unchanged; his son carries the story on.",
+        "ends": { "high": "Certain of his story", "low": "Lost without it" },
+        "spine": {
+          "want": { "text": "A life as big as he is.", "sceneIds": ["scene_35"] },
+          "truthHeld": { "text": "Living your story is being yourself.", "sceneIds": ["scene_118"] }
+        },
+        "turningPoints": [
+          { "sceneIds": ["scene_26"], "label": "Sees his death in the eye", "state": "Fear gone.", "position": 5 },
+          { "sceneIds": ["scene_181"], "label": "Tell me how it happens", "state": "Scared and lost.", "position": -2, "lookAssetFileId": "asset_file_sheet" }
+        ]
+      }
+    },
+    { "castMemberId": "cast_young_edward", "arc": { "kind": "characterArcReference", "castMemberId": "cast_edward" } }
+  ]
+}
+```
+
+**Rules:**
+
+- **Arc types:** `arcType` is `positiveChange`, `flat`, `disillusionment`,
+  `fall` or `corruption`.
+- **Spine:**
+  - `flat` arcs need `spine.truthHeld` and no `spine.falseBelief`;
+  - every other arc type needs `spine.need` and `spine.falseBelief`.
+- **Turning points:**
+  - at least two;
+  - in screenplay order by their first Scene, with the Scene ids inside one
+    turning point also in order;
+  - `position` is an integer from −5 to 5.
+- **Looks:** `lookAssetFileId` must name an available character sheet of
+  the Cast Member, or of a Cast Member sharing the arc.
+- **References:** a reference must point to a Cast Member whose own arc is
+  in the same document.
+- **Failures:** they report `CHARACTER_ARC_INVALID` with every issue.
+- **Deleting an arc owner:** deleting a Cast Member whose arc another Cast
+  Member shares fails with `CHARACTER_ARC_REFERENCE_IN_USE`.
+
 ## `renku cast design`
 
 Read, validate, write, and activate durable Cast Design documents for one Cast

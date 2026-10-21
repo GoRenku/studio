@@ -52,8 +52,10 @@ export function readCastMemberRecord(
 }
 
 function toCastMemberRecord(row: typeof castMembers.$inferSelect): CastMemberRecord {
+  // The character arc column is read only through character-arcs/persistence.
+  const { characterArc: _characterArc, ...fields } = row;
   return {
-    ...row,
+    ...fields,
     description: parseStoredCastMemberDescription(row.description, row.id) ?? null,
     kind: row.role ?? 'character',
   };

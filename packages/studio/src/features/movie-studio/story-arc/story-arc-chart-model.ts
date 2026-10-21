@@ -5,6 +5,7 @@ import {
 } from '@gorenku/studio-core/client';
 import type { StoryArcResourceResponse } from '@/services/studio-project-contracts';
 import { sceneDisplayLabel } from '../screenplay/scene-label';
+import { DEFAULT_BEAT_LABELS, PRIMARY_BEAT_KEYS } from './story-structure-labels';
 
 /**
  * The chart works in a single fractional coordinate space:
@@ -48,18 +49,6 @@ export const DEFAULT_BEAT_POSITIONS: Record<ScreenplayAnalysisBeatRole, number> 
   resolution: 0.96,
 };
 
-export const DEFAULT_BEAT_LABELS: Record<ScreenplayAnalysisBeatRole, string> = {
-  hook: 'Hook',
-  incitingIncident: 'Inciting Incident',
-  firstPlotPoint: 'First Turn',
-  firstPinchPoint: 'First Pinch',
-  midpoint: 'Midpoint',
-  secondPinchPoint: 'Second Pinch',
-  secondPlotPoint: 'Crisis',
-  climax: 'Climax',
-  resolution: 'Resolution',
-};
-
 /**
  * Ideal cadence templates for a successful three-act screenplay: the expected
  * *level* (0..100) of each measure at each structural beat. These are domain
@@ -101,17 +90,6 @@ export const EXPECTED_LEVELS: Record<string, Record<ScreenplayAnalysisBeatRole, 
     resolution: 62,
   },
 };
-
-/** Structural beats marked on the chart, in story order. */
-export const PRIMARY_BEAT_KEYS: ScreenplayAnalysisBeatRole[] = [
-  'hook',
-  'incitingIncident',
-  'firstPlotPoint',
-  'midpoint',
-  'secondPlotPoint',
-  'climax',
-  'resolution',
-];
 
 /** Every beat (in story order) used to shape the smooth expected curve. */
 const ALL_BEAT_KEYS = (Object.keys(DEFAULT_BEAT_POSITIONS) as ScreenplayAnalysisBeatRole[]).sort(

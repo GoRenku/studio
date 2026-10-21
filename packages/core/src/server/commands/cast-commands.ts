@@ -1,3 +1,4 @@
+import { listCastMembersSharingCharacterArc } from '../character-arcs/persistence.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import {
   createDiagnosticError,
@@ -266,7 +267,18 @@ export async function applyCastOperations(
             })
           );
         }
-        if (hasScreenplayReferences || dependencyLabels.length > 0) {
+        const sharingArc = listCastMembersSharingCharacterArc(session, operation.castMemberId);
+        if (sharingArc.length > 0) {
+          issues.push(
+            createDiagnosticError(
+              'CHARACTER_ARC_REFERENCE_IN_USE',
+              `Cast member's character arc is shared by: ${sharingArc.map((record) => record.name).join(', ')}.`,
+              { path: [...operationPath, 'castMemberId'] },
+              'Re-run the screenplay analysis or rewrite the arcs with `renku cast arc write` before deleting this cast member.'
+            )
+          );
+        }
+        if (hasScreenplayReferences || dependencyLabels.length > 0 || sharingArc.length > 0) {
           return;
         }
         draft.splice(index, 1);

@@ -1,3 +1,4 @@
+import { readCastMemberCharacterArcSummary } from '../character-arcs/resource.js';
 import type {
   AssetFile,
   AssetFileOwner,
@@ -75,6 +76,7 @@ export function readCastMemberResourceFromSession(
         id: castMemberId,
       }),
       voices: listCastVoicesInSession(session, castMemberId),
+      characterArc: readCastMemberCharacterArcSummary(session, castMemberId),
     };
 }
 

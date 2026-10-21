@@ -10,7 +10,7 @@ Commands
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Import, list, update, and select retained files
-  cast                 Author cast facts and Cast Design documents
+  cast                 Author cast facts, Cast Design documents and character arcs
   director context     Show director readiness for the current movie project
   location             Author location facts and generate 3D Worlds
   prop                 Author Prop facts

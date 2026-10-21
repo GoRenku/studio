@@ -1,3 +1,4 @@
+import type { CharacterArcDocument } from '../character-arcs/model.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { CastMember } from '../cast-members.js';
 import type { Location } from '../locations.js';
@@ -153,7 +154,10 @@ export interface ScreenplayAnalysisContextReport extends ScreenplayAnalysisComma
     scenes: Array<Pick<Scene, 'id' | 'productionNumber' | 'heading' | 'title' | 'blocks'>>;
     references: ScreenplayReference[];
   };
-  cast: Array<Pick<CastMember, 'id' | 'handle' | 'name' | 'role' | 'isVoiceOver' | 'age' | 'want' | 'need' | 'arc' | 'description'>>;
+  cast: Array<Pick<CastMember, 'id' | 'handle' | 'name' | 'role' | 'isVoiceOver' | 'age' | 'want' | 'need' | 'arc' | 'description'> & {
+    /** The current character arc, so a re-analysis can see what exists. */
+    characterArc: CharacterArcDocument | null;
+  }>;
   locations: Array<Pick<Location, 'id' | 'handle' | 'name' | 'timePeriod' | 'description'>>;
   props: Array<Pick<Prop, 'id' | 'handle' | 'name' | 'description'>>;
   defaultCriteria: ScreenplayAnalysisCriterion[];

@@ -60,6 +60,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'readSceneDesignResource'
   | 'readCastOverviewResource'
   | 'readCastMemberResource'
+  | 'readCastMemberCharacterArcResource'
   | 'updateCastMemberVoiceOverStatus'
   | 'readLocationOverviewResource'
   | 'readLocationResource'

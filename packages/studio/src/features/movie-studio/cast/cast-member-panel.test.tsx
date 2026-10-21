@@ -46,6 +46,7 @@ vi.mock('@/services/studio-project-assets-api', () => ({
 
 vi.mock('@/services/studio-continuity-api', () => ({
   readCastMemberResource: vi.fn(),
+  readCastMemberCharacterArc: vi.fn(),
 }));
 
 describe('CastMemberPanel', () => {
@@ -90,7 +91,7 @@ describe('CastMemberPanel', () => {
     });
 
     render(
-      <CastMemberPanel
+      <CastMemberPanel onSelect={vi.fn()}
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -127,7 +128,7 @@ describe('CastMemberPanel', () => {
     );
 
     render(
-      <CastMemberPanel
+      <CastMemberPanel onSelect={vi.fn()}
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -154,7 +155,7 @@ describe('CastMemberPanel', () => {
     );
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([], null));
 
-    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
 
     expect(await screen.findByText('A young survivor.')).toBeTruthy();
     expect(
@@ -172,13 +173,36 @@ describe('CastMemberPanel', () => {
     );
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([], null));
 
-    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
 
     expect(
       await screen.findByText('Want · Need · Arc · Description · Voice notes')
     ).toBeTruthy();
     expect(screen.queryByText('No profile image yet')).toBeNull();
     expect(screen.getByRole('switch', { name: 'Voice-over only' })).toBeTruthy();
+  });
+
+  it('shows the Arc tab between Details and Assets only when the Cast Member has an arc', async () => {
+    vi.mocked(readCastMemberResource).mockResolvedValue({
+      ...castMemberResource(),
+      characterArc: { kind: 'own' },
+    });
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
+
+    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+
+    await screen.findByRole('tab', { name: 'Arc' });
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Details', 'Arc', 'Assets']);
+  });
+
+  it('has no Arc tab without an arc', async () => {
+    vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
+
+    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+
+    await screen.findByRole('tab', { name: 'Assets' });
+    expect(screen.queryByRole('tab', { name: 'Arc' })).toBeNull();
   });
 
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {
@@ -191,7 +215,7 @@ describe('CastMemberPanel', () => {
     );
 
     render(
-      <CastMemberPanel
+      <CastMemberPanel onSelect={vi.fn()}
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -216,7 +240,7 @@ describe('CastMemberPanel', () => {
     );
 
     render(
-      <CastMemberPanel
+      <CastMemberPanel onSelect={vi.fn()}
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -247,7 +271,7 @@ describe('CastMemberPanel', () => {
     });
 
     render(
-      <CastMemberPanel
+      <CastMemberPanel onSelect={vi.fn()}
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -303,6 +327,7 @@ function castMemberResource(
       ...castMemberOverrides,
     },
     voices,
+    characterArc: null,
   };
 }
 

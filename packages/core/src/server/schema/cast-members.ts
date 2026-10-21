@@ -14,6 +14,7 @@ export const castMembers = sqliteTable(
     arc: text('arc'),
     voiceNotes: text('voice_notes'),
     description: text('description'),
+    characterArc: text('character_arc'),
     position: integer('position').notNull(),
   },
   (table) => [

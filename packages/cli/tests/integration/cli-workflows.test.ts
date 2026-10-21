@@ -474,6 +474,90 @@ describe('renku CLI', () => {
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({ id: castMemberId, description });
   });
 
+  it('prints the character arc schema, then validates, writes, lists and shows arcs', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+    expect(
+      await runRenkuCli(['project', 'open', 'constantinople', '--json'], { homeDir, io: captureIo(stdout, stderr) })
+    ).toBe(0);
+    const facts = await seedCliFacts();
+    const screenplayPath = path.join(homeDir, 'screenplay-arc.json');
+    await fs.writeFile(screenplayPath, JSON.stringify(threeActScreenplayJson(facts), null, 2), 'utf8');
+    expect(
+      await runRenkuCli(['screenplay', 'create', '--file', screenplayPath, '--json'], { homeDir, io: captureIo(stdout, stderr) })
+    ).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli(['cast', 'arc', 'schema', '--json'], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      writeDocument: { $id: 'https://schemas.gorenku.com/studio/character-arcs-write.schema.json' },
+      characterArc: { $id: 'https://schemas.gorenku.com/studio/character-arc.schema.json' },
+    });
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli(['screenplay', 'analyze', 'context', '--json'], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    const context = JSON.parse(stdout.join('\n'));
+    const sceneIds = (context.screenplay.scenes as Array<{ id: string }>).map((scene) => scene.id);
+    expect(context.cast).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: facts.castMemberId, characterArc: null }),
+    ]));
+
+    const arcsPath = path.join(homeDir, 'character-arcs.json');
+    await fs.writeFile(arcsPath, JSON.stringify({
+      kind: 'characterArcs',
+      arcs: [{
+        castMemberId: facts.castMemberId,
+        arc: {
+          kind: 'characterArc',
+          arcType: 'flat',
+          startState: 'Certain his cannon can break any wall.',
+          endState: 'Still certain; the empire around him changes.',
+          ends: { high: 'Certain', low: 'Doubting' },
+          spine: {
+            want: { text: 'A patron for the cannon.', sceneIds: [sceneIds[0]] },
+            truthHeld: { text: 'Bronze outlasts walls.', sceneIds: [sceneIds[0]] },
+          },
+          turningPoints: [
+            { sceneIds: [sceneIds[0]], label: 'Rejected', state: 'Undeterred.', position: 3 },
+            { sceneIds: [sceneIds[sceneIds.length - 1]], label: 'The breach', state: 'Vindicated.', position: 5 },
+          ],
+        },
+      }],
+    }), 'utf8');
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli(['cast', 'arc', 'validate', '--file', arcsPath, '--json'], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true, arcCount: 1 });
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli(['cast', 'arc', 'write', '--file', arcsPath, '--json'], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      written: [facts.castMemberId],
+      cleared: [],
+      resourceKeys: expect.arrayContaining([`surface:castMember:${facts.castMemberId}`]),
+    });
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli(['cast', 'arc', 'list', '--json'], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    expect(JSON.parse(stdout.join('\n')).arcs).toEqual([
+      expect.objectContaining({ castMemberId: facts.castMemberId, kind: 'characterArc', arcType: 'flat', freshness: 'current' }),
+    ]);
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli(['cast', 'arc', 'show', '--cast', facts.castMemberId, '--json'], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({ castMemberId: facts.castMemberId, arc: { arcType: 'flat' } });
+  });
+
   it('validates, writes, lists, and activates Screenplay Analysis through the CLI', async () => {
     await initializeStorageRoot();
     const createExitCode = await createProject();

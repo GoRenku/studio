@@ -136,6 +136,7 @@ export type {
 } from './resources.js';
 export * from './screenplay-analysis/index.js';
 export * from './profile-descriptions/index.js';
+export * from './character-arcs/index.js';
 export {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,

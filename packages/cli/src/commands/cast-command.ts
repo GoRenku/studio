@@ -17,6 +17,7 @@ import {
   requiredFlag,
   writeJson,
 } from './command-io.js';
+import { runCastArcCommand } from './cast-arc-command.js';
 import { dispatchCliCommand } from './structured-command.js';
 import {
   appendStudioResourceChangedEvent,
@@ -97,6 +98,15 @@ export async function runCastCommand(options: {
     }
     writeJson(options.io, report);
     return 0;
+  }
+  if (subcommand === 'arc') {
+    return runCastArcCommand({
+      subcommand: nested,
+      flags: options.flags,
+      json: options.json,
+      io: options.io,
+      homeDir: options.homeDir,
+    });
   }
   if (subcommand === 'design') {
     if (nested === 'context') {
@@ -206,7 +216,7 @@ export async function runCastCommand(options: {
         'CLI101',
         'Unknown cast command.',
         { path: ['cast', subcommand ?? ''] },
-        'Use list, show, context, validate, apply, design, or voice.'
+        'Use list, show, context, validate, apply, arc, design, or voice.'
       ),
     ],
     suggestion: 'Use a supported cast command.',

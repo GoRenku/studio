@@ -7,6 +7,7 @@ import { createLookbookServiceWiring } from './project-data-service-wiring/lookb
 import { createNavigationServiceWiring } from './project-data-service-wiring/navigation.js';
 import { createProjectAdministrationServiceWiring } from './project-data-service-wiring/project-administration.js';
 import { createScreenplayServiceWiring } from './project-data-service-wiring/screenplay.js';
+import { createCharacterArcServiceWiring } from './project-data-service-wiring/character-arcs.js';
 import { createTrashServiceWiring } from './project-data-service-wiring/trash.js';
 import { createGenerationServiceWiring } from './project-data-service-wiring/generation.js';
 import { createShotPlanServiceWiring } from './project-data-service-wiring/shot-plans.js';
@@ -22,6 +23,7 @@ export function createProjectDataService() {
     ...createDepartmentDesignServiceWiring(),
     ...createDesignResourceServiceWiring(),
     ...createScreenplayServiceWiring(),
+    ...createCharacterArcServiceWiring(),
     ...createInspirationServiceWiring(),
     ...createLookbookServiceWiring(),
     ...createTrashServiceWiring(),

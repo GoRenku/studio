@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import { toast } from 'sonner';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type {
@@ -24,13 +25,15 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { CastMemberAssetFilesTab } from './cast-member-assets-tab';
 import { CastMemberDetailsTab } from './cast-member-details-tab';
+import { CastMemberArcTab } from './arc/cast-member-arc-tab';
 
 interface CastMemberPanelProps {
   projectName: string;
   castMemberId: string;
+  onSelect: (selection: StudioSelection) => void;
 }
 
-export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelProps) {
+export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMemberPanelProps) {
   const [resource, setResource] = useState<CastMemberResourceResponse | null>(null);
   const [assetFileCollection, setAssetFileCollection] =
     useState<StudioAssetFileCollection>({ items: [], selectedAssetFileId: null });
@@ -148,6 +151,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
       defaultValue='details'
       items={[
         { value: 'details', label: 'Details' },
+        ...(resource.characterArc ? [{ value: 'arc', label: 'Arc' }] : []),
         { value: 'assetFiles', label: 'Assets' },
       ]}
     >
@@ -160,6 +164,15 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           onVoiceOverChange={updateVoiceOver}
         />
       </LineTabsContent>
+      {resource.characterArc ? (
+        <LineTabsContent value='arc'>
+          <CastMemberArcTab
+            projectName={projectName}
+            castMemberId={castMemberId}
+            onOpenCastMember={(id) => onSelect({ type: 'castMember', id })}
+          />
+        </LineTabsContent>
+      ) : null}
       <LineTabsContent value='assetFiles'>
         <CastMemberAssetFilesTab
           projectName={projectName}
