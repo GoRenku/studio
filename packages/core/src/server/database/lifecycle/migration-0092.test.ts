@@ -33,16 +33,58 @@ describe('migration 0092 sectioned profile descriptions', () => {
     }
   });
 
-  it('stores missing and blank descriptions as NULL', async () => {
+  const subjects = [
+    { table: 'cast_member', parse: parseStoredCastMemberDescription },
+    { table: 'location', parse: parseStoredLocationDescription },
+    { table: 'prop', parse: parseStoredPropDescription },
+  ];
+  const whitespace = '\t\n\v\f\r \u00a0\u1680'
+    + '\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a'
+    + '\u2028\u2029\u202f\u205f\u3000\ufeff';
+
+  it.each(subjects)('stores missing and schema-blank $table descriptions as NULL', async ({ table, parse }) => {
     const sqlite = createDatabase();
     try {
-      sqlite.prepare('insert into cast_member values (?, ?)').run('cast_null', null);
-      sqlite.prepare('insert into cast_member values (?, ?)').run('cast_blank', '  \n ');
+      const descriptions = [null, '', ...whitespace, whitespace];
+      const insert = sqlite.prepare(`insert into ${table} values (?, ?)`);
+      descriptions.forEach((description, index) => {
+        insert.run(String(index), description);
+        if (description !== null) {
+          expect(() => parse(JSON.stringify({ overview: description }), String(index)))
+            .toThrow(expect.objectContaining({ code: 'PROFILE_DESCRIPTION_STORED_INVALID' }));
+        }
+      });
 
       runMigration(sqlite, await migrationSql());
 
-      expect(readDescription(sqlite, 'cast_member', 'cast_null')).toBeNull();
-      expect(readDescription(sqlite, 'cast_member', 'cast_blank')).toBeNull();
+      descriptions.forEach((_description, index) => {
+        const stored = readDescription(sqlite, table, String(index));
+        expect(stored).toBeNull();
+        expect(parse(stored, String(index))).toBeUndefined();
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(subjects)('preserves non-blank $table descriptions including surrounding whitespace', async ({ table, parse }) => {
+    const sqlite = createDatabase();
+    try {
+      const descriptions = [
+        `${whitespace}Authored text.\n\nAnother paragraph.${whitespace}`,
+        '\u0085',
+        '\u180e',
+        '\u200b',
+      ];
+      const insert = sqlite.prepare(`insert into ${table} values (?, ?)`);
+      descriptions.forEach((description, index) => insert.run(String(index), description));
+
+      runMigration(sqlite, await migrationSql());
+
+      descriptions.forEach((description, index) => {
+        expect(parse(readDescription(sqlite, table, String(index)), String(index)))
+          .toEqual({ overview: description });
+      });
     } finally {
       sqlite.close();
     }

@@ -319,7 +319,8 @@ migration. It changes no tables or columns:
 - It rewrites each non-blank `cast_member`, `location` and `prop`
   `description` to `json_object('overview', <existing text>)`, keeping the
   text word for word.
-- Blank or whitespace-only text becomes `NULL`.
+- Blank or whitespace-only text becomes `NULL`, using the full ECMAScript
+  whitespace set recognized by the description schema's `\S` pattern.
 - It never guesses sections from the existing text.
 - It sets `PRAGMA user_version = 74`, because runtime reads now require the
   sectioned shape.
