@@ -15,11 +15,6 @@ import type {
 } from '../../client/index.js';
 import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
-import { listAllInspirationFolderRecords } from '../database/access/inspiration-folders.js';
-import {
-  listLookbookRecords,
-  readLookbookRecordByKind,
-} from '../database/access/lookbook.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import {
   readActiveScreenplayAnalysisId,
@@ -30,14 +25,9 @@ import {
   readActiveSceneBeatsRevisionRecord,
   readSceneBeats,
 } from '../database/access/scene-beats.js';
-import {
-  readActiveCastDesignId,
-} from '../database/access/cast-designs.js';
-import {
-  readActiveLocationDesignId,
-} from '../database/access/location-designs.js';
-import { listPropRecords } from '../database/access/props.js';
-import { readActivePropDesignId } from '../database/access/prop-designs.js';
+import { readCastReadiness } from '../production-readiness/cast.js';
+import { readProductionDesignReadiness } from '../production-readiness/production-design.js';
+import { readVisualLanguageReadiness } from '../production-readiness/visual-language.js';
 import {
   withCurrentProjectSession,
   type CurrentProject,
@@ -150,127 +140,6 @@ function readScreenplayReadiness(
       blocks: screenplay.scenes.reduce((count, scene) => count + scene.blocks.length, 0),
       references: screenplay.references.length,
     },
-  };
-}
-
-function readVisualLanguageReadiness(
-  session: DatabaseSession
-): DirectorVisualLanguageReadiness {
-  const productionLookbookId = readLookbookRecordByKind(session, 'production')?.id ?? null;
-  const storyboardLookbookId = readLookbookRecordByKind(session, 'storyboard')?.id ?? null;
-  return {
-    inspirationFolderCount: listAllInspirationFolderRecords(session).length,
-    lookbookCount: listLookbookRecords(session).length,
-    productionLookbookId,
-    storyboardLookbookId,
-    productionLookbookReadyForGeneration: productionLookbookId !== null,
-    storyboardLookbookReadyForGeneration: storyboardLookbookId !== null,
-  };
-}
-
-function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
-  const visualCastMembers = listCastMemberRecords(session).filter(
-    (castMember) => !castMember.isVoiceOver
-  );
-  const missingVisualReferenceCastMemberIds: string[] = [];
-  const missingActiveCastDesignCastMemberIds: string[] = [];
-  let visualReferenceCount = 0;
-  let activeCastDesignCount = 0;
-
-  for (const castMember of visualCastMembers) {
-    if (readActiveCastDesignId(session, castMember.id)) {
-      activeCastDesignCount += 1;
-    } else {
-      missingActiveCastDesignCastMemberIds.push(castMember.id);
-    }
-    const assetFiles = listAssetFilePageInSession(session, {
-      owner: { kind: 'castMember', id: castMember.id },
-      limit: 200,
-    }).items.filter(
-      (assetFile) => assetFile.type === 'character_sheet' || assetFile.type === 'cast_profile'
-    );
-    visualReferenceCount += assetFiles.length;
-    if (assetFiles.length === 0) {
-      missingVisualReferenceCastMemberIds.push(castMember.id);
-    }
-  }
-
-  return {
-    castMemberCount: visualCastMembers.length,
-    activeCastDesignCount,
-    missingActiveCastDesignCastMemberIds,
-    visualReferenceCount,
-    missingVisualReferenceCastMemberIds,
-    everyCastMemberHasVisualReference:
-      visualCastMembers.length > 0 &&
-      missingVisualReferenceCastMemberIds.length === 0,
-  };
-}
-
-function readProductionDesignReadiness(
-  session: DatabaseSession
-): DirectorProductionDesignReadiness {
-  const locations = listLocationRecords(session);
-  const missingEnvironmentSheetLocationIds: string[] = [];
-  const missingActiveLocationDesignLocationIds: string[] = [];
-  let locationSheetCount = 0;
-  let activeLocationDesignCount = 0;
-  const props = listPropRecords(session);
-  const missingPropSheetPropIds: string[] = [];
-  const missingActivePropDesignPropIds: string[] = [];
-  let propSheetCount = 0;
-  let activePropDesignCount = 0;
-
-  for (const location of locations) {
-    if (readActiveLocationDesignId(session, location.id)) {
-      activeLocationDesignCount += 1;
-    } else {
-      missingActiveLocationDesignLocationIds.push(location.id);
-    }
-    const assetFiles = listAssetFilePageInSession(session, {
-      owner: { kind: 'location', id: location.id },
-      type: 'location_sheet',
-      limit: 200,
-    }).items;
-    locationSheetCount += assetFiles.length;
-    if (assetFiles.length === 0) {
-      missingEnvironmentSheetLocationIds.push(location.id);
-    }
-  }
-
-  for (const prop of props) {
-    if (readActivePropDesignId(session, prop.id)) {
-      activePropDesignCount += 1;
-    } else {
-      missingActivePropDesignPropIds.push(prop.id);
-    }
-    const assetFiles = listAssetFilePageInSession(session, {
-      owner: { kind: 'prop', id: prop.id },
-      type: 'prop_sheet',
-      limit: 200,
-    }).items;
-    propSheetCount += assetFiles.length;
-    if (assetFiles.length === 0) {
-      missingPropSheetPropIds.push(prop.id);
-    }
-  }
-
-  return {
-    locationCount: locations.length,
-    activeLocationDesignCount,
-    missingActiveLocationDesignLocationIds,
-    locationSheetCount,
-    missingEnvironmentSheetLocationIds,
-    everyLocationHasEnvironmentSheet:
-      locations.length > 0 &&
-      missingEnvironmentSheetLocationIds.length === 0,
-    propCount: props.length,
-    activePropDesignCount,
-    missingActivePropDesignPropIds,
-    propSheetCount,
-    missingPropSheetPropIds,
-    everyPropHasPropSheet:
-      props.length === 0 || missingPropSheetPropIds.length === 0,
   };
 }
 

@@ -1,7 +1,7 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, countDistinct, eq, isNull } from 'drizzle-orm';
 import type { ShotPlanCoverage } from '../../../../client/shot-plans.js';
 import { ProjectDataError } from '../../../project-data-error.js';
-import { shotPlans } from '../../../schema/index.js';
+import { scenes, shotPlans } from '../../../schema/index.js';
 import { serializeShotPlanCoverage } from '../../../shot-plans/validation.js';
 import type { DatabaseSession } from '../../lifecycle/store.js';
 
@@ -57,6 +57,25 @@ export function listSceneShotPlanRecords(
     .where(and(eq(shotPlans.sceneId, sceneId), isNull(shotPlans.discardedAt)))
     .orderBy(asc(shotPlans.createdAt), asc(shotPlans.id))
     .all();
+}
+
+export function countScenesWithShotPlans(session: DatabaseSession): number {
+  return session.db
+    .select({ value: countDistinct(shotPlans.sceneId) })
+    .from(shotPlans)
+    .innerJoin(scenes, eq(scenes.id, shotPlans.sceneId))
+    .where(isNull(shotPlans.discardedAt))
+    .get()?.value ?? 0;
+}
+
+export function listActiveShotPlanIds(session: DatabaseSession): string[] {
+  return session.db
+    .select({ id: shotPlans.id })
+    .from(shotPlans)
+    .innerJoin(scenes, eq(scenes.id, shotPlans.sceneId))
+    .where(isNull(shotPlans.discardedAt))
+    .all()
+    .map((row) => row.id);
 }
 
 export function insertShotPlanRecord(

@@ -13,12 +13,15 @@ vi.mock('./project-settings-panel', () => ({
 vi.mock('../project-covers/project-covers-tab', () => ({
   ProjectCoversTab: () => <div data-testid='project-covers'>Project Covers</div>,
 }));
+vi.mock('../production-path/production-path-tab', () => ({
+  ProductionPathTab: () => <div data-testid='production-path'>Production Path</div>,
+}));
 vi.mock('../supporting-files/supporting-files-tab', () => ({
   SupportingFilesTab: () => <div data-testid='supporting-files'>Supporting files</div>,
 }));
 
 describe('ProjectDetailsPanel', () => {
-  it('keeps form tabs mounted and lazy-mounts Covers after Settings', () => {
+  it('opens on the Overview and keeps form tabs mounted while lazy-mounting Covers', () => {
     render(
       <ProjectDetailsPanel
         project={project()}
@@ -27,13 +30,16 @@ describe('ProjectDetailsPanel', () => {
       />
     );
 
+    const overviewTab = screen.getByRole('tab', { name: 'Overview' });
     const projectInfoTab = screen.getByRole('tab', { name: 'Project Info' });
     const settingsTab = screen.getByRole('tab', { name: 'Settings' });
     const coversTab = screen.getByRole('tab', { name: 'Covers' });
     const supportingTab = screen.getByRole('tab', { name: 'Supporting Files' });
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Project Info', 'Settings', 'Covers', 'Supporting Files']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Overview', 'Project Info', 'Settings', 'Covers', 'Supporting Files']);
     expect(screen.queryByTestId('supporting-files')).toBeNull();
-    expect(projectInfoTab.getAttribute('aria-selected')).toBe('true');
+    expect(overviewTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('production-path')).toBeTruthy();
+    expect(projectInfoTab.getAttribute('aria-selected')).toBe('false');
     expect(screen.getByTestId('project-information')).toBeTruthy();
     expect(screen.getByTestId('project-settings')).toBeTruthy();
     expect(screen.queryByTestId('project-covers')).toBeNull();

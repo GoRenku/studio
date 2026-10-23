@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AgentPrompt } from './agent-prompt';
+import { AgentRequest } from '@/ui/agent-request';
 import { CreateProjectDialog } from './create-project-dialog';
 import { SampleFilmLeadStart, type SampleFilmStartController } from './sample-film-start';
 
@@ -42,13 +42,13 @@ export function ProjectLibraryStarts({
           title='Import a screenplay'
           description='Copy this request into your agent. It creates the project and imports the screenplay.'
         >
-          <AgentPrompt label='Screenplay import request' prompt={IMPORT_SCREENPLAY_PROMPT} />
+          <AgentRequest request={IMPORT_SCREENPLAY_PROMPT} />
         </SecondaryStart>
         <SecondaryStart
           title='Write a scene with your agent'
           description='Describe an idea; your agent creates the project and drafts a one-page scene.'
         >
-          <AgentPrompt label='Scene writing request' prompt={WRITE_SCENE_PROMPT} />
+          <AgentRequest request={WRITE_SCENE_PROMPT} />
         </SecondaryStart>
       </div>
     </div>

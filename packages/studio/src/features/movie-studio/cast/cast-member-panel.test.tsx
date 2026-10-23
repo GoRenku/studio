@@ -136,7 +136,7 @@ describe('CastMemberPanel', () => {
       />
     );
 
-    expect(await screen.findByText('Arc')).toBeTruthy();
+    expect(await screen.findByText('Learns to ask for help before the machine breaks him.')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Voice' })).toBeTruthy();
     expect(screen.queryByText('Visual Anchor')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Voice Design' })).toBeNull();
@@ -184,7 +184,7 @@ describe('CastMemberPanel', () => {
     expect(screen.getByRole('switch', { name: 'Voice-over only' })).toBeTruthy();
   });
 
-  it('shows the Arc tab between Details and Assets only when the Cast Member has an arc', async () => {
+  it('always shows the Arc tab between Details and Assets', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue({
       ...castMemberResource(),
       characterArc: { kind: 'own' },
@@ -197,29 +197,34 @@ describe('CastMemberPanel', () => {
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Details', 'Arc', 'Assets']);
   });
 
-  it('has no Arc tab without an arc', async () => {
-    vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
+  it.each([
+    [false, 'Analyze my screenplay and write arcs for the main characters.'],
+    [true, 'Write a character arc for Urban.'],
+  ] as const)('asks for the arc when none is written (screenplay analyzed: %s)', async (screenplayAnalyzed, request) => {
+    vi.mocked(readCastMemberResource).mockResolvedValue({
+      ...castMemberResource(),
+      characterArc: { kind: 'notWritten', screenplayAnalyzed },
+    });
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
 
     render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    activateTab(await screen.findByRole('tab', { name: 'Arc' }));
 
-    await screen.findByRole('tab', { name: 'Assets' });
-    expect(screen.queryByRole('tab', { name: 'Arc' })).toBeNull();
+    expect(await screen.findByRole('heading', { name: "Urban's arc isn't written yet" })).toBeTruthy();
+    expect(screen.getByText(request)).toBeTruthy();
+    expect(readCastMemberCharacterArc).not.toHaveBeenCalled();
   });
 
-  it.each(['Arc', 'Assets'] as const)('handles an arc being cleared while viewing %s', async (selectedTab) => {
+  it('keeps the Arc tab and shows its empty state when the arc is cleared while viewing it', async () => {
     const withArc: CastMemberResourceResponse = { ...castMemberResource(), characterArc: { kind: 'own' } };
     vi.mocked(readCastMemberResource)
       .mockResolvedValueOnce(withArc)
-      .mockResolvedValueOnce(castMemberResource())
-      .mockResolvedValueOnce(withArc);
+      .mockResolvedValueOnce(castMemberResource());
     vi.mocked(readCastMemberCharacterArc).mockResolvedValue(characterArcResource());
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
     render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
-    activateTab(await screen.findByRole('tab', { name: selectedTab }));
-    if (selectedTab === 'Arc') {
-      await screen.findByRole('heading', { name: 'Ada' });
-    }
+    activateTab(await screen.findByRole('tab', { name: 'Arc' }));
+    await screen.findByRole('heading', { name: 'Ada' });
 
     act(() => {
       window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
@@ -227,22 +232,8 @@ describe('CastMemberPanel', () => {
       }));
     });
 
-    const expectedTab = selectedTab === 'Arc' ? 'Details' : 'Assets';
-    await waitFor(() => expect(screen.queryByRole('tab', { name: 'Arc' })).toBeNull());
-    expect(screen.getByRole('tab', { name: expectedTab }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('tabpanel')).toBeTruthy();
-    if (selectedTab === 'Arc') {
-      expect(screen.getByText('An engineer under pressure.')).toBeTruthy();
-    }
-
-    act(() => {
-      window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
-        detail: { projectName: 'constantinople', resourceKeys: ['surface:castMember:cast_urban'] },
-      }));
-    });
-
-    await screen.findByRole('tab', { name: 'Arc' });
-    expect(screen.getByRole('tab', { name: expectedTab }).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByRole('heading', { name: "Urban's arc isn't written yet" })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Arc' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {
@@ -367,7 +358,7 @@ function castMemberResource(
       ...castMemberOverrides,
     },
     voices,
-    characterArc: null,
+    characterArc: { kind: 'notWritten', screenplayAnalyzed: false },
   };
 }
 

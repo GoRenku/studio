@@ -35,6 +35,7 @@ describe('ScreenplayBeatGallery', () => {
     const { container } = render(
       <ScreenplayBeatGallery
         projectName='constantinople'
+        sceneCount={1}
         onSelect={onSelect}
       />
     );
@@ -59,6 +60,7 @@ describe('ScreenplayBeatGallery', () => {
     render(
       <ScreenplayBeatGallery
         projectName='constantinople'
+        sceneCount={1}
         onSelect={onSelect}
       />
     );
@@ -74,6 +76,23 @@ describe('ScreenplayBeatGallery', () => {
       })
     ).not.toBeNull();
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [0, 'No screenplay yet', 'Import the Final Draft screenplay at '],
+    [12, 'No storyboards yet', 'Design beats for every scene and draw a storyboard frame for each.'],
+  ] as const)('asks for the next request when there are no beat images (%s scenes)', async (sceneCount, title, request) => {
+    vi.mocked(readScreenplayBeatGalleryResource).mockResolvedValue({ ...galleryResource(), scenes: [] });
+    render(
+      <ScreenplayBeatGallery
+        projectName='constantinople'
+        sceneCount={sceneCount}
+        onSelect={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByRole('heading', { name: title })).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && (element.textContent ?? '').startsWith(request))).toBeTruthy();
   });
 
   it('keeps the same asset open across reordering and closes when it disappears', async () => {
@@ -94,6 +113,7 @@ describe('ScreenplayBeatGallery', () => {
     render(
       <ScreenplayBeatGallery
         projectName='constantinople'
+        sceneCount={1}
         onSelect={vi.fn()}
       />
     );

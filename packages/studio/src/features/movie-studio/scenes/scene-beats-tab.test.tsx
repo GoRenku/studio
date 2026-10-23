@@ -45,12 +45,25 @@ describe('SceneBeatsTab', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('asks for this scene’s beats when it has none', async () => {
+    vi.mocked(readSceneBeatsResource).mockResolvedValue({
+      ...sceneBeatsResource(),
+      activeRevisionId: null,
+      activeRevision: null,
+    });
+    render(<SceneBeatsTab projectName='big-fish' sceneId='scene-3' sceneHeading='EXT. CAMPFIRE - NIGHT' />);
+
+    expect(await screen.findByRole('heading', { name: 'Break this scene into beats' })).not.toBeNull();
+    expect(screen.getByText('Design the beats for the scene “EXT. CAMPFIRE - NIGHT” and draw a storyboard frame for each.')).not.toBeNull();
+  });
+
   it('opens the shared large preview from the tab-owned inspect action', async () => {
     const onSelect = vi.fn();
     render(
       <SceneBeatsTab
         projectName='big-fish'
         sceneId='scene-3'
+        sceneHeading='EXT. CAMPFIRE - NIGHT'
         onSelect={onSelect}
       />
     );
@@ -73,6 +86,7 @@ function SelectionHarness({ onSelect }: { onSelect: ReturnType<typeof vi.fn> }) 
     <SceneBeatsTab
       projectName='big-fish'
       sceneId='scene-3'
+      sceneHeading='EXT. CAMPFIRE - NIGHT'
       beatId={beatId}
       onSelect={(selection) => {
         if (selection.type === 'scene') {

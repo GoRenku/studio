@@ -4,7 +4,10 @@ import type {
   ShotPlanVideoGenerationGroup,
 } from '../../client/shot-plan-video-generations.js';
 import { listAssetFilesInSession } from '../asset-files/projection.js';
-import { listSceneShotPlanRecords } from '../database/access/shot-plans/plan-records.js';
+import {
+  listActiveShotPlanIds,
+  listSceneShotPlanRecords,
+} from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { trashItems } from '../schema/index.js';
 import { studioSceneVideoGenerationsResourceKey } from '../studio-coordination/resource-keys.js';
@@ -53,6 +56,19 @@ export function projectSceneShotPlanVideoGenerations(
     groups,
     resourceKeys: [studioSceneVideoGenerationsResourceKey(sceneId)],
   };
+}
+
+/** How many active Shot Plans have at least one generated video. */
+export function readShotPlanVideoCoverage(
+  session: DatabaseSession,
+): { shotPlansWithVideo: number; shotPlans: number } {
+  const activePlanIds = new Set(listActiveShotPlanIds(session));
+  const plansWithVideo = new Set(
+    listProjectVideos(session)
+      .map((assetFile) => assetFile.authoredFrom?.id)
+      .filter((shotPlanId): shotPlanId is string => Boolean(shotPlanId && activePlanIds.has(shotPlanId)))
+  );
+  return { shotPlansWithVideo: plansWithVideo.size, shotPlans: activePlanIds.size };
 }
 
 function listProjectVideos(session: DatabaseSession) {

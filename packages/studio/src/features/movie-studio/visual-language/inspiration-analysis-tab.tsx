@@ -1,5 +1,7 @@
 import type { InspirationFolderResource } from '@gorenku/studio-core/client';
-import { EmptyState } from './empty-state';
+import { ScanSearch } from 'lucide-react';
+import { PanelEmptyState } from '@/ui/panel-empty-state';
+import { inspirationAnalysisRequest } from '../agent-request-copy';
 import { VisualLanguageReport } from './visual-language-report';
 
 interface InspirationAnalysisTabProps {
@@ -11,8 +13,24 @@ export function InspirationAnalysisTab({
   projectName,
   resource,
 }: InspirationAnalysisTabProps) {
+  if (!resource.analysis && resource.images.length === 0) {
+    return (
+      <PanelEmptyState
+        icon={ScanSearch}
+        title='Not analyzed yet'
+        description='Add reference images under Grabs first. Your agent can then describe their palette, light and composition.'
+      />
+    );
+  }
   if (!resource.analysis) {
-    return <EmptyState title='Use the Renku skill to analyze this folder.' />;
+    return (
+      <PanelEmptyState
+        icon={ScanSearch}
+        title='Not analyzed yet'
+        description='Your agent can study these images and describe their palette, light, composition and mood.'
+        request={inspirationAnalysisRequest(resource.folder.name)}
+      />
+    );
   }
   return (
     <VisualLanguageReport

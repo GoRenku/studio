@@ -1,4 +1,5 @@
 import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
+import { AgentRequestHint } from '@/ui/agent-request';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 import {
@@ -18,6 +19,8 @@ interface ContinuityImageAssetFilesTabProps {
   canonicalPluralTitle: string;
   sheetTitle: string;
   sheetPluralTitle: string;
+  /** Offered when the tab has no images at all. */
+  emptyRequest: string;
   onToggleCanonical: (assetFile: StudioAssetFileResponse) => Promise<void>;
   onDeleteAssetFile: (assetFile: StudioAssetFileResponse) => Promise<void>;
 }
@@ -32,6 +35,7 @@ export function ContinuityImageAssetFilesTab({
   canonicalPluralTitle,
   sheetTitle,
   sheetPluralTitle,
+  emptyRequest,
   onToggleCanonical,
   onDeleteAssetFile,
 }: ContinuityImageAssetFilesTabProps) {
@@ -124,6 +128,9 @@ export function ContinuityImageAssetFilesTab({
   return (
     <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
       <div className='space-y-8'>
+        {canonicalAssetFiles.length === 0 && sheetAssetFiles.length === 0 ? (
+          <AgentRequestHint request={emptyRequest} />
+        ) : null}
         <MediaCollectionSection
           title={canonicalPluralTitle}
           emptyTitle={`No ${canonicalPluralTitle.toLowerCase()} yet.`}

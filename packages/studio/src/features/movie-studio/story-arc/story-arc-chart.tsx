@@ -30,6 +30,7 @@ import {
   type StoryArcActBand,
   type StoryArcScenePoint,
 } from './story-arc-chart-model';
+import { StoryArcEmptyState } from './story-arc-empty-state';
 import { StoryArcSceneAnalysisDialog } from './story-arc-scene-analysis-dialog';
 
 interface StoryArcChartProps {
@@ -84,14 +85,7 @@ export function StoryArcChart({ resource }: StoryArcChartProps) {
   );
 
   if (!resource.activeAnalysis) {
-    return (
-      <section className='rounded-(--radius-panel) border border-dashed border-border/60 bg-card/30 px-6 py-12 text-center'>
-        <p className='text-sm font-medium text-foreground'>No active screenplay analysis</p>
-        <p className='mt-2 text-sm text-muted-foreground'>
-          Analyze the screenplay to see its Act bands, key beats, and Scene cadence.
-        </p>
-      </section>
-    );
+    return <StoryArcEmptyState sceneCount={resource.scenes.length} />;
   }
 
   if (!view || !selectedCriterion) {
@@ -142,8 +136,6 @@ export function StoryArcChart({ resource }: StoryArcChartProps) {
                 sceneAnalysisById={sceneAnalysisById}
                 onSelectScene={setSelectedScene}
               />
-
-              {!model.hasAnalysis ? <EmptyAnalysisCallout /> : null}
             </div>
           </div>
 
@@ -810,18 +802,6 @@ function AnalysisSummary({ summary }: { summary: string }) {
         </p>
       </div>
     </section>
-  );
-}
-
-function EmptyAnalysisCallout() {
-  return (
-    <div className='absolute left-1/2 top-1/2 w-72 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border/60 bg-background/85 px-5 py-4 text-center shadow-md backdrop-blur-sm'>
-      <h4 className='text-sm font-semibold text-foreground'>No analysis yet</h4>
-      <p className='mt-1.5 text-xs leading-relaxed text-muted-foreground'>
-        The dashed line shows the ideal cadence. Ask the agent to analyze this
-        screenplay to compare.
-      </p>
-    </div>
   );
 }
 

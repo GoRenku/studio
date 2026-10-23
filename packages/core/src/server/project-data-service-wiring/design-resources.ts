@@ -11,6 +11,7 @@ import {
   readSceneNarrativeResource,
 } from '../resources/screenplay-ui.js';
 import { readStoryArcResource } from '../screenplay-analysis/story-arc-resource.js';
+import { readProductionPathResource } from '../production-path/resource.js';
 import {
   readSceneBeatsResource,
   readScreenplayBeatGalleryResource,
@@ -28,6 +29,7 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readPropOverviewResource'
   | 'readPropResource'
   | 'readStoryArcResource'
+  | 'readProductionPathResource'
   | 'readSceneNarrativeResource'
   | 'readSceneBeatsResource'
   | 'readScreenplayBeatGalleryResource'
@@ -42,6 +44,7 @@ export function createDesignResourceServiceWiring(): Pick<
     readPropOverviewResource,
     readPropResource,
     readStoryArcResource,
+    readProductionPathResource,
     readSceneNarrativeResource,
     readSceneBeatsResource,
     readScreenplayBeatGalleryResource,

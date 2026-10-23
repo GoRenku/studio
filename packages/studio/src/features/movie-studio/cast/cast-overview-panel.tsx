@@ -7,6 +7,7 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { ContinuityOverviewGrid } from '../continuity/continuity-overview-grid';
 import { useContinuityResource } from '../continuity/use-continuity-resource';
+import { CastOverviewEmptyState } from './cast-overview-empty-state';
 
 interface CastOverviewPanelProps {
   projectName: string;
@@ -34,6 +35,10 @@ export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelPr
   }
   if (!resource) {
     return <p className='text-sm text-muted-foreground'>Loading cast...</p>;
+  }
+
+  if (resource.cast.items.length === 0) {
+    return <CastOverviewEmptyState />;
   }
 
   return (

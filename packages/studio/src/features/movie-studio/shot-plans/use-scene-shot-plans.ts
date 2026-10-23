@@ -9,6 +9,7 @@ export function useSceneShotPlans(projectName: string, sceneId: string) {
   const [revision, setRevision] = useState(0);
 
   const reload = useCallback(() => {
+    setError(null);
     setRevision((current) => current + 1);
   }, []);
 

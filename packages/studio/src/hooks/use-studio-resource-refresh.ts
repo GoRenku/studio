@@ -240,3 +240,8 @@ export function matchesScreenplayBeatGalleryResource(
       resourceKey.startsWith('scene-beats:')
   );
 }
+
+/** The Production Path summarises the whole project, so any project change refreshes it. */
+export function matchesProductionPathResource(resourceKeys: string[]): boolean {
+  return resourceKeys.length > 0;
+}

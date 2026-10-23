@@ -240,7 +240,7 @@ export function fakeProjectDataService(): NonNullable<
       return { cast: makeProjectShell(project).navigation.cast };
     },
     async readCastMemberResource() {
-      return { castMember: fixtureCastMember, voices: [], characterArc: null };
+      return { castMember: fixtureCastMember, voices: [], characterArc: { kind: 'notWritten' as const, screenplayAnalyzed: false } };
     },
     async readCastMemberCharacterArcResource() {
       throw new Error('Character arc resource is not available in the fake project data service.');
@@ -271,6 +271,15 @@ export function fakeProjectDataService(): NonNullable<
           handle: 'prop-test',
           name: 'Prop',
         },
+      };
+    },
+    async readProductionPathResource() {
+      return {
+        stages: [
+          { id: 'screenplay' as const, status: 'complete' as const, progress: { done: 3, total: 3 } },
+          { id: 'screenplayAnalysis' as const, status: 'notStarted' as const, progress: null },
+        ],
+        nextStageId: 'screenplayAnalysis' as const,
       };
     },
     async readStoryArcResource() {

@@ -21,10 +21,12 @@ import {
 } from '@/services/studio-continuity-api';
 import {
   matchesCastMemberResource,
+  matchesStoryArcResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { CastMemberAssetFilesTab } from './cast-member-assets-tab';
 import { CastMemberDetailsTab } from './cast-member-details-tab';
+import { CastMemberArcEmptyState } from './arc/cast-member-arc-empty-state';
 import { CastMemberArcTab } from './arc/cast-member-arc-tab';
 
 interface CastMemberPanelProps {
@@ -77,7 +79,8 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
   useStudioResourceRefresh({
     projectName,
     matches: (resourceKeys) =>
-      matchesCastMemberResource(resourceKeys, castMemberId),
+      matchesCastMemberResource(resourceKeys, castMemberId) ||
+      matchesStoryArcResource(resourceKeys),
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
 
@@ -140,10 +143,6 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
     }
   };
 
-  if (selectedTab === 'arc' && resource && !resource.characterArc) {
-    setSelectedTab('details');
-  }
-
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -157,7 +156,7 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
       onValueChange={setSelectedTab}
       items={[
         { value: 'details', label: 'Details' },
-        ...(resource.characterArc ? [{ value: 'arc', label: 'Arc' }] : []),
+        { value: 'arc', label: 'Arc', pending: resource.characterArc.kind === 'notWritten' },
         { value: 'assetFiles', label: 'Assets' },
       ]}
     >
@@ -170,15 +169,20 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
           onVoiceOverChange={updateVoiceOver}
         />
       </LineTabsContent>
-      {resource.characterArc ? (
-        <LineTabsContent value='arc'>
+      <LineTabsContent value='arc' className='flex flex-col'>
+        {resource.characterArc.kind === 'notWritten' ? (
+          <CastMemberArcEmptyState
+            castMemberName={resource.castMember.name}
+            screenplayAnalyzed={resource.characterArc.screenplayAnalyzed}
+          />
+        ) : (
           <CastMemberArcTab
             projectName={projectName}
             castMemberId={castMemberId}
             onOpenCastMember={(id) => onSelect({ type: 'castMember', id })}
           />
-        </LineTabsContent>
-      ) : null}
+        )}
+      </LineTabsContent>
       <LineTabsContent value='assetFiles'>
         <CastMemberAssetFilesTab
           projectName={projectName}

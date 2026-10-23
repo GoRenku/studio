@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import { AudioLines } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { PanelEmptyState } from '@/ui/panel-empty-state';
 import { MediaCardAudioTake } from '@/ui/media-card/media-card-audio-take';
 import {
   clearShotPlanDialogueAudioTakeSelection,
@@ -13,6 +15,7 @@ import {
   type DialogueAudioRangeGroup,
 } from './shot-plan-dialogue-audio-groups';
 import { useShotPlanDialogueAudio } from './use-shot-plan-dialogue-audio';
+import { dialogueAudioRequest } from '../agent-request-copy';
 
 export function ShotPlanDialogueAudio(input: {
   projectName: string;
@@ -30,9 +33,13 @@ export function ShotPlanDialogueAudio(input: {
   if (!resource) return <p className='p-8 text-sm text-muted-foreground'>Loading audio...</p>;
   if (resource.takes.length === 0) {
     return (
-      <div className='flex h-full items-center justify-center p-8'>
-        <p className='text-sm text-muted-foreground'>No audio yet.</p>
-      </div>
+      <PanelEmptyState
+        className='h-full'
+        icon={AudioLines}
+        title='No dialogue audio yet'
+        description='Recorded dialogue for this shot plan appears here.'
+        request={dialogueAudioRequest}
+      />
     );
   }
   const groups = groupShotPlanDialogueAudio(resource);

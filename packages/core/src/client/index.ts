@@ -84,6 +84,7 @@ export type * from './scene-beats/index.js';
 export type * from './shot-plans.js';
 export type * from './shot-plan-assets.js';
 export type * from './shot-plan-video-generations.js';
+export type * from './production-path.js';
 export * from './shot-authoring.js';
 export {
   DEFAULT_PROJECT_LOCALE_TAG,

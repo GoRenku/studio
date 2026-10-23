@@ -114,6 +114,7 @@ export function PropPanel({
       <LineTabsContent value='assetFiles' className='min-h-0 flex-1'>
         <PropAssetFilesTab
           projectName={projectName}
+          propName={resource.prop.name}
           assetFiles={assetFiles.collection.items}
           selectedHeroAssetFileId={assetFiles.collection.selectedAssetFileId}
           onToggleHero={handleToggle}

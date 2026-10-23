@@ -538,6 +538,29 @@ Feature components are allowed only when they add real product meaning. A
 `CastAssetSection` that filters assets by role and wires Cast callbacks is a
 feature component. A component that only renames or restyles `MediaCard` is not.
 
+## Empty States
+
+Page-level empty states use `PanelEmptyState` from `src/ui/panel-empty-state.tsx`.
+It shows a title, one plain sentence, and the request that makes the missing
+work, rendered with `AgentRequest` from `src/ui/agent-request.tsx`.
+
+Rules:
+
+- Take request text from
+  `src/features/movie-studio/agent-request-copy.ts`; do not write request
+  strings inline in feature components.
+- Fill requests with names the page already shows, and mark the words the
+  user should edit with `[brackets]`.
+- Never parse, check or branch on request text.
+- On a page that already has content, use one `AgentRequestHint` instead of a
+  full empty state.
+- When a surface depends on earlier work, show a `StepChain` of the missing
+  steps and ask for the first one.
+- Keep a tab visible when its content is missing; mark it with
+  `LineTabsItem.pending` and show its empty state.
+
+See `../../decisions/0126-guide-empty-states-with-agent-requests.md`.
+
 ## Shared Media Card Contracts
 
 Use `src/ui/media-card` for the current included visual-card surfaces:

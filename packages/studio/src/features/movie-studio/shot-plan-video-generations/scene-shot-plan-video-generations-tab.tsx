@@ -6,15 +6,18 @@ import {
   AccordionTrigger,
 } from '@/ui/accordion';
 import { ShotPlanVideoGenerationGroup } from './shot-plan-video-generation-group';
+import { SceneVideoGenerationsEmptyState } from './scene-video-generations-empty-state';
 import { useSceneShotPlanVideoGenerations } from './use-scene-shot-plan-video-generations';
 import type { StudioSceneShotPlanVideoGenerations } from '@/services/studio-shot-plan-video-generations-contracts';
 
 export function SceneShotPlanVideoGenerationsTab({
   projectName,
   sceneId,
+  sceneHeading,
 }: {
   projectName: string;
   sceneId: string;
+  sceneHeading: string;
 }) {
   const { resource, error, loading, retry } =
     useSceneShotPlanVideoGenerations(projectName, sceneId);
@@ -38,9 +41,11 @@ export function SceneShotPlanVideoGenerationsTab({
   }
   if (!resource?.groups.length) {
     return (
-      <p className='p-6 text-sm text-muted-foreground'>
-        No generated videos yet.
-      </p>
+      <SceneVideoGenerationsEmptyState
+        projectName={projectName}
+        sceneId={sceneId}
+        sceneHeading={sceneHeading}
+      />
     );
   }
 

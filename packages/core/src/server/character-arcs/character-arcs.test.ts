@@ -80,6 +80,12 @@ describe('character arcs', () => {
     expect(report.cleared).toEqual([castIds.narrator]);
     await expect(projectData.readCharacterArc({ homeDir, castMemberId: castIds.narrator }))
       .rejects.toMatchObject({ code: 'CHARACTER_ARC_NOT_FOUND' });
+    const castResource = await projectData.readCastMemberResource({
+      homeDir,
+      projectName: 'constantinople',
+      castMemberId: castIds.narrator,
+    });
+    expect(castResource.characterArc).toEqual({ kind: 'notWritten', screenplayAnalyzed: false });
   });
 
   it.each(['validateCharacterArcs', 'writeCharacterArcs'] as const)('%s reports malformed documents before reading project references', async (command) => {

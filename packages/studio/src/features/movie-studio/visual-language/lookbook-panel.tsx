@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/ui/badge';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
+import { LookbookEmptyState } from './lookbook-empty-state';
 import { LookbookVisualContentTab } from './lookbook-visual-content-tab';
 import { VisualLanguageReport } from './visual-language-report';
 
@@ -82,11 +83,7 @@ export function LookbookPanel({
   }
 
   if (resource === null) {
-    return (
-      <EmptyState
-        title={`${kind === 'production' ? 'Production' : 'Storyboard'} Lookbook has not been authored.`}
-      />
-    );
+    return <LookbookEmptyState kind={kind} />;
   }
 
   return (

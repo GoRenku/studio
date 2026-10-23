@@ -123,6 +123,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
       <LineTabsContent value='visual'>
         <LocationVisualContentTab
           projectName={projectName}
+          locationName={resource.location.name}
           assetFiles={assetFiles.collection.items}
           selectedHeroAssetFileId={assetFiles.collection.selectedAssetFileId}
           onToggleHeroDisplay={toggleHeroDisplay}
@@ -132,6 +133,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
       <LineTabsContent value='world' className='h-full overflow-hidden'>
         <LocationWorldTab
           projectName={projectName}
+          locationName={resource.location.name}
           world={resource.selectedWorld}
         />
       </LineTabsContent>

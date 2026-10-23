@@ -365,6 +365,7 @@ export function MovieStudioScreen({
                     <Button variant='outline' onClick={fdxUpdate.show}>{fdxUpdate.status.state === 'pending' ? 'Screenplay update available' : 'External screenplay'}</Button>
                   ) : null}
                   projectName={project.project.projectName}
+                  sceneCount={project.project.counts.scenes}
                   onSelect={selectMovieStudioSurface}
                 />
               ) : (

@@ -10,6 +10,7 @@ import {
 import { ProjectInformationPanel } from '../project-information/project-information-panel';
 import { ProjectSettingsPanel } from './project-settings-panel';
 import { ProjectCoversTab } from '../project-covers/project-covers-tab';
+import { ProductionPathTab } from '../production-path/production-path-tab';
 import { SupportingFilesTab } from '../supporting-files/supporting-files-tab';
 
 interface ProjectDetailsPanelProps {
@@ -68,14 +69,21 @@ export function ProjectDetailsPanel({
 
   return (
     <LineTabs
-      defaultValue='project-info'
+      defaultValue='overview'
       items={[
+        { value: 'overview', label: 'Overview' },
         { value: 'project-info', label: 'Project Info' },
         { value: 'settings', label: 'Settings' },
         { value: 'covers', label: 'Covers' },
         { value: 'supporting-files', label: 'Supporting Files' },
       ]}
     >
+      <LineTabsContent value='overview' className='min-h-0 flex-1'>
+        <ProductionPathTab
+          projectName={project.project.projectName}
+          projectTitle={project.project.title}
+        />
+      </LineTabsContent>
       <LineTabsContent
         value='project-info'
         forceMount

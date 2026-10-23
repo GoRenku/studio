@@ -3,6 +3,7 @@ import type {
   CastMemberResourceResponse,
   StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
+import { AgentRequestHint } from '@/ui/agent-request';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import {
   continuityImageAspectRatio,
@@ -10,6 +11,7 @@ import {
   continuityImageUrl,
   continuityPreviewImage,
 } from '../continuity/continuity-image-assets';
+import { castMemberMediaRequest } from '../agent-request-copy';
 import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
 import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
@@ -46,6 +48,11 @@ export function CastMemberAssetFilesTab({
   return (
     <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
       <div className='space-y-8'>
+        {profileAssetFiles.length === 0 &&
+        characterSheetAssetFiles.length === 0 &&
+        resource.voices.length === 0 ? (
+          <AgentRequestHint request={castMemberMediaRequest(resource.castMember.name)} />
+        ) : null}
         <CastAssetFileSection
           title='Profile Images'
           roleLabel='profile image'

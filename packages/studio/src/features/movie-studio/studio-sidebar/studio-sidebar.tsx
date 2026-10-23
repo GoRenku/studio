@@ -282,7 +282,7 @@ export function StudioSidebar({
 
         <StudioSidebarSection
           title='Cast'
-          detail={`${project.project.counts.castMembers} members`}
+          detail={countDetail(project.project.counts.castMembers, 'members')}
           icon={<UsersRound className='h-4 w-4' />}
           active={selection.type === 'cast'}
           expanded={visibleExpandedSections.has('cast')}
@@ -310,7 +310,7 @@ export function StudioSidebar({
 
         <StudioSidebarSection
           title='Locations'
-          detail={`${project.project.counts.locations} locations`}
+          detail={countDetail(project.project.counts.locations, 'locations')}
           icon={<MapPin className='h-4 w-4' />}
           active={selection.type === 'locations'}
           expanded={visibleExpandedSections.has('locations')}
@@ -334,7 +334,7 @@ export function StudioSidebar({
 
         <StudioSidebarSection
           title='Props'
-          detail={`${project.project.counts.props} props`}
+          detail={countDetail(project.project.counts.props, 'props')}
           icon={<Package className='h-4 w-4' />}
           active={selection.type === 'props'}
           expanded={visibleExpandedSections.has('props')}
@@ -357,7 +357,7 @@ export function StudioSidebar({
 
         <StudioSidebarSection
           title='Screenplay'
-          detail={`${project.project.counts.scenes} scenes`}
+          detail={countDetail(project.project.counts.scenes, 'scenes')}
           icon={<Clapperboard className='h-4 w-4' />}
           active={selection.type === 'screenplay'}
           expanded={visibleExpandedSections.has('screenplay')}
@@ -496,4 +496,9 @@ function ProjectCard({
       </span>
     </Button>
   );
+}
+
+/** An empty section reads "Not started" so it looks like work waiting, not a dead end. */
+function countDetail(count: number, noun: string): string {
+  return count === 0 ? 'Not started' : `${count} ${noun}`;
 }

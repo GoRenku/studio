@@ -226,6 +226,7 @@ export function ScenePanel({
           <SceneShotPlanVideoGenerationsTab
             projectName={projectName}
             sceneId={sceneId}
+            sceneHeading={resource.scene.heading}
           />
         ) : null}
       </LineTabsContent>
@@ -237,6 +238,7 @@ export function ScenePanel({
           <SceneBeatsTab
             projectName={projectName}
             sceneId={sceneId}
+            sceneHeading={resource.scene.heading}
             beatId={beatId}
             onSelect={onSelect}
             onHeaderActionChange={setTabBarAction}
@@ -262,6 +264,7 @@ export function ScenePanel({
             <SceneShotPlansTab
               projectName={projectName}
               sceneId={sceneId}
+              sceneHeading={resource.scene.heading}
               onSelect={onSelect}
               onPlanActivate={handlePlanActivate}
               restoreFocusPlanId={restoreFocusPlanId}

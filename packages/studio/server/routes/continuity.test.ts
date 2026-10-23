@@ -39,7 +39,7 @@ describe('continuity Hono route', () => {
           },
           firstImage,
           voices: [],
-          characterArc: null,
+          characterArc: { kind: 'notWritten' as const, screenplayAnalyzed: false },
         };
       },
       async readLocationResource() {

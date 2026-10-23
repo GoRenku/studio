@@ -82,6 +82,9 @@ A Cast Member has an arc when their arc column holds either:
 Studio has no separate "main character" flag; the skill decides who gets an
 arc. The Arc tab appears exactly when the Cast Member has one of the two.
 
+Plan 0241 changed this on 2026-10-22: the Arc tab now always shows, with an
+empty state that asks for the arc when none exists.
+
 ### Arc tab
 
 - **Header:**

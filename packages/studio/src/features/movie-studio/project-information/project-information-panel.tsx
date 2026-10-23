@@ -21,6 +21,7 @@ import {
   matchesProjectInformationResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
+import { AgentRequestHint } from '@/ui/agent-request';
 import { Input } from '@/ui/input';
 import {
   Select,
@@ -40,6 +41,7 @@ import {
   type ProjectInformationDraft,
   type ProjectInformationDraftResource,
 } from './project-information-draft';
+import { projectInformationRequest } from '../agent-request-copy';
 
 const ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16', '21:9'] as const;
 
@@ -220,6 +222,12 @@ export function ProjectInformationPanel({
               </Select>
             </Field>
           </div>
+
+          {!projectDraft.logline.trim() &&
+          !projectDraft.synopsis.trim() &&
+          !projectDraft.premise.trim() ? (
+            <AgentRequestHint request={projectInformationRequest} />
+          ) : null}
 
           <Field label='Logline'>
             <Textarea

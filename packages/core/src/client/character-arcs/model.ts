@@ -129,7 +129,8 @@ export interface CharacterArcReadReport extends CharacterArcReportBase {
 export type CastMemberCharacterArcSummary =
   | { kind: 'own' }
   | { kind: 'shared'; ownerCastMemberId: CastMemberId; ownerName: string }
-  | null;
+  /** No arc yet; `screenplayAnalyzed` says whether a Screenplay Analysis already exists. */
+  | { kind: 'notWritten'; screenplayAnalyzed: boolean };
 
 export interface CastMemberCharacterArcResource {
   castMember: { id: CastMemberId; name: string; role?: string };

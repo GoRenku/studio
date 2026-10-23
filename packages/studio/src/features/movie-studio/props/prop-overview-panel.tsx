@@ -7,6 +7,7 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { ContinuityOverviewGrid } from '../continuity/continuity-overview-grid';
 import { useContinuityResource } from '../continuity/use-continuity-resource';
+import { PropOverviewEmptyState } from './prop-overview-empty-state';
 
 export function PropOverviewPanel({
   projectName,
@@ -33,6 +34,10 @@ export function PropOverviewPanel({
   if (error) return <p className='text-sm text-destructive'>{error}</p>;
   if (!resource) {
     return <p className='text-sm text-muted-foreground'>Loading props...</p>;
+  }
+
+  if (resource.props.items.length === 0) {
+    return <PropOverviewEmptyState />;
   }
 
   return (

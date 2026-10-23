@@ -6,6 +6,11 @@ import { SceneShotPlanVideoGenerationsTab } from './scene-shot-plan-video-genera
 
 const mocks = vi.hoisted(() => ({
   useSceneShotPlanVideoGenerations: vi.fn(),
+  useSceneShotPlans: vi.fn(),
+}));
+
+vi.mock('../shot-plans/use-scene-shot-plans', () => ({
+  useSceneShotPlans: mocks.useSceneShotPlans,
 }));
 
 vi.mock('./use-scene-shot-plan-video-generations', () => ({
@@ -53,6 +58,7 @@ describe('SceneShotPlanVideoGenerationsTab', () => {
       <SceneShotPlanVideoGenerationsTab
         projectName='constantinople'
         sceneId='scene_opening'
+        sceneHeading='EXT. HARBOR - DUSK'
       />,
     );
 
@@ -67,7 +73,10 @@ describe('SceneShotPlanVideoGenerationsTab', () => {
     expect(screen.getByText('Detached video')).toBeTruthy();
   });
 
-  it('keeps the empty state quiet', () => {
+  it.each([
+    [0, 'Video takes start from a shot plan', 'Plan the shots for “EXT. HARBOR - DUSK”, then generate video takes.'],
+    [1, 'No video takes yet', 'Generate video takes for the shots in “EXT. HARBOR - DUSK”.'],
+  ] as const)('asks for the next request when there are no videos (%s shot plans)', (shotPlanCount, title, request) => {
     mocks.useSceneShotPlanVideoGenerations.mockReturnValue({
       resource: {
         sceneId: 'scene_opening',
@@ -80,14 +89,25 @@ describe('SceneShotPlanVideoGenerationsTab', () => {
       loading: false,
       retry: vi.fn(),
     });
+    mocks.useSceneShotPlans.mockReturnValue({
+      resource: {
+        sceneId: 'scene_opening',
+        shotPlans: Array.from({ length: shotPlanCount }, (_, index) => ({ shotPlan: { id: `plan_${index}` } })),
+        warnings: [],
+      },
+      error: null,
+      reload: vi.fn(),
+    });
 
     render(
       <SceneShotPlanVideoGenerationsTab
         projectName='constantinople'
         sceneId='scene_opening'
+        sceneHeading='EXT. HARBOR - DUSK'
       />,
     );
 
-    expect(screen.getByText('No generated videos yet.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: title })).toBeTruthy();
+    expect(screen.getByText(request)).toBeTruthy();
   });
 });

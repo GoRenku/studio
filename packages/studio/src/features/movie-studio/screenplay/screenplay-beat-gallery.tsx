@@ -19,15 +19,18 @@ import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import { beatLabel } from '../scenes/scene-beat-labels';
 import { sceneDisplayLabel } from './scene-label';
+import { ScreenplayBeatGalleryEmptyState } from './screenplay-beat-gallery-empty-state';
 
 interface ScreenplayBeatGalleryProps {
   externalScreenplayAction?: ReactNode;
   projectName: string;
+  sceneCount: number;
   onSelect: (selection: StudioSelection) => void;
 }
 
 export function ScreenplayBeatGallery({
   projectName,
+  sceneCount,
   onSelect,
   externalScreenplayAction,
 }: ScreenplayBeatGalleryProps) {
@@ -109,11 +112,11 @@ export function ScreenplayBeatGallery({
   }
   if (!resource.scenes.length) {
     return (
-      <div className='flex h-full flex-col items-center justify-center gap-4 p-8'>
-        {externalScreenplayAction}
-        <p className='rounded-lg border border-dashed border-border/50 px-6 py-10 text-center text-sm text-muted-foreground'>
-          The Screenplay has no generated beat images yet.
-        </p>
+      <div className='flex h-full flex-col bg-panel-bg'>
+        {externalScreenplayAction && (
+          <div className='flex justify-end px-6 pt-5'>{externalScreenplayAction}</div>
+        )}
+        <ScreenplayBeatGalleryEmptyState hasScenes={sceneCount > 0} />
       </div>
     );
   }

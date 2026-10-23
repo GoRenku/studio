@@ -7,6 +7,8 @@ export interface LineTabsItem<Value extends string> {
   value: Value;
   label: ReactNode;
   disabled?: boolean;
+  /** Marks a tab whose content has not been made yet with a small hollow dot. */
+  pending?: boolean;
 }
 
 interface LineTabsProps<Value extends string>

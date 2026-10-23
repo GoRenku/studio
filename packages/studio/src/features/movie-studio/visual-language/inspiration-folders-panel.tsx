@@ -1,6 +1,7 @@
 import type { InspirationResource } from '@gorenku/studio-core/client';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
-import { EmptyState } from './empty-state';
+import { Images } from 'lucide-react';
+import { PanelEmptyState } from '@/ui/panel-empty-state';
 import { InspirationFolderCard } from './inspiration-folder-card';
 
 interface InspirationFoldersPanelProps {
@@ -17,7 +18,13 @@ export function InspirationFoldersPanel({
   onDeleteFolder,
 }: InspirationFoldersPanelProps) {
   if (!resource.folders.items.length) {
-    return <EmptyState title='Create an Inspiration folder to collect references.' />;
+    return (
+      <PanelEmptyState
+        icon={Images}
+        title='No inspiration yet'
+        description='Use New Folder to collect reference images, such as stills from a film or a photographer you admire. Your agent can then analyze them for your lookbooks.'
+      />
+    );
   }
 
   return (

@@ -8,6 +8,7 @@ import { ProjectDataError } from '../../project-data-error.js';
 import {
   sceneBeatsRevisions,
   sceneBeatsState,
+  scenes,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import type { ProjectIdGenerator } from '../../entity-ids.js';
@@ -158,6 +159,17 @@ export function readActiveSceneBeatsRevisionId(
     .from(sceneBeatsState)
     .where(eq(sceneBeatsState.sceneId, sceneId))
     .get()?.activeRevisionId ?? null;
+}
+
+export function countScenesWithActiveSceneBeats(session: DatabaseSession): number {
+  return session.db
+    .select({ revision: sceneBeatsRevisions })
+    .from(sceneBeatsState)
+    .innerJoin(scenes, eq(scenes.id, sceneBeatsState.sceneId))
+    .innerJoin(sceneBeatsRevisions, eq(sceneBeatsRevisions.id, sceneBeatsState.activeRevisionId))
+    .all()
+    .filter(({ revision }) => readSceneBeats({ row: revision }).beats.length > 0)
+    .length;
 }
 
 export function readActiveSceneBeatsRevisionRecord(

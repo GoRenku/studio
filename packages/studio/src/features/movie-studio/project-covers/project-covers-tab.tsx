@@ -8,12 +8,15 @@ import {
   selectProjectCoverAssetFile,
 } from '@/services/studio-project-assets-api';
 import { readProject } from '@/services/studio-projects-api';
+import { ImageIcon } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { PanelEmptyState } from '@/ui/panel-empty-state';
 import {
   matchesProjectCoversResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { useSelectableAssetFileCollection } from '@/hooks/use-selectable-asset-collection';
+import { projectCoverRequest } from '../agent-request-copy';
 import { ProjectCoverCards } from './project-cover-cards';
 
 export function ProjectCoversTab({
@@ -106,6 +109,18 @@ export function ProjectCoversTab({
           Retry
         </Button>
       </div>
+    );
+  }
+
+  if (collection.items.length === 0) {
+    return (
+      <PanelEmptyState
+        className='min-h-full bg-panel-bg'
+        icon={ImageIcon}
+        title='No cover yet'
+        description='The cover appears on this project’s card in the Project Library and at the top of the sidebar.'
+        request={projectCoverRequest}
+      />
     );
   }
 

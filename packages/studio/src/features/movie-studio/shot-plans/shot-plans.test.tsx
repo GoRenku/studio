@@ -24,6 +24,9 @@ import {
 } from '@/services/studio-shot-plans-api';
 
 vi.mock('./use-scene-shot-plans');
+vi.mock('../scenes/use-scene-has-beats', () => ({
+  useSceneHasBeats: vi.fn(() => ({ hasBeats: false, error: null, retry: vi.fn() })),
+}));
 vi.mock('./use-shot-image-candidates');
 vi.mock('@/services/studio-shot-plans-api', () => ({
   deleteStudioShotPlan: vi.fn(),
@@ -118,6 +121,7 @@ describe('Shot Plans feature', () => {
       <SceneShotPlansTab
         projectName='constantinople'
         sceneId='scene_one'
+        sceneHeading='INT. COUNCIL ROOM - DAY'
         onSelect={onSelect}
         onPlanActivate={vi.fn()}
       />
@@ -397,11 +401,12 @@ describe('Shot Plans feature', () => {
     await waitFor(() => expect(document.activeElement).toBe(secondTrigger));
   });
 
-  it('keeps collection loading, error retry, and empty states quiet', () => {
+  it('keeps collection loading and error retry quiet and asks for beats first when the scene has none', () => {
     const reload = vi.fn();
     const props = {
       projectName: 'constantinople',
       sceneId: 'scene_one',
+      sceneHeading: 'INT. COUNCIL ROOM - DAY',
       onSelect: vi.fn(),
       onPlanActivate: vi.fn(),
     };
@@ -428,7 +433,8 @@ describe('Shot Plans feature', () => {
       reload,
     });
     rerender(<SceneShotPlansTab {...props} />);
-    expect(screen.getByText('No Shot Plans for this Scene.')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Shot plans start from beats' })).not.toBeNull();
+    expect(screen.getByText('Design the beats for “INT. COUNCIL ROOM - DAY”, then plan its shots.')).not.toBeNull();
   });
 
   it('keeps candidate loading and error retry stable without an empty dialog', () => {

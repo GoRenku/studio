@@ -13,7 +13,7 @@ import {
   matchesSceneBeatsResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { SceneBeatsEmpty } from './scene-beats-empty';
+import { SceneBeatsEmptyState } from './scene-beats-empty-state';
 import { beatLabel } from './scene-beat-labels';
 import { Button } from '@/ui/button';
 import { BeatStoryboardImageCandidatesDialog } from './beat-storyboard-image-candidates-dialog';
@@ -21,6 +21,7 @@ import { BeatStoryboardImageCandidatesDialog } from './beat-storyboard-image-can
 interface SceneBeatsTabProps {
   projectName: string;
   sceneId: string;
+  sceneHeading: string;
   beatId?: string;
   onSelect?: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
@@ -30,6 +31,7 @@ interface SceneBeatsTabProps {
 export function SceneBeatsTab({
   projectName,
   sceneId,
+  sceneHeading,
   beatId,
   onSelect = () => {},
   onHeaderActionChange,
@@ -119,7 +121,7 @@ export function SceneBeatsTab({
     );
   }
   if (!resource.activeRevision || !beats.length) {
-    return <SceneBeatsEmpty />;
+    return <SceneBeatsEmptyState sceneHeading={sceneHeading} />;
   }
 
   return (

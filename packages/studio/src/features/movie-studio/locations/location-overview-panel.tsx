@@ -7,6 +7,7 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { ContinuityOverviewGrid } from '../continuity/continuity-overview-grid';
 import { useContinuityResource } from '../continuity/use-continuity-resource';
+import { LocationOverviewEmptyState } from './location-overview-empty-state';
 
 interface LocationOverviewPanelProps {
   projectName: string;
@@ -37,6 +38,10 @@ export function LocationOverviewPanel({
   }
   if (!resource) {
     return <p className='text-sm text-muted-foreground'>Loading locations...</p>;
+  }
+
+  if (resource.locations.items.length === 0) {
+    return <LocationOverviewEmptyState />;
   }
 
   return (

@@ -11,6 +11,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadCastMemberResourceInput } from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
+import { readActiveScreenplayAnalysisId } from '../screenplay-analysis/persistence.js';
 import { characterArcFreshness, characterArcFreshnessHelp } from './freshness.js';
 import {
   listCastMembersSharingCharacterArc,
@@ -56,22 +57,20 @@ export async function readCastMemberCharacterArcResource(
   }
 }
 
-/** Whether the Cast Member has an own or shared arc; decides if the Arc tab shows. */
+/** Whether the Cast Member has an own or shared arc, or why it has none yet. */
 export function readCastMemberCharacterArcSummary(
   session: DatabaseSession,
   castMemberId: string
 ): CastMemberCharacterArcSummary {
   const stored = readStoredCharacterArc(session, castMemberId);
-  if (!stored) {
-    return null;
-  }
-  if (stored.arc.kind === 'characterArc') {
+  if (stored?.arc.kind === 'characterArc') {
     return { kind: 'own' };
   }
-  const owner = readStoredCharacterArc(session, stored.arc.castMemberId);
-  return owner?.arc.kind === 'characterArc'
-    ? { kind: 'shared', ownerCastMemberId: owner.castMemberId, ownerName: owner.name }
-    : null;
+  const owner = stored ? readStoredCharacterArc(session, stored.arc.castMemberId) : null;
+  if (owner?.arc.kind === 'characterArc') {
+    return { kind: 'shared', ownerCastMemberId: owner.castMemberId, ownerName: owner.name };
+  }
+  return { kind: 'notWritten', screenplayAnalyzed: readActiveScreenplayAnalysisId(session) !== null };
 }
 
 function readLooks(session: DatabaseSession, arc: CharacterArc): AssetFile[] {

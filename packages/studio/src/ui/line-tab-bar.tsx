@@ -5,6 +5,7 @@ interface LineTabBarItem<Value extends string> {
   value: Value;
   label: ReactNode;
   disabled?: boolean;
+  pending?: boolean;
 }
 
 interface LineTabBarProps<Value extends string> {
@@ -30,6 +31,12 @@ export function LineTabBar<Value extends string>({
           className='h-full flex-none rounded-none border-0 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] data-[state=active]:!bg-item-active-bg data-[state=active]:text-foreground after:!bottom-0 data-[state=active]:after:bg-primary disabled:cursor-not-allowed disabled:opacity-35'
         >
           {item.label}
+          {item.pending ? (
+            <span
+              aria-hidden='true'
+              className='ml-2 inline-block h-1.5 w-1.5 rounded-full border-[1.5px] border-muted-foreground'
+            />
+          ) : null}
         </TabsTrigger>
       ))}
       {trailing ? (

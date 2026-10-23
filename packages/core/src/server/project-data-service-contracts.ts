@@ -111,6 +111,7 @@ import type {
   ProjectShell,
   UpdateAssetFileInput,
   StoryArcResource,
+  ProductionPathResource,
   SceneBeatsResource,
   ScreenplayBeatGalleryResource,
   GarbageCollectionPreview,
@@ -243,6 +244,7 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   readPropOverviewResource(input: ListNavigationInput): Promise<PropOverviewResource>;
   readPropResource(input: ReadPropResourceInput): Promise<PropResource>;
   readStoryArcResource(input: ReadProjectInput): Promise<StoryArcResource>;
+  readProductionPathResource(input: ReadProjectInput): Promise<ProductionPathResource>;
   readCastMemberCharacterArcResource(
     input: ReadCastMemberResourceInput
   ): Promise<CastMemberCharacterArcResource>;

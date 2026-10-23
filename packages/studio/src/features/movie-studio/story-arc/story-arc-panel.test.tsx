@@ -15,12 +15,20 @@ describe('StoryArcPanel', () => {
     vi.mocked(readStoryArcResource).mockReset();
   });
 
-  it('renders the intentional no-analysis state without Scene tag fallbacks', async () => {
+  it('asks for an analysis without Scene tag fallbacks when none exists', async () => {
     vi.mocked(readStoryArcResource).mockResolvedValue(storyArcResource(false));
     render(<StoryArcPanel projectName='basilica' />);
 
-    expect(await screen.findByText('No active screenplay analysis')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'See the shape of your story' })).toBeTruthy();
+    expect(screen.getByText('Analyze my screenplay.')).toBeTruthy();
     expect(screen.queryByText('Hook')).toBeNull();
+  });
+
+  it('asks for a screenplay first when there are no scenes to analyze', async () => {
+    vi.mocked(readStoryArcResource).mockResolvedValue({ ...storyArcResource(false), scenes: [] });
+    render(<StoryArcPanel projectName='basilica' />);
+
+    expect(await screen.findByRole('heading', { name: 'No screenplay to analyze yet' })).toBeTruthy();
   });
 
   it('refreshes the hierarchy-independent analysis resource', async () => {

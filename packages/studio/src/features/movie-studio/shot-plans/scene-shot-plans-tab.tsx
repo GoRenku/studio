@@ -8,12 +8,14 @@ import type {
   StudioShot,
   StudioShotPlanListItem,
 } from '@/services/studio-shot-plans-contracts';
+import { SceneShotPlansEmptyState } from './scene-shot-plans-empty-state';
 import { useSceneShotPlans } from './use-scene-shot-plans';
 import { formatProductionNumberForDisplay } from '@gorenku/studio-core/client';
 
 export function SceneShotPlansTab({
   projectName,
   sceneId,
+  sceneHeading,
   onSelect,
   onPlanActivate,
   restoreFocusPlanId,
@@ -21,6 +23,7 @@ export function SceneShotPlansTab({
 }: {
   projectName: string;
   sceneId: string;
+  sceneHeading: string;
   onSelect: (selection: StudioSelection) => void;
   onPlanActivate: (shotPlanId: string) => void;
   restoreFocusPlanId?: string | null;
@@ -63,9 +66,11 @@ export function SceneShotPlansTab({
   }
   if (resource.shotPlans.length === 0) {
     return (
-      <p className='p-8 text-sm text-muted-foreground'>
-        No Shot Plans for this Scene.
-      </p>
+      <SceneShotPlansEmptyState
+        projectName={projectName}
+        sceneId={sceneId}
+        sceneHeading={sceneHeading}
+      />
     );
   }
 
