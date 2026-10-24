@@ -1,6 +1,7 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { AssetFile } from './asset-files.js';
 import type { CastMember } from './cast-members.js';
+import type { CastCostume, CastingRound, CastLook } from './casting/model.js';
 import type { CastVoice } from './cast-voices.js';
 import type {
   CastDesignDocument,
@@ -82,6 +83,19 @@ export type MediaGenerationPropContext = {
   prop: Prop;
 } & MediaGenerationSubjectDetails<PropDesignDocument>;
 
+/** What a Cast Member wears in one scene, from the wardrobe plan. */
+export interface MediaGenerationSceneWardrobe {
+  look: { id: string; name: string };
+  costume: { id: string; name: string; wardrobe: string[]; continuityNotes: string[] } | null;
+  /** The Character Sheet picked for the costume. */
+  characterSheetAssetFileId: string | null;
+}
+
+export type MediaGenerationSceneCastContext = MediaGenerationCastContext & {
+  /** Null when the Cast Member has no Look covering this scene. */
+  wardrobe: MediaGenerationSceneWardrobe | null;
+};
+
 export interface MediaGenerationDialogueTurnContext {
   number: number;
   turnId: string;
@@ -96,7 +110,7 @@ export interface MediaGenerationSceneContext {
   contextText: string;
   sceneBeatsRevision: SceneBeatsRevision | null;
   selectedBeatIds: string[];
-  castMembers: MediaGenerationCastContext[];
+  castMembers: MediaGenerationSceneCastContext[];
   locations: MediaGenerationLocationContext[];
   props: MediaGenerationPropContext[];
   dialogueTurns: MediaGenerationDialogueTurnContext[];
@@ -112,6 +126,8 @@ export type MediaGenerationTargetContext =
       sourceInspirationFolders: InspirationFolderWithResolvedPath[];
     }
   | ({ kind: 'castMember'; scenes: Scene[]; voices: MediaGenerationCastVoice[] } & MediaGenerationCastContext)
+  | ({ kind: 'castingRound'; round: CastingRound; look: CastLook; looks: CastLook[]; scenes: Scene[] } & MediaGenerationCastContext)
+  | ({ kind: 'castCostume'; costume: CastCostume; look: CastLook; scenes: Scene[] } & MediaGenerationCastContext)
   | ({ kind: 'location'; scenes: Scene[] } & MediaGenerationLocationContext)
   | ({ kind: 'prop'; scenes: Scene[] } & MediaGenerationPropContext)
   | MediaGenerationSceneContext

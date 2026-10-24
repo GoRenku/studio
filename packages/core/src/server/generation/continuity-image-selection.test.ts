@@ -9,6 +9,7 @@ import { createSampleMovieProject, writeConfig } from '../testing/project-data-f
 describe('continuity image attachment selection', () => {
   const projectData = createProjectDataService();
   let project: { projectName: string; homeDir: string };
+  let costumeId: string;
 
   beforeEach(async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-continuity-selection-'));
@@ -31,12 +32,26 @@ describe('continuity image attachment selection', () => {
     });
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'image.png'), 'image');
+    const looks = await projectData.writeCastLooksPlan({
+      ...project,
+      document: { kind: 'castLooksPlan', castMemberId: 'cast_test0002', looks: [{ name: 'Main', sceneIds: [] }] },
+    });
+    const wardrobe = await projectData.writeCastWardrobePlan({
+      ...project,
+      document: {
+        kind: 'castWardrobePlan',
+        castMemberId: 'cast_test0002',
+        costumes: [{ name: 'Main', lookId: looks.looks[0]!.id, wardrobe: ['Dark robe'], continuityNotes: [], sceneIds: [] }],
+      },
+    });
+    costumeId = wardrobe.costumes[0]!.id;
   });
 
   const subjects = [
     {
       purpose: 'cast.profile',
       sheetPurpose: 'cast.character-sheet',
+      sheetTarget: () => ({ kind: 'castCostume' as const, id: costumeId }),
       owner: { kind: 'castMember', id: 'cast_test0002' },
       readResource: () => projectData.readCastMemberResource({ ...project, castMemberId: 'cast_test0002' }),
       readOverview: async () => (await projectData.readCastOverviewResource(project)).cast.items,
@@ -44,6 +59,7 @@ describe('continuity image attachment selection', () => {
     {
       purpose: 'location.hero',
       sheetPurpose: 'location.sheet',
+      sheetTarget: () => ({ kind: 'location' as const, id: 'location_test0001' }),
       owner: { kind: 'location', id: 'location_test0001' },
       readResource: () => projectData.readLocationResource({ ...project, locationId: 'location_test0001' }),
       readOverview: async () => (await projectData.readLocationOverviewResource(project)).locations.items,
@@ -51,6 +67,7 @@ describe('continuity image attachment selection', () => {
     {
       purpose: 'prop.hero',
       sheetPurpose: 'prop.sheet',
+      sheetTarget: () => ({ kind: 'prop' as const, id: 'prop_test0001' }),
       owner: { kind: 'prop', id: 'prop_test0001' },
       readResource: () => projectData.readPropResource({ ...project, propId: 'prop_test0001' }),
       readOverview: async () => (await projectData.readPropOverviewResource(project)).props.items,
@@ -79,7 +96,7 @@ describe('continuity image attachment selection', () => {
       await projectData.attachGenerationMedia({
         ...project,
         purpose: subject.sheetPurpose,
-        target: subject.owner,
+        target: subject.sheetTarget(),
         sourceProjectRelativePath: 'tmp/image.png',
       });
       expect((await projectData.listAssetFilePage({ ...project, owner: subject.owner })).selectedAssetFileId)

@@ -32,6 +32,7 @@ import { createShotPlanVideoGenerationsRoute } from './shot-plan-video-generatio
 import { createSceneStoryboardImagesRoute } from './scene-storyboard-images.js';
 import { createShotPlanDialogueAudioRoute } from './shot-plan-dialogue-audio.js';
 import { createCastVoicesRoute } from './cast-voices.js';
+import { createCastCastingRoute } from './cast-casting.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
@@ -62,6 +63,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'readCastOverviewResource'
   | 'readCastMemberResource'
   | 'readCastMemberCharacterArcResource'
+  | 'readCastCastingResource'
+  | 'setCastingCandidateStatus'
   | 'updateCastMemberVoiceOverStatus'
   | 'readLocationOverviewResource'
   | 'readLocationResource'
@@ -213,6 +216,7 @@ export function createProjectsRoute(
     .route('/:projectName', createAssetFilesRoute({ projectData, requireToken }))
     .route('/:projectName', createSupportingFilesRoute({ projectData, requireToken }))
     .route('/:projectName', createCastVoicesRoute({ projectData, requireToken }))
+    .route('/:projectName', createCastCastingRoute({ projectData, requireToken }))
     .route(
       '/:projectName',
       createGenerationPreviewRoute({ projectData, requireToken })

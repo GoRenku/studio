@@ -184,6 +184,11 @@ describe('Asset command', () => {
     });
   });
 
+  it('parses the Cast Look and Cast Costume selection targets', () => {
+    expect(parseSelectionTarget('look:cast_look_a')).toEqual({ kind: 'castLook', id: 'cast_look_a' });
+    expect(parseSelectionTarget('costume:cast_costume_a')).toEqual({ kind: 'castCostume', id: 'cast_costume_a' });
+  });
+
   it('parses the Project Cover selection target', () => {
     expect(parseSelectionTarget('project')).toEqual({ kind: 'project' });
   });

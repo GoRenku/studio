@@ -10,6 +10,9 @@
     "./codex-apps/image-edit.html": "./codex-apps-dist/codex-apps/image-edit.html",
     "./codex-apps/image-edit-target-chooser.html": "./codex-apps-dist/codex-apps/image-edit-target-chooser.html",
     "./codex-apps/route-chooser.html": "./codex-apps-dist/codex-apps/route-chooser.html",
+    "./codex-apps/casting-round.html": "./codex-apps-dist/codex-apps/casting-round.html",
+    "./codex-apps/casting-board.html": "./codex-apps-dist/codex-apps/casting-board.html",
+    "./codex-apps/casting-wardrobe.html": "./codex-apps-dist/codex-apps/casting-wardrobe.html",
     "./server": {
       "types": "./server-dist/index.d.ts",
       "import": "./server-dist/index.js"
@@ -23,7 +26,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && pnpm run build:server && vite build && pnpm run build:codex",
-    "build:codex": "pnpm run clean:codex && vite build --config vite.codex.config.ts --mode generation-review && vite build --config vite.codex.config.ts --mode dialogue-direction && vite build --config vite.codex.config.ts --mode image-edit && vite build --config vite.codex.config.ts --mode image-edit-target-chooser && vite build --config vite.codex.config.ts --mode route-chooser",
+    "build:codex": "pnpm run clean:codex && vite build --config vite.codex.config.ts --mode generation-review && vite build --config vite.codex.config.ts --mode dialogue-direction && vite build --config vite.codex.config.ts --mode image-edit && vite build --config vite.codex.config.ts --mode image-edit-target-chooser && vite build --config vite.codex.config.ts --mode route-chooser && vite build --config vite.codex.config.ts --mode casting-round && vite build --config vite.codex.config.ts --mode casting-board && vite build --config vite.codex.config.ts --mode casting-wardrobe",
     "clean:codex": "node -e \"require('node:fs').rmSync('codex-apps-dist', { recursive: true, force: true })\"",
     "clean:server": "node -e \"require('node:fs').rmSync('server-dist', { recursive: true, force: true })\"",
     "build:server": "pnpm run clean:server && tsc --project tsconfig.server.json",

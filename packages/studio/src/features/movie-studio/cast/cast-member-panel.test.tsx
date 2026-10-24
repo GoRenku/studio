@@ -15,6 +15,8 @@ import {
 import { readCastMemberCharacterArc, readCastMemberResource } from '@/services/studio-continuity-api';
 import { CastMemberPanel } from './cast-member-panel';
 import { characterArcResource } from './arc/character-arc-test-fixtures';
+import { readCastCasting } from '@/services/studio-cast-casting-api';
+import { castCastingResource } from './casting/casting-test-fixtures';
 import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
@@ -50,6 +52,10 @@ vi.mock('@/services/studio-continuity-api', () => ({
   readCastMemberCharacterArc: vi.fn(),
 }));
 
+vi.mock('@/services/studio-cast-casting-api', () => ({
+  readCastCasting: vi.fn(),
+}));
+
 describe('CastMemberPanel', () => {
   beforeEach(() => {
     vi.mocked(readCastAssetFiles).mockReset();
@@ -58,6 +64,7 @@ describe('CastMemberPanel', () => {
     vi.mocked(deleteCastVoice).mockReset();
     vi.mocked(readCastMemberResource).mockReset();
     vi.mocked(readCastMemberCharacterArc).mockReset();
+    vi.mocked(readCastCasting).mockReset();
     vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue();
     vi.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
   });
@@ -93,7 +100,7 @@ describe('CastMemberPanel', () => {
     });
 
     render(
-      <CastMemberPanel onSelect={vi.fn()}
+      <CastMemberPanel
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -130,7 +137,7 @@ describe('CastMemberPanel', () => {
     );
 
     render(
-      <CastMemberPanel onSelect={vi.fn()}
+      <CastMemberPanel
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -157,7 +164,7 @@ describe('CastMemberPanel', () => {
     );
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([], null));
 
-    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
 
     expect(await screen.findByText('A young survivor.')).toBeTruthy();
     expect(
@@ -175,7 +182,7 @@ describe('CastMemberPanel', () => {
     );
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([], null));
 
-    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
 
     expect(
       await screen.findByText('Want · Need · Arc · Description · Voice notes')
@@ -184,17 +191,31 @@ describe('CastMemberPanel', () => {
     expect(screen.getByRole('switch', { name: 'Voice-over only' })).toBeTruthy();
   });
 
-  it('always shows the Arc tab between Details and Assets', async () => {
+  it('always shows the Arc and Casting tabs between Details and Assets', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue({
       ...castMemberResource(),
       characterArc: { kind: 'own' },
     });
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
 
-    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
 
     await screen.findByRole('tab', { name: 'Arc' });
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Details', 'Arc', 'Assets']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Details', 'Arc', 'Casting', 'Assets']);
+  });
+
+  it('loads casting only when the Casting tab opens', async () => {
+    vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
+    vi.mocked(readCastCasting).mockResolvedValue(castCastingResource({ castMember: { id: 'cast_urban', name: 'Urban' }, looks: [] }));
+
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
+    const castingTab = await screen.findByRole('tab', { name: 'Casting' });
+    expect(readCastCasting).not.toHaveBeenCalled();
+    activateTab(castingTab);
+
+    expect(await screen.findByRole('heading', { name: "Urban isn't cast yet" })).toBeTruthy();
+    expect(readCastCasting).toHaveBeenCalledWith('constantinople', 'cast_urban');
   });
 
   it.each([
@@ -207,7 +228,7 @@ describe('CastMemberPanel', () => {
     });
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
 
-    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
     activateTab(await screen.findByRole('tab', { name: 'Arc' }));
 
     expect(await screen.findByRole('heading', { name: "Urban's arc isn't written yet" })).toBeTruthy();
@@ -222,7 +243,7 @@ describe('CastMemberPanel', () => {
       .mockResolvedValueOnce(castMemberResource());
     vi.mocked(readCastMemberCharacterArc).mockResolvedValue(characterArcResource());
     vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
-    render(<CastMemberPanel onSelect={vi.fn()} projectName='constantinople' castMemberId='cast_urban' />);
+    render(<CastMemberPanel projectName='constantinople' castMemberId='cast_urban' />);
     activateTab(await screen.findByRole('tab', { name: 'Arc' }));
     await screen.findByRole('heading', { name: 'Ada' });
 
@@ -246,7 +267,7 @@ describe('CastMemberPanel', () => {
     );
 
     render(
-      <CastMemberPanel onSelect={vi.fn()}
+      <CastMemberPanel
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -271,7 +292,7 @@ describe('CastMemberPanel', () => {
     );
 
     render(
-      <CastMemberPanel onSelect={vi.fn()}
+      <CastMemberPanel
         projectName='constantinople'
         castMemberId='cast_urban'
       />
@@ -302,7 +323,7 @@ describe('CastMemberPanel', () => {
     });
 
     render(
-      <CastMemberPanel onSelect={vi.fn()}
+      <CastMemberPanel
         projectName='constantinople'
         castMemberId='cast_urban'
       />

@@ -11,6 +11,7 @@ export type MediaPurpose =
   | 'lookbook.image'
   | 'lookbook.video-sheet'
   | 'lookbook.storyboard-sheet'
+  | 'cast.casting-candidate'
   | 'cast.character-sheet'
   | 'cast.profile'
   | 'cast.voice-sample'
@@ -27,6 +28,8 @@ export type MediaTarget =
   | { kind: 'assetFile'; assetFileId: string }
   | { kind: 'lookbook'; id: string }
   | { kind: 'castMember'; id: string }
+  | { kind: 'castingRound'; id: string }
+  | { kind: 'castCostume'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'prop'; id: string }
   | { kind: 'scene'; id: string }
@@ -46,7 +49,8 @@ export const MEDIA_PURPOSE_TARGET_KINDS = {
   'lookbook.image': 'lookbook',
   'lookbook.video-sheet': 'lookbook',
   'lookbook.storyboard-sheet': 'lookbook',
-  'cast.character-sheet': 'castMember',
+  'cast.casting-candidate': 'castingRound',
+  'cast.character-sheet': 'castCostume',
   'cast.profile': 'castMember',
   'cast.voice-sample': 'castMember',
   'shot-plan.dialogue-audio': 'shotPlan',
@@ -74,6 +78,7 @@ export const MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS: Record<
   'lookbook.image': 'image',
   'lookbook.video-sheet': 'image',
   'lookbook.storyboard-sheet': 'image',
+  'cast.casting-candidate': 'image',
   'cast.character-sheet': 'image',
   'cast.profile': 'image',
   'cast.voice-sample': 'audio',

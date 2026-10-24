@@ -36,7 +36,11 @@ export type AssetFileSelectionTarget =
   | { kind: 'prop'; id: string }
   | { kind: 'lookbook'; id: string }
   | { kind: 'shot'; id: string }
-  | { kind: 'sceneBeat'; sceneId: string; beatId: string };
+  | { kind: 'sceneBeat'; sceneId: string; beatId: string }
+  /** The Casting Candidate cast for a Cast Look. */
+  | { kind: 'castLook'; id: string }
+  /** The Character Sheet picked for a Cast Costume. */
+  | { kind: 'castCostume'; id: string };
 
 export interface AssetFileLocaleContext {
   localeId?: string | null;

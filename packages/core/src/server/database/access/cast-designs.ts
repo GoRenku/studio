@@ -125,10 +125,7 @@ export function toCastDesignSummary(input: {
       input.document.design.appearance.grooming,
       input.document.design.appearance.silhouette,
     ].filter(isString),
-    costume: [
-      ...input.document.design.costume.baseWardrobeLogic,
-      ...input.document.design.costume.variants.map((variant) => variant.label),
-    ],
+    costume: [...input.document.design.costume.baseWardrobeLogic],
     voiceCasting: input.document.design.voiceCasting?.voiceIdentity ?? null,
     generationGuidance: [
       ...input.document.design.generationGuidance.characterSheetPositive,

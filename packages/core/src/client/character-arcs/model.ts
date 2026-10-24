@@ -54,7 +54,7 @@ export interface CharacterArcTurningPoint {
   position: number;
   quote?: string;
   /** Character sheet that shows the character at this moment. */
-  lookAssetFileId?: string;
+  characterSheetAssetFileId?: string;
 }
 
 export interface CharacterArc {
@@ -67,17 +67,9 @@ export interface CharacterArc {
   turningPoints: CharacterArcTurningPoint[];
 }
 
-/** Points an age variant (for example a younger self) at another Cast Member's arc. */
-export interface CharacterArcReference {
-  kind: 'characterArcReference';
-  castMemberId: CastMemberId;
-}
-
-export type CharacterArcDocument = CharacterArc | CharacterArcReference;
-
 export interface CharacterArcsWriteDocument {
   kind: 'characterArcs';
-  arcs: Array<{ castMemberId: CastMemberId; arc: CharacterArcDocument }>;
+  arcs: Array<{ castMemberId: CastMemberId; arc: CharacterArc }>;
 }
 
 export type CharacterArcFreshness = 'current' | 'needsRefresh';
@@ -106,9 +98,7 @@ export interface CharacterArcsWriteReport extends CharacterArcReportBase {
 export interface CharacterArcListItem {
   castMemberId: CastMemberId;
   name: string;
-  kind: CharacterArcDocument['kind'];
-  arcType?: CharacterArcType;
-  sharedWithCastMemberId?: CastMemberId;
+  arcType: CharacterArcType;
   writtenAt: string;
   freshness: CharacterArcFreshness;
 }
@@ -119,7 +109,7 @@ export interface CharacterArcListReport extends CharacterArcReportBase {
 
 export interface CharacterArcReadReport extends CharacterArcReportBase {
   castMemberId: CastMemberId;
-  arc: CharacterArcDocument;
+  arc: CharacterArc;
   writtenAt: string;
   freshness: CharacterArcFreshness;
   freshnessHelp: string | null;
@@ -128,24 +118,21 @@ export interface CharacterArcReadReport extends CharacterArcReportBase {
 /** Whether a Cast Member has an arc, used to decide if the Arc tab shows. */
 export type CastMemberCharacterArcSummary =
   | { kind: 'own' }
-  | { kind: 'shared'; ownerCastMemberId: CastMemberId; ownerName: string }
   /** No arc yet; `screenplayAnalyzed` says whether a Screenplay Analysis already exists. */
   | { kind: 'notWritten'; screenplayAnalyzed: boolean };
 
 export interface CastMemberCharacterArcResource {
   castMember: { id: CastMemberId; name: string; role?: string };
-  /** The arc shown; for a shared arc, the owner's arc. */
   arc: CharacterArc;
-  sharedWith: { ownerCastMemberId: CastMemberId; ownerName: string } | null;
   scenes: Array<{ id: SceneId; productionNumber?: string; heading: string; title?: string }>;
-  /** Scenes where the arc's Cast Members appear, from screenplay references. */
+  /** Scenes where the Cast Member appears, from screenplay references. */
   presence: Array<{ sceneId: SceneId; speaks: boolean }>;
   structure: {
     actSegments: Array<{ role: string; title: string; sceneIds: SceneId[] }>;
     keyBeats: Array<{ key: ScreenplayAnalysisBeatRole; sceneId?: SceneId }>;
   } | null;
   /** Character sheets named by turning points. */
-  looks: AssetFile[];
+  characterSheets: AssetFile[];
   freshness: CharacterArcFreshness;
   freshnessHelp: string | null;
 }

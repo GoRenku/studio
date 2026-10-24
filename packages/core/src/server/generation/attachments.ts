@@ -11,6 +11,7 @@ import { validateMediaGenerationProvenance } from '../asset-files/generation-pro
 import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { assetFileSelectionTargetForOwnerType } from '../asset-files/selection.js';
 import { readProjectRecord } from '../database/access/project.js';
+import { readCastingRoundRecord } from '../database/access/casting/rounds.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
@@ -40,6 +41,8 @@ export interface AttachGenerationMediaInput {
   clipId?: string;
   takeTitle?: string;
   sourceTakeId?: string;
+  /** For a casting candidate: the Skill model key of the round route that generated it. */
+  castingModelKey?: string;
 }
 
 export interface GenerationMediaAttachmentReport {
@@ -148,7 +151,7 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
   }
   validateLookbookKind(input);
   const selectionTarget = input.select
-    ? assetFileSelectionTargetForOwnerType(
+    ? attachment.selectionTarget ?? assetFileSelectionTargetForOwnerType(
         attachment.destination.owner,
         attachment.assetFileType,
       )
@@ -175,6 +178,9 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
     ...(selectionTarget ? { selectionTarget } : {}),
     ...(generationProvenance ? { generationProvenance } : {}),
     ...(authoredFromShotPlanId ? { authoredFromShotPlanId } : {}),
+    ...(attachment.castingRoundId
+      ? { castingCandidate: castingCandidate(input.session, attachment.castingRoundId, input.castingModelKey) }
+      : {}),
   });
   const project = readProjectRecord(input.session);
   const assetFile = readOwnedAssetFile(input.session, {
@@ -207,6 +213,23 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
     ...(persisted.take ? { take: persisted.take } : {}),
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
+}
+
+/** A casting candidate names which of its round's routes generated it. */
+function castingCandidate(
+  session: DatabaseSession,
+  roundId: string,
+  modelKey: string | undefined
+): { roundId: string; modelKey: string } {
+  const round = readCastingRoundRecord(session, roundId);
+  if (!modelKey || !round?.routes.some((route) => route.model.key === modelKey)) {
+    throw new ProjectDataError(
+      'CASTING_CANDIDATE_MODEL_INVALID',
+      'A casting candidate must name the model key of one of its round\'s routes.',
+      { suggestion: `Pass --casting-model with one of: ${round?.routes.map((route) => route.model.key).join(', ') ?? 'the round routes'}.` },
+    );
+  }
+  return { roundId, modelKey };
 }
 
 function requiresGenerationProvenance(assetFileType: string): boolean {

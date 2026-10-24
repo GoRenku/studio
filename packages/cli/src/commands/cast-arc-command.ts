@@ -1,6 +1,6 @@
 import { createDiagnosticError, StructuredError } from '@gorenku/studio-diagnostics';
 import {
-  characterArcDocumentSchema,
+  characterArcSchema,
   characterArcsWriteDocumentSchema,
   type CharacterArcsWriteDocument,
 } from '@gorenku/studio-core/client';
@@ -24,7 +24,7 @@ export async function runCastArcCommand(options: {
     case 'schema':
       writeJson(options.io, {
         writeDocument: characterArcsWriteDocumentSchema,
-        characterArc: characterArcDocumentSchema,
+        characterArc: characterArcSchema,
       });
       return 0;
     case 'validate': {

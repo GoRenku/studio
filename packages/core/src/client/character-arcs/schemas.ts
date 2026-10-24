@@ -15,7 +15,9 @@ const spineField = {
   additionalProperties: false,
 } as const;
 
-const characterArcSchemaDefinition = {
+export const characterArcSchema = {
+  $id: 'https://schemas.gorenku.com/studio/character-arc.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
   required: ['kind', 'arcType', 'startState', 'endState', 'ends', 'spine', 'turningPoints'],
   properties: {
@@ -55,37 +57,13 @@ const characterArcSchemaDefinition = {
           state: nonEmptyString,
           position: { type: 'integer', minimum: -5, maximum: 5 },
           quote: nonEmptyString,
-          lookAssetFileId: nonEmptyString,
+          characterSheetAssetFileId: nonEmptyString,
         },
         additionalProperties: false,
       },
     },
   },
   additionalProperties: false,
-} as const;
-
-const characterArcReferenceSchemaDefinition = {
-  type: 'object',
-  required: ['kind', 'castMemberId'],
-  properties: {
-    kind: { const: 'characterArcReference' },
-    castMemberId: nonEmptyString,
-  },
-  additionalProperties: false,
-} as const;
-
-export const characterArcDocumentSchema = {
-  $id: 'https://schemas.gorenku.com/studio/character-arc.schema.json',
-  $schema: 'https://json-schema.org/draft/2020-12/schema',
-  type: 'object',
-  required: ['kind'],
-  properties: {
-    kind: { enum: ['characterArc', 'characterArcReference'] },
-  },
-  allOf: [
-    { if: { type: 'object', properties: { kind: { const: 'characterArc' } } }, then: characterArcSchemaDefinition },
-    { if: { type: 'object', properties: { kind: { const: 'characterArcReference' } } }, then: characterArcReferenceSchemaDefinition },
-  ],
 } as const;
 
 export const characterArcsWriteDocumentSchema = {

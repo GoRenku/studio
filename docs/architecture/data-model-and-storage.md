@@ -152,6 +152,15 @@ Use the focused documents below for current direction.
   validated, agent-authored department design history as tagged JSON in
   `cast_design`, `location_design`, and `prop_design`, with one active document
   per owner tracked in their corresponding state table.
+- Cast Looks, Cast Costumes and Casting Rounds are SQLite-owned project data
+  (ADR 0127). One person is one Cast Member at every age; each Look covers a
+  list of scenes (`cast_look`, `cast_look_scene`), each costume belongs to one
+  Look and covers some of its scenes (`cast_costume`, `cast_costume_scene`),
+  and each round records the confirmed models, counts and estimate for one
+  Look (`casting_round`). Casting candidates are `casting_candidate` Asset
+  files linked to their round with a durable status. The Look's cast
+  candidate and each costume's picked Character Sheet are scoped selections
+  (`castLook`, `castCostume`).
 - Cast Members, Locations, and Props have one canonical authoring path each:
   `renku cast`, `renku location`, and `renku prop`. Screenplay JSON references
   all three existing Project subject types by durable ids without embedding or

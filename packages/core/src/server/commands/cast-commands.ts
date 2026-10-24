@@ -1,4 +1,3 @@
-import { listCastMembersSharingCharacterArc } from '../character-arcs/persistence.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import {
   createDiagnosticError,
@@ -7,7 +6,6 @@ import {
 import type { CastMember } from '../../client/cast-members.js';
 import type {
   CastDesignContextReport,
-  CastMemberInput,
   CastOperationDocument,
   DepartmentCommandChange,
   DepartmentCommandReport,
@@ -29,22 +27,17 @@ import {
 } from '../database/access/cast-designs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
-  allocateDepartmentId,
-  applyPlacement,
-  assertExistingObjectUsesId,
-  assertNewObjectUsesKey,
   collectReferencedCastMemberIds,
   projectSummary,
   throwIfDepartmentIssues,
-  moveByPlacement,
 } from './department-command-support.js';
 import { assertCastOperationDocument } from '../department-design-json/validator.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import type { CastOperationContext } from './cast-operations/context.js';
+import { applyCastOperation } from './cast-operations/handlers.js';
 import {
   listCastAssetFileRoleRecords,
   listCastMemberRecords,
-  readCastMemberDeleteDependencySummary,
-  type CastMemberDeleteDependencySummary,
   replaceCastMemberAuthoringRecords,
   updateCastMemberVoiceOverRecord,
 } from '../database/access/cast-members.js';
@@ -187,111 +180,17 @@ export async function applyCastOperations(
     const draft = [...existing];
     const issues: DiagnosticIssue[] = [];
 
+    const context: CastOperationContext = {
+      session,
+      ...(input.idGenerator ? { idGenerator: input.idGenerator } : {}),
+      draft,
+      referencedCastMemberIds,
+      issues,
+      changes,
+      generatedIds,
+    };
     input.document.operations.forEach((operation, operationIndex) => {
-      const operationPath = ['operations', String(operationIndex)];
-      if (operation.operation === 'castMember.add') {
-        assertNewObjectUsesKey({
-          id: operation.castMember.id,
-          key: operation.castMember.key,
-          path: [...operationPath, 'castMember'],
-          label: 'cast member',
-          issues,
-        });
-        if (issues.length > 0) {
-          return;
-        }
-        const id = allocateDepartmentId({
-          prefix: 'cast',
-          key: operation.castMember.key as string,
-          kind: 'cast',
-          path: [...operationPath, 'castMember', 'key'],
-          idGenerator: input.idGenerator,
-          generatedIds,
-        });
-        const castMember = toCastMember({ ...operation.castMember, id });
-        draft.splice(
-          0,
-          draft.length,
-          ...applyPlacement(draft, castMember, operation.placement)
-        );
-        changes.push({ operation: operation.operation, castMemberId: id });
-      }
-      if (operation.operation === 'castMember.update') {
-        assertExistingObjectUsesId({
-          id: operation.castMember.id,
-          key: operation.castMember.key,
-          path: [...operationPath, 'castMember'],
-          label: 'cast member',
-          issues,
-        });
-        const id = operation.castMember.id;
-        const index = id ? draft.findIndex((castMember) => castMember.id === id) : -1;
-        if (id && index === -1) {
-          issues.push(notFoundIssue('cast member', [...operationPath, 'castMember', 'id']));
-          return;
-        }
-        if (id && index !== -1) {
-          draft[index] = toCastMember(operation.castMember);
-          changes.push({ operation: operation.operation, castMemberId: id });
-        }
-      }
-      if (operation.operation === 'castMember.delete') {
-        const index = draft.findIndex((castMember) => castMember.id === operation.castMemberId);
-        if (index === -1) {
-          issues.push(notFoundIssue('cast member', [...operationPath, 'castMemberId']));
-          return;
-        }
-        const hasScreenplayReferences = referencedCastMemberIds.has(
-          operation.castMemberId
-        );
-        if (hasScreenplayReferences) {
-          issues.push(
-            createDiagnosticError(
-              'PROJECT_DATA216',
-              'Cast member is still referenced by screenplay scenes or blocks.',
-              { path: [...operationPath, 'castMemberId'] },
-              'Revise screenplay scene references before deleting this cast member.'
-            )
-          );
-        }
-        const dependencies = readCastMemberDeleteDependencySummary(
-          session,
-          operation.castMemberId
-        );
-        const dependencyLabels = castMemberDeleteDependencyLabels(dependencies);
-        if (dependencyLabels.length > 0) {
-          issues.push(
-            castMemberDeleteDependencyIssue({
-              dependencyLabels,
-              path: [...operationPath, 'castMemberId'],
-            })
-          );
-        }
-        const sharingArc = listCastMembersSharingCharacterArc(session, operation.castMemberId);
-        if (sharingArc.length > 0) {
-          issues.push(
-            createDiagnosticError(
-              'CHARACTER_ARC_REFERENCE_IN_USE',
-              `Cast member's character arc is shared by: ${sharingArc.map((record) => record.name).join(', ')}.`,
-              { path: [...operationPath, 'castMemberId'] },
-              'Re-run the screenplay analysis or rewrite the arcs with `renku cast arc write` before deleting this cast member.'
-            )
-          );
-        }
-        if (hasScreenplayReferences || dependencyLabels.length > 0 || sharingArc.length > 0) {
-          return;
-        }
-        draft.splice(index, 1);
-        changes.push({ operation: operation.operation, castMemberId: operation.castMemberId });
-      }
-      if (operation.operation === 'castMember.move') {
-        draft.splice(
-          0,
-          draft.length,
-          ...moveByPlacement(draft, operation.castMemberId, operation.placement, 'Cast member')
-        );
-        changes.push({ operation: operation.operation, castMemberId: operation.castMemberId });
-      }
+      applyCastOperation(context, operation, ['operations', String(operationIndex)]);
     });
 
     validateCastDraft({
@@ -365,27 +264,6 @@ function requireCastMember(
     });
   }
   return castMember;
-}
-
-function toCastMember(input: CastMemberInput): CastMember {
-  if (!input.id) {
-    throw new ProjectDataError('PROJECT_DATA206', 'Cast member requires id.', {
-      suggestion: 'Use key for adds and id for updates.',
-    });
-  }
-  return {
-    id: input.id,
-    handle: input.handle,
-    name: input.name,
-    role: input.role,
-    isVoiceOver: input.isVoiceOver ?? false,
-    age: input.age,
-    want: input.want,
-    need: input.need,
-    arc: input.arc,
-    voiceNotes: input.voiceNotes,
-    description: input.description,
-  };
 }
 
 function castGenerationReadiness(
@@ -512,56 +390,6 @@ function typeCounts(
     counts.set(record.type, count);
   });
   return [...counts.values()];
-}
-
-function castMemberDeleteDependencyIssue(input: {
-  dependencyLabels: string[];
-  path: string[];
-}): DiagnosticIssue {
-  return createDiagnosticError(
-    'PROJECT_DATA217',
-    `Cast member has dependent ${joinDependencyLabels(input.dependencyLabels)}.`,
-    { path: input.path },
-    'Remove or reassign dependent Cast assets and Cast Designs before deleting this cast member.'
-  );
-}
-
-function castMemberDeleteDependencyLabels(
-  dependencies: CastMemberDeleteDependencySummary
-): string[] {
-  return [
-    dependencies.assetFileCount > 0
-      ? pluralizeDependency('Cast asset', dependencies.assetFileCount)
-      : null,
-    dependencies.designCount > 0
-      ? pluralizeDependency('Cast Design', dependencies.designCount)
-      : null,
-    dependencies.activeDesignStateCount > 0 ? 'active Cast Design state' : null,
-  ].filter(isString);
-}
-
-function joinDependencyLabels(labels: string[]): string {
-  if (labels.length <= 1) {
-    return labels[0] ?? 'records';
-  }
-  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
-}
-
-function pluralizeDependency(label: string, count: number): string {
-  return `${count} ${label}${count === 1 ? '' : 's'}`;
-}
-
-function isString(value: string | null): value is string {
-  return value !== null;
-}
-
-function notFoundIssue(label: string, path: string[]): DiagnosticIssue {
-  return createDiagnosticError(
-    'PROJECT_DATA205',
-    `${label} was not found.`,
-    { path },
-    'Check the id from the latest list command.'
-  );
 }
 
 function toProjectLanguage(row: ProjectLocaleRecord): ProjectLanguage {

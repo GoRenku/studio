@@ -129,6 +129,51 @@ describe('department design commands', () => {
     });
   });
 
+  it('preserves a Cast Member named by a historical Scene Beats revision', async () => {
+    await createSampleMovieProject({ homeDir, projectData });
+    await openCurrentProject({ projectName: 'constantinople', homeDir });
+    const added = await projectData.applyCastOperations({
+      homeDir,
+      document: {
+        kind: 'castOperations',
+        operations: [{
+          operation: 'castMember.add',
+          castMember: { key: 'envoy', handle: 'envoy', name: 'Envoy' },
+        }],
+      },
+    });
+    const castMemberId = added.generatedIds!.find((entry) => entry.key === 'envoy')!.id;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const beat = {
+      title: 'Negotiation',
+      description: 'An envoy brings terms to the court.',
+      narrativeDevelopment: 'The negotiations begin.',
+      narrativePurpose: 'Establish the stakes.',
+      castMemberIds: [castMemberId],
+      locationIds: [],
+      propIds: [],
+      screenplayBlockIds: [scene.blocks[0]!.id],
+    };
+    await projectData.createSceneBeatsRevision({
+      homeDir,
+      document: { sceneId: scene.id, beats: [beat] },
+    });
+    await projectData.resetSceneBeats({
+      homeDir,
+      document: { sceneId: scene.id, beats: [{ ...beat, castMemberIds: [] }] },
+    });
+
+    await expect(projectData.applyCastOperations({
+      homeDir,
+      document: {
+        kind: 'castOperations',
+        operations: [{ operation: 'castMember.delete', castMemberId }],
+      },
+    })).rejects.toMatchObject({ issues: [expect.objectContaining({ code: 'PROJECT_DATA218' })] });
+    await expect(projectData.readCastMember({ homeDir, castMemberId })).resolves.toMatchObject({ name: 'Envoy' });
+  });
+
   it('writes Cast, Location, and Prop Design documents', async () => {
     await createSampleMovieProject({ homeDir, projectData });
     const productionLookbook = await projectData.writeProductionLookbook({
@@ -136,14 +181,12 @@ describe('department design commands', () => {
       document: productionLookbookDocument(),
     });
 
-    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
     const cast = await projectData.listCastMembers({ homeDir });
     const locations = await projectData.listLocations({ homeDir });
     const castMemberId = cast[1]!.id;
     const locationId = locations[0]!.id;
-    const sceneId = screenplay.screenplay.scenes[0]!.id;
 
-    const castDesign = castDesignDocument(castMemberId, sceneId);
+    const castDesign = castDesignDocument(castMemberId);
     const castWrite = await projectData.writeCastDesign({
       homeDir,
       document: castDesign,
@@ -386,8 +429,7 @@ describe('department design commands', () => {
 });
 
 function castDesignDocument(
-  castMemberId: string,
-  sceneId: string
+  castMemberId: string
 ): CastDesignDocument {
   return {
     kind: 'castDesign',
@@ -413,13 +455,6 @@ function castDesignDocument(
       },
       costume: {
         baseWardrobeLogic: ['Dark formal layers with restrained ornament'],
-        variants: [
-          {
-            label: 'council-night',
-            scope: { kind: 'scenes', sceneIds: [sceneId] },
-            wardrobe: ['Layered robe, minimal jewelry, dark sash'],
-          },
-        ],
       },
       voiceCasting: {
         voiceIdentity: 'Measured young sovereign voice',
@@ -464,7 +499,6 @@ function minimalCastDesignDocument(castMemberId: string): CastDesignDocument {
       },
       costume: {
         baseWardrobeLogic: ['Functional layers with subtle formal detail'],
-        variants: [],
       },
       voiceCasting: {
         voiceIdentity: 'Calm, observant, technically fluent voice',

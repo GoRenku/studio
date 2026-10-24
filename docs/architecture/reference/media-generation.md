@@ -71,6 +71,25 @@ domain resources and Inspector inputs retain history; generation attachment
 continues to persist the exact new request. Core rejects conflicting facts for
 one Asset id with `CORE_MEDIA_GENERATION_CONTEXT_INCONSISTENT_MEDIA`.
 
+Casting (ADR 0127) adds two cast targets. `cast.casting-candidate` targets a
+`castingRound` and reports the round, its Look and the Cast Member's Looks;
+its `casting-identity` suggestion offers the round's references
+(workflow-selected) and other Looks' cast candidates. `cast.character-sheet`
+targets a `castCostume` and reports the costume and its Look; its
+`cast-identity` suggestion is the Look's cast candidate. Scene contexts give
+each Cast Member a `wardrobe` (Look, costume, picked sheet), and the picked
+sheet leads the Cast Member's `cast-continuity` suggestion, workflow-selected.
+
+Casting estimates use the same injected generation estimator as generation
+review. The Skill supplies one prepared candidate request per model/provider,
+including its operation route and explicit output count. A missing request
+means no estimate; the panel does not synthesize provider requests from model
+defaults. Provider options retain the complete `GenerationCostEstimate` envelope
+and separate route billing. `estimateCastingRoundCost` in Core's browser-safe
+casting API owns the shared candidate-count aggregation used by Codex and React.
+The shared Studio estimate view displays the per-candidate estimate, warnings
+and price source. Provider pricing remains in Engines.
+
 Scene Beat authoring uses the same reference projections and exposes their
 inventory at `visualReferences.assets`. Its creative department context remains
 unchanged.

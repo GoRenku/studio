@@ -4,6 +4,12 @@ Date: 2026-10-20
 
 Status: accepted
 
+Status: accepted
+
+[ADR 0127](0127-cast-looks-costumes-and-casting-rounds.md) removes the shared
+arc (`characterArcReference`) and renames the turning point sheet field to
+`characterSheetAssetFileId`: one person is one Cast Member at every age.
+
 Applies [JSON Storage Validation](../architecture/json-storage-validation.md),
 [ADR 0041](0041-keep-ai-artifacts-and-prompts-opaque.md) and
 [ADR 0073](0073-keep-screenplay-derived-artifacts-weak.md). Implemented by plan

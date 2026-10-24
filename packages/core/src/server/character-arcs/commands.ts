@@ -63,10 +63,7 @@ export async function listCharacterArcs(input: CharacterArcsProjectInput = {}): 
     arcs: listStoredCharacterArcs(session).map((record) => ({
       castMemberId: record.castMemberId,
       name: record.name,
-      kind: record.arc.kind,
-      ...(record.arc.kind === 'characterArc'
-        ? { arcType: record.arc.arcType }
-        : { sharedWithCastMemberId: record.arc.castMemberId }),
+      arcType: record.arc.arcType,
       writtenAt: record.writtenAt,
       freshness: characterArcFreshness(session, record.writtenAt),
     })),
@@ -102,14 +99,12 @@ function assertDocument(session: DatabaseSession, input: { document: CharacterAr
 }
 
 function readValidationContext(session: DatabaseSession, document: CharacterArcsWriteDocument): CharacterArcValidationContext {
-  const lookIds = new Set(
+  const characterSheetIds = new Set(
     document.arcs.flatMap((entry) =>
-      entry.arc.kind === 'characterArc'
-        ? entry.arc.turningPoints.flatMap((point) => point.lookAssetFileId ? [point.lookAssetFileId] : [])
-        : [])
+      entry.arc.turningPoints.flatMap((point) => point.characterSheetAssetFileId ? [point.characterSheetAssetFileId] : []))
   );
   const assetFiles = new Map<string, { ownerKey: string; type: string }>();
-  for (const id of lookIds) {
+  for (const id of characterSheetIds) {
     const record = readAssetFileRecordIncludingDiscarded(session, id);
     if (record && isAssetFileAvailableInSession(session, record)) {
       assetFiles.set(id, { ownerKey: record.ownerKey, type: record.type });

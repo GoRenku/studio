@@ -27,6 +27,7 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
     clipId: flags.clip,
     takeTitle: flags.takeTitle,
     sourceTakeId: flags.sourceTake,
+    ...(flags.castingModel ? { castingModelKey: flags.castingModel } : {}),
     ...(flags.previsRevision !== undefined ? { previsRevisionId: flags.previsRevision } : {}),
     ...(input.turnRange ? { turnRange: input.turnRange } : {}),
     ...(flags.provenance

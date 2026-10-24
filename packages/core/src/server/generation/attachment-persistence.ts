@@ -1,5 +1,6 @@
 import type { ShotPlanClipTake } from '../../client/shot-plan-clips.js';
 import { registerClipTakeInSession } from '../shot-plan-clips/commands.js';
+import { insertCastingCandidateRecord } from '../database/access/casting/rounds.js';
 import { selectAssetFileInSession, selectFirstContinuityImageInSession } from '../asset-files/selection.js';
 import type { AssetFileOwner, AssetFileSelectionTarget } from '../../client/asset-files.js';
 import {
@@ -47,6 +48,8 @@ export interface PersistGeneratedMediaAttachmentInput {
   authoredFromShotPlanId?: string;
   previsRevisionId?: string;
   clipTake?: { clipId: string; title?: string; sourceTakeId?: string };
+  /** Registers the file as a candidate of this Casting Round in the same transaction. */
+  castingCandidate?: { roundId: string; modelKey: string };
 }
 
 export interface PersistedGeneratedMediaAttachment {
@@ -180,6 +183,9 @@ export function persistGeneratedMediaAttachment(
       });
       if (input.clipTake) {
         take = registerClipTakeInSession(session, { ...input.clipTake, assetFileId });
+      }
+      if (input.castingCandidate) {
+        insertCastingCandidateRecord(session, { assetFileId, ...input.castingCandidate });
       }
       if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookImage') {
         insertLookbookImageRecord(session, {

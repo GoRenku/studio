@@ -63,14 +63,24 @@ beforeAll(async () => {
   await fs.mkdir(path.join(projectFolder, 'tmp'), { recursive: true });
   olderProfile = await attach('cast.profile', { kind: 'castMember', id: castMemberId });
   profile = await attach('cast.profile', { kind: 'castMember', id: castMemberId }, true);
-  sheet = await attach('cast.character-sheet', { kind: 'castMember', id: castMemberId });
+  await service.applyScreenplayOperations({
+    homeDir, projectName: 'movie',
+    operations: [{ operation: 'scene.add', scene: { key: 'harbor', heading: 'EXT. HARBOR - DAY', blocks: [] }, structureEntryKey: 'harbor-entry', placement: { at: 'end' } }],
+  } as never);
+  const [scene] = (await service.readScreenplayStructure({ homeDir, projectName: 'movie' })).screenplay.scenes;
+  const [look] = (await service.writeCastLooksPlan({ homeDir, projectName: 'movie', document: { kind: 'castLooksPlan', castMemberId, looks: [{ name: 'Main', sceneIds: [scene!.id] }] } })).looks;
+  const [costume] = (await service.writeCastWardrobePlan({
+    homeDir, projectName: 'movie',
+    document: { kind: 'castWardrobePlan', castMemberId, costumes: [{ name: 'Main', lookId: look!.id, wardrobe: ['Court robe'], continuityNotes: [], sceneIds: [scene!.id] }] },
+  })).costumes;
+  sheet = await attach('cast.character-sheet', { kind: 'castCostume', id: costume!.id });
   const lookbook = await service.writeProductionLookbook({ homeDir, projectName: 'movie', document: productionLookbookDocument() } as never);
   lookbookImage = await attach('lookbook.image', { kind: 'lookbook', id: lookbook.lookbook.id });
   lookbookSheet = await attach('lookbook.video-sheet', { kind: 'lookbook', id: lookbook.lookbook.id });
 
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, castingRoundHtml: html, castingBoardHtml: html, castingWardrobeHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0' }, { capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } } as never });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);

@@ -9,7 +9,6 @@ import { withCurrentProjectSession } from '../database/lifecycle/current-project
 import type { RenkuConfigPathOptions } from '../config/index.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
-import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   listCastDesignRecords,
@@ -21,9 +20,8 @@ import {
 } from '../database/access/cast-designs.js';
 import { assertCastDesignDocument } from '../department-design-json/validator.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { projectSummary, throwIfDepartmentIssues } from './department-command-support.js';
+import { projectSummary } from './department-command-support.js';
 import { castResourceKeys } from './cast-commands.js';
-import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export async function listCastDesigns(
@@ -183,32 +181,6 @@ function assertCastDesignSemantics(
   document: CastDesignDocument
 ): void {
   requireCastMember(document.castMemberId, session);
-  const screenplay = readCanonicalScreenplay(session);
-  const issues: DiagnosticIssue[] = [];
-  const sceneIds = new Set(screenplay.scenes.map((scene) => scene.id));
-  const variantLabels = new Set<string>();
-  document.design.costume.variants.forEach((variant, index) => {
-    const labelKey = variant.label.trim().toLocaleLowerCase();
-    if (variantLabels.has(labelKey)) {
-      issues.push(
-        createDiagnosticError(
-          'PROJECT_DATA209',
-          `Duplicate costume variant label: ${variant.label}.`,
-          { path: ['design', 'costume', 'variants', String(index), 'label'] },
-          'Use unique costume variant labels inside one Cast Design.'
-        )
-      );
-    }
-    variantLabels.add(labelKey);
-    if (
-      variant.scope.kind === 'scenes'
-      && (new Set(variant.scope.sceneIds).size !== variant.scope.sceneIds.length
-        || variant.scope.sceneIds.some((sceneId) => !sceneIds.has(sceneId)))
-    ) {
-      issues.push(scopeIssue(['design', 'costume', 'variants', String(index), 'scope', 'sceneIds']));
-    }
-  });
-  throwIfDepartmentIssues(issues);
 }
 
 function requireCastMember(castMemberId: string, session: DatabaseSession) {
@@ -249,13 +221,4 @@ function requiredDesignId(designId: string | undefined): string {
   throw new ProjectDataError('PROJECT_DATA206', 'Cast Design id is required.', {
     suggestion: 'Pass --design, or use --active with --cast.',
   });
-}
-
-function scopeIssue(path: string[]) {
-  return createDiagnosticError(
-    'PROJECT_DATA210',
-    'Cast Design scope references an unknown sequence or scene.',
-    { path },
-    'Use ids from the latest screenplay read command.'
-  );
 }

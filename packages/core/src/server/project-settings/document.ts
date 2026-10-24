@@ -2,10 +2,11 @@ import Ajv2020, { type ErrorObject } from 'ajv/dist/2020.js';
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import { GENERATION_LANES } from '../../client/generation-lanes.js';
 import type { ProjectSettingsDocument } from '../../client/project-settings.js';
+import { castingRouteSchema, castingSettingsSchema } from '../../client/casting/schemas.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 7,
+  version: 8,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -47,6 +48,9 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
       runGenerationsConcurrently: false,
       maxConcurrentGenerations: 1,
     },
+  },
+  casting: {
+    routes: [],
   },
 };
 
@@ -90,9 +94,9 @@ const projectSettingsSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
   additionalProperties: false,
-  required: ['version', 'screenplayImport', 'generation'],
+  required: ['version', 'screenplayImport', 'generation', 'casting'],
   properties: {
-    version: { const: 7 },
+    version: { const: 8 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -123,6 +127,7 @@ const projectSettingsSchema = {
         ...Object.fromEntries(GENERATION_LANES.map((lane) => [lane, laneSchema])),
       },
     },
+    casting: { $ref: castingSettingsSchema.$id },
   },
 } as const;
 
@@ -139,6 +144,8 @@ function getAjv(): Ajv2020 {
     useDefaults: false,
     coerceTypes: false,
   });
+  ajv.addSchema(castingRouteSchema);
+  ajv.addSchema(castingSettingsSchema);
   cachedAjv = ajv;
   return ajv;
 }

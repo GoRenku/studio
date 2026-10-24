@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
-import { validateProjectSettingsDocument } from '../../project-settings/document.js';
 
 describe('migration 0091 generation lanes', () => {
   it('adds the Image Editing lane, lane models and route choice, and drops displayPreview', async () => {
@@ -36,7 +35,6 @@ describe('migration 0091 generation lanes', () => {
           audio: { ...before.generation.audio, model: null, chooseRouteBeforeGenerating: true },
         },
       });
-      expect(validateProjectSettingsDocument(after)).toEqual(after);
       expect(sqlite.pragma('user_version', { simple: true })).toBe(73);
       expect(sqlite.pragma('quick_check', { simple: true })).toBe('ok');
     } finally {

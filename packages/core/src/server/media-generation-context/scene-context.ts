@@ -23,6 +23,7 @@ import {
   readSceneBeatsRevisionRecord,
   toSceneBeatsRevisionSummary,
 } from '../database/access/scene-beats.js';
+import { readSceneWardrobe } from '../casting/scene-wardrobe.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { listCastVoicesInSession } from '../cast-voices/projection.js';
@@ -51,7 +52,12 @@ export function projectMediaGenerationSceneContext(input: {
   const castMembers = subjectIds.castMemberIds
     .flatMap((id) => {
       const record = castRecords.get(id);
-      return record && !record.isVoiceOver ? [projectCastMemberContext(input.session, record, input.assetFiles)] : [];
+      return record && !record.isVoiceOver
+        ? [{
+            ...projectCastMemberContext(input.session, record, input.assetFiles),
+            wardrobe: readSceneWardrobe(input.session, { castMemberId: record.id, sceneId: scene.id }),
+          }]
+        : [];
     });
   const locations = subjectIds.locationIds
     .flatMap((id) => {

@@ -13,6 +13,8 @@ import { nativeRequestControlList, nativeRequestValuesIssues } from './native-re
  * implementation; Codex never imports Engines and never reads prices.
  */
 export interface GenerationCostEstimator {
+  /** Local approximate price lookup; never prepares requests or calls a provider. */
+  estimateImage(modelKey: string): Promise<GenerationCostEstimate>;
   estimate(input: {
     homeDir?: string;
     provider: string;

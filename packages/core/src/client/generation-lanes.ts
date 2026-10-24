@@ -54,6 +54,7 @@ export const MEDIA_PURPOSE_GENERATION_LANES: Record<MediaPurpose, GenerationLane
   'lookbook.image': 'image',
   'lookbook.video-sheet': 'image',
   'lookbook.storyboard-sheet': 'image',
+  'cast.casting-candidate': 'image',
   'cast.character-sheet': 'image',
   'cast.profile': 'image',
   'cast.voice-sample': 'audio',

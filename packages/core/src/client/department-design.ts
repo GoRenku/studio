@@ -122,10 +122,6 @@ export interface DepartmentPlacement {
   position?: 'only';
 }
 
-export type CastDesignScope =
-  | { kind: 'project' }
-  | { kind: 'scenes'; sceneIds: string[] };
-
 export interface CastInterpretation {
   roleUnderstanding: string;
   audienceRead: string[];
@@ -150,16 +146,9 @@ export interface CastPerformanceDesign {
   sceneEnergy: string[];
 }
 
-export interface CastCostumeVariant {
-  label: string;
-  scope: CastDesignScope;
-  wardrobe: string[];
-  continuityNotes?: string[];
-}
-
+/** Wardrobe logic shared by every costume; costumes themselves are Cast Costume records. */
 export interface CastCostumeDesign {
   baseWardrobeLogic: string[];
-  variants: CastCostumeVariant[];
 }
 
 export interface CastVoiceCastingDesign {

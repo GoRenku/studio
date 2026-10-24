@@ -223,25 +223,8 @@ export const castDesignSchema = {
           statusShifts: stringArray,
           sceneEnergy: stringArray,
         }),
-        costume: objectWith(['baseWardrobeLogic', 'variants'], {
+        costume: objectWith(['baseWardrobeLogic'], {
           baseWardrobeLogic: stringArray,
-          variants: {
-            type: 'array',
-            items: objectWith(['label', 'scope', 'wardrobe'], {
-              label: stringValue,
-              scope: {
-                oneOf: [
-                  objectWith(['kind'], { kind: { const: 'project' } }),
-                  objectWith(['kind', 'sceneIds'], {
-                    kind: { const: 'scenes' },
-                    sceneIds: { type: 'array', minItems: 1, items: stringValue },
-                  }),
-                ],
-              },
-              wardrobe: stringArray,
-              continuityNotes: stringArray,
-            }),
-          },
         }),
         voiceCasting: objectWith(['voiceIdentity'], {
           voiceIdentity: stringValue,

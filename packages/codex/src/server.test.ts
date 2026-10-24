@@ -27,7 +27,7 @@ beforeAll(async () => {
   await fs.writeFile(reviewFile, JSON.stringify({ provider: 'acme-images', model: 'image-model', mediaKind: 'image', prompt: 'Café\nα', request: { prompt: 'Café\nα', resolution: '2K' } }));
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Protocol resource fixture</body></html>');
-  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
+  server = createCodexServer({ version: '0.1.24', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, castingRoundHtml: html, castingBoardHtml: html, castingWardrobeHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0', title: 'Codex' }, {
     capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } },
   });
@@ -66,8 +66,9 @@ describe('official MCP registration and transport', () => {
 
   it('registers one purpose panel per family, with one opening tool and one UI resource each', async () => {
     const tools = (await client.listTools()).tools.map((tool) => tool.name);
-    expect(tools.filter((name) => name.endsWith('.open')).sort()).toEqual(['dialogue.direction.open', 'image.edit.open']);
+    expect(tools.filter((name) => name.endsWith('.open')).sort()).toEqual(['casting.board.open', 'casting.round.open', 'casting.wardrobe.open', 'dialogue.direction.open', 'image.edit.open']);
     expect((await client.listResources()).resources.map((resource) => resource.uri).filter((uri) => uri.startsWith('ui://')).sort()).toEqual([
+      'ui://renku/casting-board', 'ui://renku/casting-round', 'ui://renku/casting-wardrobe',
       'ui://renku/dialogue-direction', 'ui://renku/generation-review', 'ui://renku/image-edit', 'ui://renku/image-edit/target-chooser', 'ui://renku/route-chooser',
     ]);
   });
@@ -164,7 +165,7 @@ describe('host capability negotiation', () => {
     ['claude-desktop', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } }, 'non-codex-client'],
     ['unknown-agent', {}, 'non-codex-client'],
   ])('requires Studio Preview for %s with capabilities %j', async (name, capabilities, reason) => {
-    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), dialogueDirectionHtml: path.join(root, 'app.html'), imageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html'), routeChooserHtml: path.join(root, 'app.html'), costEstimator: createFakeCostEstimator() });
+    const isolatedServer = createCodexServer({ version: '0.1.24', generationReviewHtml: path.join(root, 'app.html'), dialogueDirectionHtml: path.join(root, 'app.html'), imageEditHtml: path.join(root, 'app.html'), imageEditTargetChooserHtml: path.join(root, 'app.html'), routeChooserHtml: path.join(root, 'app.html'), castingRoundHtml: path.join(root, 'app.html'), castingBoardHtml: path.join(root, 'app.html'), castingWardrobeHtml: path.join(root, 'app.html'), costEstimator: createFakeCostEstimator() });
     const isolatedClient = new Client({ name, version: 'test' }, { capabilities });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {

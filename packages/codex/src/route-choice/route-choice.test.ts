@@ -39,7 +39,7 @@ beforeAll(async () => {
   await service.createMovieProject({ homeDir, projectName: 'movie', title: 'Route choice fixture' });
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, castingRoundHtml: html, castingBoardHtml: html, castingWardrobeHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
   client = new Client({ name: 'codex-mcp-client', version: '1.0.0' }, { capabilities: { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } } as never });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);

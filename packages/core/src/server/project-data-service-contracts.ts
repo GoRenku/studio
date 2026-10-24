@@ -12,6 +12,16 @@ import type {
   CharacterArcsWriteReport,
 } from '../client/character-arcs/model.js';
 import type {
+  CastCastingResource,
+  CastingCandidateStatus,
+  CastingCandidateStatusReport,
+  CastingLookReport,
+  CastingRoundReport,
+  CastingSettingsReport,
+  CastLooksReport,
+  CastWardrobeReport,
+} from '../client/casting/model.js';
+import type {
   AssetFile,
   AssetFileLocaleContext,
   AssetFileOwner,
@@ -423,6 +433,18 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   writeCharacterArcs(input: ValidateCharacterArcsInput): Promise<CharacterArcsWriteReport>;
   listCharacterArcs(input?: CharacterArcsProjectInput): Promise<CharacterArcListReport>;
   readCharacterArc(input: ReadCharacterArcInput): Promise<CharacterArcReadReport>;
+  showCastLooks(input: CastingCastMemberInput): Promise<CastLooksReport>;
+  validateCastLooksPlan(input: CastingDocumentInput): Promise<CastLooksReport>;
+  writeCastLooksPlan(input: CastingDocumentInput): Promise<CastLooksReport>;
+  showCastWardrobe(input: CastingCastMemberInput): Promise<CastWardrobeReport>;
+  validateCastWardrobePlan(input: CastingDocumentInput): Promise<CastWardrobeReport>;
+  writeCastWardrobePlan(input: CastingDocumentInput): Promise<CastWardrobeReport>;
+  createCastingRound(input: CastingDocumentInput): Promise<CastingRoundReport>;
+  showCastingLook(input: CastingProjectInput & { lookId: string }): Promise<CastingLookReport>;
+  setCastingCandidateStatus(input: CastingCandidateStatusInput): Promise<CastingCandidateStatusReport>;
+  showCastingSettings(input: CastingProjectInput): Promise<CastingSettingsReport>;
+  setCastingSettings(input: CastingProjectInput & { casting: unknown; filePath?: string }): Promise<CastingSettingsReport>;
+  readCastCastingResource(input: ReadCastMemberResourceInput): Promise<CastCastingResource>;
   listScreenplayAnalyses(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisListReport>;
   readScreenplayAnalysis(input: ReadScreenplayAnalysisInput): Promise<ScreenplayAnalysisReadReport>;
   validateScreenplayAnalysis(input: ValidateScreenplayAnalysisInput): Promise<ScreenplayAnalysisValidationReport>;
@@ -736,6 +758,26 @@ export interface RestoreScreenplayRevisionInput extends ScreenplayProjectInput {
 export interface ScreenplayAnalysisProjectInput extends RenkuConfigPathOptions {}
 
 export interface CharacterArcsProjectInput extends RenkuConfigPathOptions {}
+
+/** Casting commands act on the named Project, or the current authoring Project when omitted. */
+export interface CastingProjectInput extends RenkuConfigPathOptions {
+  projectName?: string;
+}
+
+export interface CastingCastMemberInput extends CastingProjectInput {
+  castMemberId: string;
+}
+
+export interface CastingDocumentInput extends CastingProjectInput {
+  document: unknown;
+  filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface CastingCandidateStatusInput extends CastingProjectInput {
+  assetFileId: string;
+  status: CastingCandidateStatus;
+}
 
 export interface ValidateCharacterArcsInput extends CharacterArcsProjectInput {
   document: CharacterArcsWriteDocument;

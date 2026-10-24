@@ -8,7 +8,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string };
-const codexAppEntries = ['generation-review', 'dialogue-direction', 'image-edit', 'image-edit-target-chooser', 'route-chooser'];
+const codexAppEntries = ['generation-review', 'dialogue-direction', 'image-edit', 'image-edit-target-chooser', 'route-chooser', 'casting-round', 'casting-board', 'casting-wardrobe'];
 
 export default defineConfig(({ mode }) => {
   if (!codexAppEntries.includes(mode)) {

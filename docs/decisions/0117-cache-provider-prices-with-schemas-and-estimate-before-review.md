@@ -43,6 +43,13 @@ through their APIs; others only on pricing pages, where research is slow.
   attaches it in `generation prepare` and `generation preview show`, and
   injects a `GenerationCostEstimator` into the Codex MCP server, which never
   imports Engines.
+- Casting (ADR 0127) uses that same estimator and full envelope per candidate.
+  Core owns only the casting aggregation of those amounts by candidate count;
+  Codex and React share that calculation. Every offered paid model/provider
+  requires a Skill-prepared one-candidate request before the panel opens;
+  missing requests return structured issues for the agent to resolve. Provider
+  prices that remain unavailable after estimation stay visible with their
+  explanation. Engines remains the provider-pricing owner.
 - Skill route descriptions carry `billing`: `hostPlanUsage` for Codex built-in
   routes, which are never estimated, and `providerCharge` otherwise.
 - Studio formats estimates in one shared view used by the generation review

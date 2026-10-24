@@ -18,10 +18,11 @@ import { requireProjectCoverFile } from '../project-covers/cover-file.js';
 import { assetFileOwnerKey } from './owner-keys.js';
 import { assertAssetFileOwnerExists } from './ownership.js';
 import { listAssetFilePageInSession } from './projection.js';
+import { readCastingCandidateRecord, readCastingRoundRecord } from '../database/access/casting/rounds.js';
 import {
   assetFileSelectionTargetForOwner,
   assetFileSelectionTargetKey,
-  selectionTargetOwner,
+  resolveSelectionTargetOwner,
 } from './selection-targets.js';
 
 const selectedAssetFileTypes: Record<AssetFileSelectionTarget['kind'], string> = {
@@ -33,6 +34,8 @@ const selectedAssetFileTypes: Record<AssetFileSelectionTarget['kind'], string> =
   lookbook: 'lookbook_image',
   shot: 'shot_image',
   sceneBeat: 'scene_storyboard_image',
+  castLook: 'casting_candidate',
+  castCostume: 'character_sheet',
 };
 
 export async function selectAssetFile(
@@ -40,7 +43,7 @@ export async function selectAssetFile(
 ): Promise<AssetFileSelectionReport> {
   const { projectFolder, session } = await openProjectSession(input);
   try {
-    const owner = selectionTargetOwner(input.target);
+    const owner = resolveSelectionTargetOwner(session, input.target);
     assertSelectionInSession(session, {
       target: input.target,
       owner,
@@ -62,7 +65,7 @@ export async function clearAssetFileSelection(
 ): Promise<AssetFileSelectionReport> {
   const { projectFolder, session } = await openProjectSession(input);
   try {
-    const owner = selectionTargetOwner(input.target);
+    const owner = resolveSelectionTargetOwner(session, input.target);
     assertAssetFileOwnerExists(session, owner);
     clearSelectedAssetFileRecord(session, assetFileSelectionTargetKey(input.target));
     return selectionReport(session, projectFolder, input.target, null);
@@ -75,7 +78,7 @@ export function selectAssetFileInSession(
   session: DatabaseSession,
   input: { target: AssetFileSelectionTarget; assetFileId: string; now: string }
 ): void {
-  const owner = selectionTargetOwner(input.target);
+  const owner = resolveSelectionTargetOwner(session, input.target);
   assertSelectionInSession(session, { ...input, owner });
   writeSelectedAssetFileRecord(session, {
     targetKey: assetFileSelectionTargetKey(input.target),
@@ -117,7 +120,7 @@ export function assetFileSelectionResourceKeys(
 ): string[] {
   return target.kind === 'project'
     ? projectCoverSelectionResourceKeys()
-    : assetFileOwnerResourceKeys(session, selectionTargetOwner(target));
+    : assetFileOwnerResourceKeys(session, resolveSelectionTargetOwner(session, target));
 }
 
 export function selectFirstContinuityImageInSession(
@@ -170,11 +173,28 @@ function assertSelectionInSession(
       'Selected Asset must be an active canonical candidate owned by the exact selection target.'
     );
   }
+  if (input.target.kind === 'castLook') {
+    assertCandidateBelongsToLook(session, { lookId: input.target.id, assetFileId: input.assetFileId });
+  }
   if (input.target.kind === 'project') {
     requireProjectCoverFile(session, {
       assetFileId: input.assetFileId,
       errorCode: 'CORE_ASSET_SELECTION_INVALID',
     });
+  }
+}
+
+function assertCandidateBelongsToLook(
+  session: DatabaseSession,
+  input: { lookId: string; assetFileId: string }
+): void {
+  const candidate = readCastingCandidateRecord(session, input.assetFileId);
+  const round = candidate ? readCastingRoundRecord(session, candidate.roundId) : null;
+  if (!round || round.lookId !== input.lookId) {
+    throw new ProjectDataError(
+      'CORE_ASSET_SELECTION_INVALID',
+      'A Look can only be cast from a candidate of its own casting rounds.'
+    );
   }
 }
 

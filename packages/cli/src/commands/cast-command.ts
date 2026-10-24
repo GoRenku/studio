@@ -18,6 +18,7 @@ import {
   writeJson,
 } from './command-io.js';
 import { runCastArcCommand } from './cast-arc-command.js';
+import { runCastCastingCommand } from './cast-casting-command.js';
 import { dispatchCliCommand } from './structured-command.js';
 import {
   appendStudioResourceChangedEvent,
@@ -35,6 +36,9 @@ export async function runCastCommand(options: {
     design?: string;
     active?: boolean;
     dryRun?: boolean;
+    look?: string;
+    assetFile?: string;
+    status?: string;
   };
   json: boolean;
   io: RenkuCliIo;
@@ -102,6 +106,15 @@ export async function runCastCommand(options: {
   if (subcommand === 'arc') {
     return runCastArcCommand({
       subcommand: nested,
+      flags: options.flags,
+      json: options.json,
+      io: options.io,
+      homeDir: options.homeDir,
+    });
+  }
+  if (subcommand === 'looks' || subcommand === 'wardrobe' || subcommand === 'casting') {
+    return runCastCastingCommand({
+      input: options.input,
       flags: options.flags,
       json: options.json,
       io: options.io,

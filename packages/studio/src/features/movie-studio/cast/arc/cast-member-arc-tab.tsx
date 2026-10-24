@@ -13,11 +13,9 @@ import { CharacterArcTurningPoints } from './character-arc-turning-points';
 export function CastMemberArcTab({
   projectName,
   castMemberId,
-  onOpenCastMember,
 }: {
   projectName: string;
   castMemberId: string;
-  onOpenCastMember: (castMemberId: string) => void;
 }) {
   const read = useCallback(
     () => readCastMemberCharacterArc(projectName, castMemberId),
@@ -42,7 +40,7 @@ export function CastMemberArcTab({
   }
   return (
     <article className='min-h-full bg-panel-bg px-8 pb-12 pt-7 text-foreground'>
-      <CharacterArcSummary resource={resource} onOpenCastMember={onOpenCastMember} />
+      <CharacterArcSummary resource={resource} />
       <CharacterArcTimeline resource={resource} />
       <CharacterArcTurningPoints projectName={projectName} resource={resource} />
     </article>

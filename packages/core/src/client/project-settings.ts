@@ -1,9 +1,10 @@
+import type { CastingSettings } from './casting/model.js';
 import type { GenerationLane } from './generation-lanes.js';
 
 export const STUDIO_PROJECT_SETTINGS_RESOURCE_KEY = 'project-settings' as const;
 
 export interface ProjectSettingsDocument {
-  version: 7;
+  version: 8;
   screenplayImport: {
     createContinuitySubjects: boolean;
     generateContinuityImages: boolean;
@@ -12,6 +13,8 @@ export interface ProjectSettingsDocument {
     generateBeatStoryboardImages: boolean;
   };
   generation: ProjectGenerationSettings;
+  /** Models and counts that pre-fill the Casting Round panel. */
+  casting: CastingSettings;
 }
 
 export interface ProjectGenerationSettings {

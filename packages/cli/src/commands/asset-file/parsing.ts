@@ -33,11 +33,17 @@ export function parseAssetFileOwner(value: string): AssetFileOwner {
   }
 }
 
+const SCOPED_SELECTION_PREFIXES = {
+  'location-world:': 'locationWorld',
+  'look:': 'castLook',
+  'costume:': 'castCostume',
+} as const;
+
 export function parseSelectionTarget(value: string): AssetFileSelectionTarget {
-  if (value.startsWith('location-world:')) {
-    const id = value.slice('location-world:'.length);
+  for (const [prefix, kind] of Object.entries(SCOPED_SELECTION_PREFIXES)) {
+    const id = value.startsWith(prefix) ? value.slice(prefix.length) : '';
     if (id) {
-      return { kind: 'locationWorld', id };
+      return { kind, id };
     }
   }
   const owner = parseAssetFileOwner(value);
@@ -58,9 +64,9 @@ export function parseSelectionTarget(value: string): AssetFileSelectionTarget {
     issues: [
       createDiagnosticError(
         'CLI046',
-        'Asset selection supports the Project, Cast Members, Locations, Location Worlds, Props, Lookbooks, Shots, and Scene Beats.',
+        'Asset selection supports the Project, Cast Members, Cast Looks, Cast Costumes, Locations, Location Worlds, Props, Lookbooks, Shots, and Scene Beats.',
         { path: ['--target'], context: 'renku CLI arguments' },
-        'Use project, cast:<id>, location:<id>, location-world:<id>, prop:<id>, lookbook:<id>, shot:<id>, or beat:<scene-id>:<beat-id>.'
+        'Use project, cast:<id>, look:<id>, costume:<id>, location:<id>, location-world:<id>, prop:<id>, lookbook:<id>, shot:<id>, or beat:<scene-id>:<beat-id>.'
       ),
     ],
   });

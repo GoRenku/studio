@@ -19,6 +19,7 @@ import type {
 type CastDestinationKind =
   | 'cast.characterSheet'
   | 'cast.profile'
+  | 'cast.castingCandidate'
   | 'cast.voiceSample';
 
 export async function resolveCastDestinationFile(
@@ -59,7 +60,9 @@ export function resolveCastDestinationRootSync(
   input: DestinationRootInput<CastDestinationKind>
 ): ProjectRelativePath {
   const castMember = requireCastMember(input.session, input.destination.castMemberId);
-  return joinProjectRelativePath('cast', castMember.handle);
+  return input.destination.kind === 'cast.castingCandidate'
+    ? joinProjectRelativePath('cast', castMember.handle, 'casting')
+    : joinProjectRelativePath('cast', castMember.handle);
 }
 
 export async function resolveCastDestinationOutputNames(
@@ -90,6 +93,9 @@ function castGeneratedFileStem(
   }
   if (input.destination.kind === 'cast.profile') {
     return fixedFileStem('profile');
+  }
+  if (input.destination.kind === 'cast.castingCandidate') {
+    return fixedFileStem('candidate');
   }
   return requiredSemanticFileStem(input.destination.referenceName);
 }

@@ -17,3 +17,4 @@ export * from './visual-language.js';
 
 export * from './shot-plan-previs.js';
 export * from './shot-plan-clips.js';
+export * from './casting.js';

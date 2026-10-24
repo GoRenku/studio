@@ -22,6 +22,7 @@ export interface MediaCommandFlags {
   clip?: string;
   takeTitle?: string;
   sourceTake?: string;
+  castingModel?: string;
   sourceSheet?: string;
   revision?: string;
   beats?: string;

@@ -95,11 +95,10 @@ describe('continuity Hono route', () => {
         },
         turningPoints: [],
       },
-      sharedWith: null,
       scenes: [],
       presence: [],
       structure: null,
-      looks: [],
+      characterSheets: [],
       freshness: 'current' as const,
       freshnessHelp: null,
     }));
@@ -108,7 +107,7 @@ describe('continuity Hono route', () => {
     const response = await app.request('/constantinople/continuity/cast/cast_ada/arc');
 
     expect(response.status).toBe(200);
-    expect((await response.json()).resource).toMatchObject({ castMember: { id: 'cast_ada' }, looks: [] });
+    expect((await response.json()).resource).toMatchObject({ castMember: { id: 'cast_ada' }, characterSheets: [] });
     expect(readCastMemberCharacterArcResource).toHaveBeenCalledWith({
       projectName: 'constantinople',
       castMemberId: 'cast_ada',

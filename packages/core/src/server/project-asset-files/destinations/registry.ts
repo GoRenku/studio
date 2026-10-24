@@ -107,6 +107,7 @@ import {
 
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
+const castCastingCandidateResolver = castResolver<'cast.castingCandidate'>();
 const castVoiceSampleResolver = castResolver<'cast.voiceSample'>();
 const locationSheetResolver = locationResolver<'location.sheet'>();
 const locationHeroResolver = locationResolver<'location.hero'>();
@@ -189,6 +190,7 @@ const destinationResolvers = {
   },
   'cast.characterSheet': castCharacterSheetResolver,
   'cast.profile': castProfileResolver,
+  'cast.castingCandidate': castCastingCandidateResolver,
   'cast.voiceSample': castVoiceSampleResolver,
   'location.sheet': locationSheetResolver,
   'location.hero': locationHeroResolver,
@@ -299,7 +301,7 @@ function retainedAssetFilePathReservations(
   );
 }
 
-function castResolver<K extends 'cast.characterSheet' | 'cast.profile' | 'cast.voiceSample'>(): DestinationResolver<K> {
+function castResolver<K extends 'cast.characterSheet' | 'cast.profile' | 'cast.castingCandidate' | 'cast.voiceSample'>(): DestinationResolver<K> {
   return {
     resolveFile: resolveCastDestinationFile,
     resolveFileSync: resolveCastDestinationFileSync,

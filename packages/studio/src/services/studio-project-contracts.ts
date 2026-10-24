@@ -1,5 +1,7 @@
 import type {
   AssetFile,
+  CastCastingResource,
+  CastingRoundView,
   CastMemberCharacterArcResource,
   CastMemberResource,
   CastOverviewResource,
@@ -69,8 +71,24 @@ export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & 
   };
 };
 
-export type CastMemberCharacterArcResourceResponse = Omit<CastMemberCharacterArcResource, 'looks'> & {
-  looks: StudioAssetFileResponse[];
+export type CastMemberCharacterArcResourceResponse = Omit<CastMemberCharacterArcResource, 'characterSheets'> & {
+  characterSheets: StudioAssetFileResponse[];
+};
+
+export type CastingRoundViewResponse = Omit<CastingRoundView, 'candidates'> & {
+  candidates: Array<Omit<CastingRoundView['candidates'][number], 'assetFile'> & {
+    assetFile: StudioAssetFileResponse;
+  }>;
+};
+
+export type CastCastingLookResponse = Omit<CastCastingResource['looks'][number], 'rounds' | 'castCandidate'> & {
+  rounds: CastingRoundViewResponse[];
+  castCandidate: StudioAssetFileResponse | null;
+};
+
+export type CastCastingResourceResponse = Omit<CastCastingResource, 'looks' | 'characterSheets'> & {
+  looks: CastCastingLookResponse[];
+  characterSheets: StudioAssetFileResponse[];
 };
 
 export type CastMemberResourceResponse = Omit<

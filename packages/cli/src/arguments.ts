@@ -10,7 +10,7 @@ Commands
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
   asset                Import, list, update, and select retained files
-  cast                 Author cast facts, Cast Design documents and character arcs
+  cast                 Author cast facts, Cast Designs, character arcs, Looks, wardrobe and casting rounds
   director context     Show director readiness for the current movie project
   location             Author location facts and generate 3D Worlds
   prop                 Author Prop facts
@@ -21,6 +21,8 @@ Commands
   info language        Add, update, remove, or set base languages
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
+  settings casting show     Show the Project's casting models and counts
+  settings casting set      Replace casting defaults from --file {"routes": [...]}
   settings generation show  Show generation lane defaults; optional --lane
   settings generation set   Change one lane: --lane plus --provider, --model/--model-name,
                             --clear-model, --choose-route on|off, --ask-before-generating on|off
@@ -47,6 +49,7 @@ Commands
   shot-plan clip take clear Clear the selected take for --clip
   shot-plan clip take update Set the short --title of --take
   media import --clip      Atomically attach and register a raw take; optional --take-title/--source-take
+  media import --casting-model  Model key of the round route that made a cast.casting-candidate
   sample-film install  Download the Basilica sample film into the Project Library
   telemetry status     Show whether usage statistics are on and being sent
   telemetry enable     Turn on usage statistics for this computer
@@ -95,6 +98,8 @@ Options
   --provenance         Media Generation Provenance JSON file
   --locale             Project locale id
   --cast               Cast member id for cast commands
+  --look               Cast Look id for casting commands
+  --status             Casting candidate status: candidate, shortlisted or hidden
   --voice              Cast Voice id or reference name
   --location           Location id for location and production-design commands
   --prop               Prop id for prop and production-design commands
@@ -225,6 +230,7 @@ function createCliFlags() {
     clip: { type: 'string' },
     sourceTake: { type: 'string' },
     takeTitle: { type: 'string' },
+    castingModel: { type: 'string' },
     previsRevision: {
       type: 'string',
     },
@@ -285,6 +291,12 @@ function createCliFlags() {
       type: 'string',
     },
     cast: {
+      type: 'string',
+    },
+    look: {
+      type: 'string',
+    },
+    status: {
       type: 'string',
     },
     voice: {

@@ -46,7 +46,7 @@ describe('Project Settings Hono route', () => {
     await expect(response.json()).resolves.toMatchObject({
       resource: {
         project: { name: 'constantinople' },
-        settings: { version: 7 },
+        settings: { version: 8 },
       },
     });
   });

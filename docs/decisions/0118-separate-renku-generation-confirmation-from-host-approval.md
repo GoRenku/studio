@@ -4,6 +4,11 @@ Date: 2026-10-12
 
 Status: accepted
 
+Status: accepted
+
+[ADR 0127](0127-cast-looks-costumes-and-casting-rounds.md) makes a consumed
+Casting Round Generate the confirmation for every candidate in that round.
+
 Updates [ADR 0105](0105-select-generation-review-by-preference-and-host-capability.md)
 and [ADR 0106](0106-install-codex-plugin-and-route-generation-review.md).
 

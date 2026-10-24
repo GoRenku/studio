@@ -130,7 +130,7 @@ beforeAll(async () => {
 
   const html = path.join(root, 'app.html');
   await fs.writeFile(html, '<!doctype html><html><body>Panel</body></html>');
-  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
+  server = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, castingRoundHtml: html, castingBoardHtml: html, castingWardrobeHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
   client = await connectedClient(server, 'codex-mcp-client', { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: [RESOURCE_MIME_TYPE] } } });
 });
 
@@ -256,7 +256,7 @@ describe('dialogue direction MCP registration', () => {
 
   it.each([['claude-code', {}], ['codex-mcp-client', {}]])('rejects opening for %s before reading the Project', async (name, capabilities) => {
     const html = path.join(root, 'app.html');
-    const isolated = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
+    const isolated = createCodexServer({ version: 'test', generationReviewHtml: html, dialogueDirectionHtml: html, imageEditHtml: html, imageEditTargetChooserHtml: html, routeChooserHtml: html, castingRoundHtml: html, castingBoardHtml: html, castingWardrobeHtml: html, costEstimator: createFakeCostEstimator(), homeDir });
     const isolatedClient = await connectedClient(isolated, name, capabilities);
     try {
       const result = await isolatedClient.callTool({ name: 'dialogue.direction.open', arguments: { ...lineOpening(), project: 'missing' } as never });

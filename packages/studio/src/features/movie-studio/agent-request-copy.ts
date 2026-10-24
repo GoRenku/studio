@@ -81,3 +81,23 @@ export function locationMediaRequest(locationName: string): string {
 export function propMediaRequest(propName: string): string {
   return `Make a hero image and a prop sheet for ${propName}.`;
 }
+
+export function castLooksRequest(castMemberName: string): string {
+  return `Cast ${castMemberName}.`;
+}
+
+export function castLookRequest(castMemberName: string, lookName: string): string {
+  return `Run a casting round for ${castMemberName} · ${lookName}.`;
+}
+
+export function moreLikeShortlistRequest(castMemberName: string, lookName: string): string {
+  return `Run another casting round for ${castMemberName} · ${lookName} like the shortlisted candidates.`;
+}
+
+export function planWardrobeRequest(castMemberName: string): string {
+  return `Plan ${castMemberName}'s wardrobe.`;
+}
+
+export function costumeCharacterSheetsRequest(castMemberName: string): string {
+  return `Make ${castMemberName}'s character sheets.`;
+}

@@ -4,6 +4,12 @@ Date: 2026-07-26
 
 Status: accepted
 
+Status: accepted
+
+[ADR 0127](0127-cast-looks-costumes-and-casting-rounds.md) adds the `castLook`
+and `castCostume` selection scopes; a Character Sheet can be selected for a
+Cast Costume.
+
 [Decision 0107](0107-unify-retained-project-media-as-asset-files.md) moves exclusive
 ownership onto each retained file and selections onto canonical file IDs,
 removing the separate membership row. Plan 0222 tracks implementation; the

@@ -138,6 +138,28 @@ describe('cost estimates', () => {
     expect(await engine.estimateCost('acme', request, context())).toMatchObject({ state: 'computed', amountUsd: 0.9 });
   });
 
+  it('applies the route schema defaults before matching a price tier', async () => {
+    const tiered = price([{ unit: 'image', unitPriceUsd: 0.04, quantity: { kind: 'constant', value: 1 }, tiers: [
+      { when: { '/resolution': '1k' }, unitPriceUsd: 0.02 },
+      { when: { '/resolution': '2k' }, unitPriceUsd: 0.05 },
+    ] }], { source: { kind: 'providerApi', observedAt: NOW.toISOString() } });
+    const engine = createMediaEngine([provider({
+      readPrice: async () => tiered,
+      readInputSchema: async () => ({ type: 'object', properties: { prompt: { type: 'string' }, resolution: { type: 'string', default: '1k' } } }),
+    })]);
+    expect(await engine.estimateCost('acme', { model: 'acme/image', input: {} }, context())).toMatchObject({ state: 'computed', amountUsd: 0.02 });
+    expect(await engine.estimateCost('acme', { model: 'acme/image', input: { resolution: '2k' } }, context())).toMatchObject({ state: 'computed', amountUsd: 0.05 });
+  });
+
+  it('prices an explicit single-image request independently of the route batch default', async () => {
+    const engine = createMediaEngine([provider({
+      readPrice: async () => price([{ unit: 'image', unitPriceUsd: 0.05, quantity: { kind: 'field', pointer: '/num_images', default: 1 } }]),
+      readInputSchema: async () => ({ type: 'object', properties: { num_images: { type: 'integer', default: 4 } } }),
+    })]);
+    expect(await engine.estimateCost('acme', { model: 'acme/image', input: {} }, context())).toMatchObject({ amountUsd: 0.2 });
+    expect(await engine.estimateCost('acme', { model: 'acme/image', input: { num_images: 1 } }, context())).toMatchObject({ amountUsd: 0.05 });
+  });
+
   it('states an unpriced reason once', async () => {
     const engine = createMediaEngine([provider({ readPrice: async () => price([], { notes: ['Billed per token.'] }) })]);
     expect(await engine.estimateCost('acme', request, context())).toMatchObject({ state: 'unpriced', basis: 'Billed per token.', notes: [] });

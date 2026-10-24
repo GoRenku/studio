@@ -13,6 +13,9 @@ import { consumeGenerationReview, respondToGenerationReview } from './generation
 import { readGenerationReference } from './generation-reference-resources.js';
 import { integrationErrorResult } from './diagnostics.js';
 import { assertGenerationReviewCapability, readGenerationReviewCapabilities } from './generation-review-capabilities.js';
+import { registerCastingBoard } from './casting-board/index.js';
+import { registerCastingRound } from './casting-round/index.js';
+import { registerCastingWardrobe } from './casting-wardrobe/index.js';
 import { registerDialogueDirection } from './dialogue-direction/index.js';
 import { registerImageEdit } from './image-edit/index.js';
 import { registerRouteChoice } from './route-choice/index.js';
@@ -24,6 +27,9 @@ export interface CodexServerOptions {
   imageEditHtml: string;
   imageEditTargetChooserHtml: string;
   routeChooserHtml: string;
+  castingRoundHtml: string;
+  castingBoardHtml: string;
+  castingWardrobeHtml: string;
   /** Injected by the CLI composition root; Codex never imports Engines. */
   costEstimator: GenerationCostEstimator;
   homeDir?: string;
@@ -42,6 +48,9 @@ export function createCodexServer(options: CodexServerOptions): McpServer {
   registerDialogueDirection(server, { html: options.dialogueDirectionHtml, homeDir: options.homeDir });
   registerImageEdit(server, { editHtml: options.imageEditHtml, targetChooserHtml: options.imageEditTargetChooserHtml, homeDir: options.homeDir });
   registerRouteChoice(server, { html: options.routeChooserHtml, homeDir: options.homeDir });
+  registerCastingRound(server, { html: options.castingRoundHtml, costEstimator: options.costEstimator, homeDir: options.homeDir });
+  registerCastingBoard(server, { html: options.castingBoardHtml, homeDir: options.homeDir });
+  registerCastingWardrobe(server, { html: options.castingWardrobeHtml, homeDir: options.homeDir });
   return server;
 }
 

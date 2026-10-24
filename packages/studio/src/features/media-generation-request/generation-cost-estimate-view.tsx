@@ -14,19 +14,20 @@ const STATE_LABELS: Record<GenerationCostEstimate['state'], string> = {
  * The one place an estimate is formatted. Amounts come from Engines; an
  * unknown price never shows as $0.
  */
-export function GenerationCostEstimateView({ estimate, outdated = false, refreshing = false }: {
+export function GenerationCostEstimateView({ estimate, outdated = false, refreshing = false, label = 'Estimated cost' }: {
   estimate: GenerationCostEstimate | null;
   outdated?: boolean;
   refreshing?: boolean;
+  label?: string;
 }) {
   if (!estimate) {
     return null;
   }
   const amount = estimate.amountUsd === null ? null : formatUsd(estimate.amountUsd);
   return (
-    <section aria-label='Estimated cost' className='flex min-w-0 flex-col gap-0.5 text-left'>
+    <section aria-label={label} className='flex min-w-0 flex-col gap-0.5 text-left'>
       <div className='flex items-center gap-2'>
-        <span className='text-xs text-muted-foreground'>Estimated cost</span>
+        <span className='text-xs text-muted-foreground'>{label}</span>
         {amount ? <span className='text-sm font-semibold tabular-nums text-foreground'>{amount}</span> : null}
         {outdated ? <Badge variant='outline'>Estimate outdated</Badge> : null}
         {refreshing ? <span role='status' className='text-xs text-muted-foreground'>Updating…</span> : null}

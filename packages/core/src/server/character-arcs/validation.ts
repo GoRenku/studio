@@ -6,15 +6,11 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import {
-  characterArcDocumentSchema,
+  characterArcSchema,
   characterArcsWriteDocumentSchema,
   storedCharacterArcSchema,
 } from '../../client/character-arcs/schemas.js';
-import type {
-  CharacterArc,
-  CharacterArcDocument,
-  CharacterArcsWriteDocument,
-} from '../../client/character-arcs/model.js';
+import type { CharacterArc, CharacterArcsWriteDocument } from '../../client/character-arcs/model.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 const INVALID = 'CHARACTER_ARC_INVALID';
@@ -35,7 +31,7 @@ function getAjv(): Ajv2020 {
     useDefaults: false,
     coerceTypes: false,
   });
-  ajv.addSchema(characterArcDocumentSchema);
+  ajv.addSchema(characterArcSchema);
   ajv.addSchema(characterArcsWriteDocumentSchema);
   ajv.addSchema(storedCharacterArcSchema);
   cachedAjv = ajv;
@@ -83,7 +79,7 @@ export function assertCharacterArcsWriteDocument(input: {
 export function parseStoredCharacterArc(
   value: string,
   castMemberId: string
-): { writtenAt: string; arc: CharacterArcDocument } {
+): { writtenAt: string; arc: CharacterArc } {
   const path = ['castMember', castMemberId, 'characterArc'];
   let parsed: unknown;
   try {
@@ -95,7 +91,7 @@ export function parseStoredCharacterArc(
   if (issues.length > 0) {
     throwStoredInvalid(castMemberId, issues.map((entry) => ({ ...entry, code: STORED_INVALID })));
   }
-  return parsed as { writtenAt: string; arc: CharacterArcDocument };
+  return parsed as { writtenAt: string; arc: CharacterArc };
 }
 
 type SemanticCheck = (
@@ -108,8 +104,7 @@ const SEMANTIC_CHECKS: SemanticCheck[] = [
   checkCastMembers,
   checkSpineForArcType,
   checkSceneReferences,
-  checkArcReferences,
-  checkLooks,
+  checkCharacterSheets,
 ];
 
 function checkCastMembers(document: CharacterArcsWriteDocument, context: CharacterArcValidationContext, filePath?: string): DiagnosticIssue[] {
@@ -129,7 +124,7 @@ function checkCastMembers(document: CharacterArcsWriteDocument, context: Charact
 }
 
 function checkSpineForArcType(document: CharacterArcsWriteDocument, _context: CharacterArcValidationContext, filePath?: string): DiagnosticIssue[] {
-  return ownArcs(document).flatMap(({ arc, index }) => {
+  return document.arcs.flatMap(({ arc }, index) => {
     const path = ['arcs', String(index), 'arc', 'spine'];
     const required = arc.arcType === 'flat' ? ['truthHeld'] : ['need', 'falseBelief'];
     const forbidden = arc.arcType === 'flat' ? ['falseBelief'] : [];
@@ -145,7 +140,7 @@ function checkSpineForArcType(document: CharacterArcsWriteDocument, _context: Ch
 }
 
 function checkSceneReferences(document: CharacterArcsWriteDocument, context: CharacterArcValidationContext, filePath?: string): DiagnosticIssue[] {
-  return ownArcs(document).flatMap(({ arc, index }) => {
+  return document.arcs.flatMap(({ arc }, index) => {
     const base = ['arcs', String(index), 'arc'];
     const unknown = (sceneIds: string[], path: string[]) =>
       sceneIds
@@ -175,52 +170,21 @@ function checkSceneReferences(document: CharacterArcsWriteDocument, context: Cha
   });
 }
 
-function checkArcReferences(document: CharacterArcsWriteDocument, _context: CharacterArcValidationContext, filePath?: string): DiagnosticIssue[] {
-  const owners = new Set(ownArcs(document).map(({ castMemberId }) => castMemberId));
-  return document.arcs.flatMap((entry, index) => {
-    if (entry.arc.kind !== 'characterArcReference') {
-      return [];
-    }
-    const path = ['arcs', String(index), 'arc', 'castMemberId'];
-    if (entry.arc.castMemberId === entry.castMemberId) {
-      return [issue('A Cast Member cannot share its own arc.', path, filePath)];
-    }
-    return owners.has(entry.arc.castMemberId)
-      ? []
-      : [issue('A shared arc must point to a Cast Member whose own arc is in the same document.', path, filePath)];
-  });
-}
-
-function checkLooks(document: CharacterArcsWriteDocument, context: CharacterArcValidationContext, filePath?: string): DiagnosticIssue[] {
-  return ownArcs(document).flatMap(({ arc, index, castMemberId }) => {
-    const sharingOwnerKeys = new Set(
-      [castMemberId, ...referencingCastMemberIds(document, castMemberId)].map((id) => `castMember:${id}`)
-    );
-    return arc.turningPoints.flatMap((turningPoint, turningIndex) => {
-      if (!turningPoint.lookAssetFileId) {
+function checkCharacterSheets(document: CharacterArcsWriteDocument, context: CharacterArcValidationContext, filePath?: string): DiagnosticIssue[] {
+  return document.arcs.flatMap(({ arc, castMemberId }, index) =>
+    arc.turningPoints.flatMap((turningPoint, turningIndex) => {
+      if (!turningPoint.characterSheetAssetFileId) {
         return [];
       }
-      const path = ['arcs', String(index), 'arc', 'turningPoints', String(turningIndex), 'lookAssetFileId'];
-      const asset = context.assetFiles.get(turningPoint.lookAssetFileId);
+      const path = ['arcs', String(index), 'arc', 'turningPoints', String(turningIndex), 'characterSheetAssetFileId'];
+      const asset = context.assetFiles.get(turningPoint.characterSheetAssetFileId);
       if (!asset || asset.type !== CHARACTER_SHEET) {
-        return [issue(`lookAssetFileId must name an available character sheet: ${turningPoint.lookAssetFileId}.`, path, filePath)];
+        return [issue(`characterSheetAssetFileId must name an available character sheet: ${turningPoint.characterSheetAssetFileId}.`, path, filePath)];
       }
-      return sharingOwnerKeys.has(asset.ownerKey)
+      return asset.ownerKey === `castMember:${castMemberId}`
         ? []
-        : [issue('The character sheet must belong to this Cast Member or to a Cast Member sharing this arc.', path, filePath)];
-    });
-  });
-}
-
-function ownArcs(document: CharacterArcsWriteDocument): Array<{ arc: CharacterArc; index: number; castMemberId: string }> {
-  return document.arcs.flatMap((entry, index) =>
-    entry.arc.kind === 'characterArc' ? [{ arc: entry.arc, index, castMemberId: entry.castMemberId }] : []);
-}
-
-function referencingCastMemberIds(document: CharacterArcsWriteDocument, ownerId: string): string[] {
-  return document.arcs
-    .filter((entry) => entry.arc.kind === 'characterArcReference' && entry.arc.castMemberId === ownerId)
-    .map((entry) => entry.castMemberId);
+        : [issue('The character sheet must belong to this Cast Member.', path, filePath)];
+    }));
 }
 
 function validateShape(schemaId: string, value: unknown, basePath: string[], filePath?: string): DiagnosticIssue[] {
@@ -233,7 +197,6 @@ function validateShape(schemaId: string, value: unknown, basePath: string[], fil
 
 function mapAjvErrors(errors: ErrorObject[], basePath: string[], filePath?: string): DiagnosticIssue[] {
   return errors
-    .filter((error) => error.keyword !== 'if')
     .map((error) => {
       const path = [...basePath, ...error.instancePath.split('/').slice(1)];
       if (error.keyword === 'required') {

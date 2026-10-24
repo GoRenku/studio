@@ -43,15 +43,19 @@ export function suggestSceneSubjectMedia(input: {
   collection: GenerationAssetFiles;
 }): MediaGenerationReferenceSuggestion[] {
   return [
-    ...input.sceneContext.castMembers.map((context) => createReferenceSuggestion({
-      id: 'cast-continuity',
-      role: 'continuity',
-      subject: { kind: 'castMember', id: context.castMember.id },
-      assetFiles: context.assetFileIds.map((id) => input.collection.get(id)).filter((assetFile) => assetFile.type === 'character_sheet'),
-      projectFolder: input.projectFolder,
-      warnings: input.warnings,
-      collection: input.collection,
-    })),
+    ...input.sceneContext.castMembers.map((context) => {
+      const costumeSheetId = context.wardrobe?.characterSheetAssetFileId;
+      return leadWith(createReferenceSuggestion({
+        id: 'cast-continuity',
+        role: 'continuity',
+        subject: { kind: 'castMember', id: context.castMember.id },
+        assetFiles: context.assetFileIds.map((id) => input.collection.get(id)).filter((assetFile) => assetFile.type === 'character_sheet'),
+        ...(costumeSheetId ? { selectedAssetFileIds: [costumeSheetId], workflowSelectedAssetFileIds: [costumeSheetId] } : {}),
+        projectFolder: input.projectFolder,
+        warnings: input.warnings,
+        collection: input.collection,
+      }), costumeSheetId);
+    }),
     ...input.sceneContext.locations.map((context) => createReferenceSuggestion({
       id: 'location-continuity',
       role: 'continuity',
@@ -71,6 +75,23 @@ export function suggestSceneSubjectMedia(input: {
       collection: input.collection,
     })),
   ];
+}
+
+/** Puts the scene costume's picked sheet first; the other sheets stay as candidates. */
+function leadWith(
+  suggestion: MediaGenerationReferenceSuggestion,
+  assetFileId: string | null | undefined
+): MediaGenerationReferenceSuggestion {
+  if (!assetFileId) {
+    return suggestion;
+  }
+  return {
+    ...suggestion,
+    candidates: [
+      ...suggestion.candidates.filter((candidate) => candidate.assetFileId === assetFileId),
+      ...suggestion.candidates.filter((candidate) => candidate.assetFileId !== assetFileId),
+    ],
+  };
 }
 
 export function suggestBeatStoryboards(input: {

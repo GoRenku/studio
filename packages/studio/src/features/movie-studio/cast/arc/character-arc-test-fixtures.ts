@@ -18,12 +18,11 @@ export function characterArcResource(
         falseBelief: { text: 'Help is weakness.', sceneIds: ['scene_2'] },
       },
       turningPoints: [
-        { sceneIds: ['scene_1'], label: 'Night shift', state: 'Alone and proud.', position: -3, lookAssetFileId: 'asset_sheet' },
+        { sceneIds: ['scene_1'], label: 'Night shift', state: 'Alone and proud.', position: -3, characterSheetAssetFileId: 'asset_sheet' },
         { sceneIds: ['scene_2', 'scene_3'], label: 'Blackout', state: 'Overwhelmed.', position: -5, quote: 'I have it.' },
         { sceneIds: ['scene_4'], label: 'Calls the apprentice', state: 'Relieved.', position: 4 },
       ],
     },
-    sharedWith: null,
     scenes: [
       { id: 'scene_1', productionNumber: '1', heading: 'INT. CONTROL ROOM - NIGHT' },
       { id: 'scene_2', productionNumber: '2', heading: 'INT. CONTROL ROOM - LATER' },
@@ -42,12 +41,12 @@ export function characterArcResource(
       ],
       keyBeats: [{ key: 'midpoint', sceneId: 'scene_2' }, { key: 'climax', sceneId: 'scene_4' }],
     },
-    looks: [{
+    characterSheets: [{
       id: 'asset_sheet',
       title: 'Ada — Night Shift',
       type: 'character_sheet',
       mediaKind: 'image',
-    } as CastMemberCharacterArcResourceResponse['looks'][number]],
+    } as CastMemberCharacterArcResourceResponse['characterSheets'][number]],
     freshness: 'current',
     freshnessHelp: null,
     ...overrides,

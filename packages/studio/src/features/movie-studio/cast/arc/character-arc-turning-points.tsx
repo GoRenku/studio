@@ -11,7 +11,7 @@ export function CharacterArcTurningPoints({
   projectName: string;
   resource: CastMemberCharacterArcResourceResponse;
 }) {
-  const looks = new Map(resource.looks.map((look) => [look.id, look]));
+  const characterSheets = new Map(resource.characterSheets.map((sheet) => [sheet.id, sheet]));
   const { ends, turningPoints } = resource.arc;
   return (
     <div className='mt-6 flex gap-[22px] overflow-x-auto pb-4 pt-1'>
@@ -23,15 +23,17 @@ export function CharacterArcTurningPoints({
           <div className='flex gap-2.5'>
             {group.cards.map((card) => {
               const point = turningPoints[card.turningPointIndex]!;
-              const look = point.lookAssetFileId ? looks.get(point.lookAssetFileId) : undefined;
+              const characterSheet = point.characterSheetAssetFileId
+                ? characterSheets.get(point.characterSheetAssetFileId)
+                : undefined;
               return (
                 <article key={card.number} className='flex w-[228px] flex-none flex-col overflow-hidden rounded-[10px] border border-border/40 bg-muted/30'>
-                  {look ? (
+                  {characterSheet ? (
                     <>
                       <div className='aspect-video bg-white/90'>
-                        <img src={projectAssetFileUrl(projectName, look.id)} alt={look.title ?? ''} className='h-full w-full object-contain' />
+                        <img src={projectAssetFileUrl(projectName, characterSheet.id)} alt={characterSheet.title ?? ''} className='h-full w-full object-contain' />
                       </div>
-                      {look.title ? <p className='px-3 pt-1.5 text-[11px] text-muted-foreground'>{look.title}</p> : null}
+                      {characterSheet.title ? <p className='px-3 pt-1.5 text-[11px] text-muted-foreground'>{characterSheet.title}</p> : null}
                     </>
                   ) : null}
                   <div className='flex flex-1 flex-col gap-1.5 px-3 pb-3 pt-2.5'>

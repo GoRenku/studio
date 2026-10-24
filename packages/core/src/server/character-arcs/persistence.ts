@@ -1,5 +1,5 @@
 import { asc, eq, inArray, isNotNull } from 'drizzle-orm';
-import type { CharacterArcDocument } from '../../client/character-arcs/model.js';
+import type { CharacterArc } from '../../client/character-arcs/model.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { castMembers } from '../schema/index.js';
 import { parseStoredCharacterArc } from './validation.js';
@@ -9,7 +9,7 @@ export interface StoredCharacterArcRecord {
   name: string;
   role: string | null;
   writtenAt: string;
-  arc: CharacterArcDocument;
+  arc: CharacterArc;
 }
 
 /** The only reader of `cast_member.character_arc`. */
@@ -42,7 +42,7 @@ export function readStoredCharacterArc(
  */
 export function replaceStoredCharacterArcs(
   session: DatabaseSession,
-  input: { arcs: Array<{ castMemberId: string; arc: CharacterArcDocument }>; writtenAt: string }
+  input: { arcs: Array<{ castMemberId: string; arc: CharacterArc }>; writtenAt: string }
 ): { written: string[]; cleared: string[] } {
   const listed = new Set(input.arcs.map((entry) => entry.castMemberId));
   const cleared = session.db
@@ -63,16 +63,6 @@ export function replaceStoredCharacterArcs(
       .run();
   }
   return { written: input.arcs.map((entry) => entry.castMemberId), cleared };
-}
-
-/** Cast Members whose arc is a reference to the given owner's arc. */
-export function listCastMembersSharingCharacterArc(
-  session: DatabaseSession,
-  ownerCastMemberId: string
-): StoredCharacterArcRecord[] {
-  return listStoredCharacterArcs(session).filter(
-    (record) => record.arc.kind === 'characterArcReference' && record.arc.castMemberId === ownerCastMemberId
-  );
 }
 
 function toStoredRecord(row: { id: string; name: string; role: string | null; characterArc: string | null }): StoredCharacterArcRecord {

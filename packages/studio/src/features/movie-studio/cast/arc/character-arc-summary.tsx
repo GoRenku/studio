@@ -1,34 +1,13 @@
 import { ArrowRight } from 'lucide-react';
 import type { CastMemberCharacterArcResourceResponse } from '@/services/studio-project-contracts';
-import { Button } from '@/ui/button';
 import { ARC_TYPE_HINTS, ARC_TYPE_LABELS, SPINE_LABELS, SPINE_ORDER } from './character-arc-copy';
 import { SceneChips } from './scene-chips';
 
-export function CharacterArcSummary({
-  resource,
-  onOpenCastMember,
-}: {
-  resource: CastMemberCharacterArcResourceResponse;
-  onOpenCastMember: (castMemberId: string) => void;
-}) {
+export function CharacterArcSummary({ resource }: { resource: CastMemberCharacterArcResourceResponse }) {
   const { arc } = resource;
   const spineKeys = SPINE_ORDER[arc.arcType].filter((key) => arc.spine[key]);
   return (
     <header>
-      {resource.sharedWith ? (
-        <p className='mb-3.5 rounded-lg bg-muted/40 px-3.5 py-2.5 text-[13.5px] text-foreground/85'>
-          Shared with{' '}
-          <Button
-            type='button'
-            variant='link'
-            className='h-auto p-0 text-[13.5px] font-bold text-primary'
-            onClick={() => onOpenCastMember(resource.sharedWith!.ownerCastMemberId)}
-          >
-            {resource.sharedWith.ownerName}
-          </Button>
-          . This is {resource.sharedWith.ownerName}&apos;s arc.
-        </p>
-      ) : null}
       <div className='flex flex-wrap items-center gap-3.5'>
         <h1 className='text-[30px] font-extrabold leading-tight tracking-[-0.01em]'>{resource.castMember.name}</h1>
         {resource.castMember.role ? (

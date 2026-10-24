@@ -3,7 +3,9 @@ import {
   assetFiles,
   castDesigns,
   castDesignState,
+  castLooks,
   castMembers,
+  castVoices,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
@@ -79,6 +81,8 @@ export interface CastMemberDeleteDependencySummary {
   assetFileCount: number;
   designCount: number;
   activeDesignStateCount: number;
+  lookCount: number;
+  voiceCount: number;
 }
 
 export function replaceCastMemberAuthoringRecords(
@@ -162,6 +166,16 @@ export function readCastMemberDeleteDependencySummary(
       .select({ castMemberId: castDesignState.castMemberId })
       .from(castDesignState)
       .where(eq(castDesignState.castMemberId, castMemberId))
+      .all().length,
+    lookCount: session.db
+      .select({ id: castLooks.id })
+      .from(castLooks)
+      .where(eq(castLooks.castMemberId, castMemberId))
+      .all().length,
+    voiceCount: session.db
+      .select({ id: castVoices.id })
+      .from(castVoices)
+      .where(eq(castVoices.castMemberId, castMemberId))
       .all().length,
   };
 }

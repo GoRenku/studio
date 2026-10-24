@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AssetFileOwner, AssetFileSelectionTarget } from '../../client/asset-files.js';
+import type { AssetFileOwner } from '../../client/asset-files.js';
 import {
   assetFileSelectionTargetForOwnerType,
 } from './selection.js';
@@ -9,7 +9,7 @@ describe('Asset selection capability', () => {
   it.each<{
     owner: AssetFileOwner;
     type: string;
-    target: AssetFileSelectionTarget;
+    target: Parameters<typeof selectionTargetOwner>[0];
   }>([
     {
       owner: { kind: 'castMember', id: 'cast_1' },

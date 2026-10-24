@@ -337,6 +337,24 @@ export function fakeProjectDataService(): NonNullable<
     async selectDefaultCastVoice() {
       return { valid: true, warnings: [], project: { id: project.id, projectName: project.projectName }, castMemberId: 'cast_urban', selectedCastVoiceId: 'cast_voice_1', voices: [], resourceKeys: [] };
     },
+    async readCastCastingResource(input) {
+      return {
+        castMember: { id: input.castMemberId, name: fixtureCastMember.name },
+        scenes: [{ id: 'scene_opening', productionNumber: '1', heading: 'EXT. THEODOSIAN WALLS - DAWN' }],
+        looks: [],
+        costumes: [],
+        characterSheets: [],
+      };
+    },
+    async setCastingCandidateStatus(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { id: project.id, projectName: project.projectName },
+        resourceKeys: [`surface:castMember:${fixtureCastMember.id}`],
+        candidate: { assetFileId: input.assetFileId, roundId: 'round_1', status: input.status, modelKey: 'lumen' },
+      };
+    },
     async readSceneBeatsResource() {
       return {
         scene: {

@@ -129,6 +129,7 @@ export function createGenerationServiceWiring() {
       clipId?: string;
       takeTitle?: string;
       sourceTakeId?: string;
+      castingModelKey?: string;
     }) {
       const report = await withProject(input, ({ session, projectFolder }) =>
         attachGenerationMedia({

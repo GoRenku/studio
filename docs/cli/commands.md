@@ -107,6 +107,20 @@ open `/?settings=provider-credentials` to guide the user to the existing global
 Settings key editor. Closing or saving preserves the current route and other
 query parameters.
 
+## `renku settings casting`
+
+Show or replace the Project's casting defaults: the models and counts that
+pre-fill the Casting Round panel. The panel's save box writes the same value.
+
+```bash
+renku settings casting show --json
+renku settings casting set --file <casting-json> --json
+```
+
+The file is `{ "routes": [{ "provider", "model": { "key", "name" }, "count" }] }`
+with Skill provider ids and model guide keys; `routes` may be empty.
+Concurrency comes from the image lane's `maxConcurrentGenerations`.
+
 ## `renku settings generation`
 
 Show or change the generation lanes of Project Settings without replacing the
@@ -639,11 +653,10 @@ Input JSON shape:
         },
         "turningPoints": [
           { "sceneIds": ["scene_26"], "label": "Sees his death in the eye", "state": "Fear gone.", "position": 5 },
-          { "sceneIds": ["scene_181"], "label": "Tell me how it happens", "state": "Scared and lost.", "position": -2, "lookAssetFileId": "asset_file_sheet" }
+          { "sceneIds": ["scene_181"], "label": "Tell me how it happens", "state": "Scared and lost.", "position": -2, "characterSheetAssetFileId": "asset_file_sheet" }
         ]
       }
-    },
-    { "castMemberId": "cast_young_edward", "arc": { "kind": "characterArcReference", "castMemberId": "cast_edward" } }
+    }
   ]
 }
 ```
@@ -660,13 +673,72 @@ Input JSON shape:
   - in screenplay order by their first Scene, with the Scene ids inside one
     turning point also in order;
   - `position` is an integer from −5 to 5.
-- **Looks:** `lookAssetFileId` must name an available character sheet of
-  the Cast Member, or of a Cast Member sharing the arc.
-- **References:** a reference must point to a Cast Member whose own arc is
-  in the same document.
+- **Character sheets:** `characterSheetAssetFileId` must name an available
+  character sheet of the same Cast Member.
 - **Failures:** they report `CHARACTER_ARC_INVALID` with every issue.
-- **Deleting an arc owner:** deleting a Cast Member whose arc another Cast
-  Member shares fails with `CHARACTER_ARC_REFERENCE_IN_USE`.
+
+## `renku cast looks`, `renku cast wardrobe` and `renku cast casting`
+
+Cast Looks, the wardrobe plan and casting rounds (ADR 0127). The same person
+is one Cast Member at every age; each visible age or large physique change is
+a Look covering a list of scenes. Commands act on the current authoring
+project; `--project` only names the project for Studio resource events.
+
+```bash
+renku cast looks show --cast <cast-member-id> --json
+renku cast looks validate|write --file <cast-looks-plan-json> --json
+renku cast wardrobe show --cast <cast-member-id> --json
+renku cast wardrobe validate|write --file <cast-wardrobe-plan-json> --json
+renku cast casting round create --file <casting-round-json> --json
+renku cast casting show --look <look-id> --json
+renku cast casting candidate status --asset-file <asset-file-id> --status candidate|shortlisted|hidden --json
+renku asset select --project <project> --target look:<look-id> --asset-file <casting-candidate-asset-file-id> --json
+renku asset select --project <project> --target costume:<costume-id> --asset-file <character-sheet-asset-file-id> --json
+```
+
+- **`looks write`** replaces the Cast Member's Looks. A listed `id` keeps an
+  existing Look (rename freely); an omitted Look is removed only when no
+  costume or casting round depends on it (`CASTING_LOOK_IN_USE`). A scene
+  belongs to at most one Look (`CASTING_LOOK_SCENE_CONFLICT`), and a Look
+  cannot drop scenes its costumes still wear.
+- **`wardrobe write`** replaces the Cast Member's costumes. Each costume
+  belongs to one Look, its scenes are within that Look's scenes
+  (`CASTING_COSTUME_SCENE_OUTSIDE_LOOK`), and a scene has one costume
+  (`CASTING_COSTUME_SCENE_CONFLICT`). A removed costume's picked sheet is
+  unselected and reported in `clearedSheetSelections`; the sheet stays in
+  Assets.
+- **`casting round create`** records a confirmed round before its
+  candidates are generated. References must be active files of the same Cast
+  Member (`CASTING_ROUND_REFERENCE_NOT_OWNED`). Candidates are then generated
+  with purpose `cast.casting-candidate` and imported with
+  `renku media import --purpose cast.casting-candidate --target casting-round:<round-id> --casting-model <route-model-key>`,
+  naming which round route made it (`CASTING_CANDIDATE_MODEL_INVALID` otherwise).
+- **Casting** a Look selects one candidate of its own rounds with the
+  `look:<id>` target. Character sheets target `costume:<id>`; import with
+  `--select` or pick later with the `costume:<id>` target.
+- Every issue in a document is reported together with stable `CASTING_`
+  codes.
+
+Input JSON shapes:
+
+```json
+{ "kind": "castLooksPlan", "castMemberId": "cast_sintel", "looks": [
+  { "id": "cast_look_main", "name": "Young", "description": "About 16, slender and agile, 165 cm.", "sceneIds": ["scene_3", "scene_4"] },
+  { "name": "Fifteen years later", "sceneIds": ["scene_1", "scene_13"] }
+] }
+```
+
+```json
+{ "kind": "castWardrobePlan", "castMemberId": "cast_sintel", "costumes": [
+  { "name": "Young Ishtar survivor", "lookId": "cast_look_main", "wardrobe": ["Plain worn leather separates."], "continuityNotes": [], "sceneIds": ["scene_3", "scene_4"] }
+] }
+```
+
+```json
+{ "kind": "castingRoundCreate", "lookId": "cast_look_main",
+  "routes": [{ "provider": "fal-ai", "model": { "key": "<model-guide-key>", "name": "<name>" }, "count": 4 }],
+  "maxConcurrentGenerations": 4, "referenceAssetFileIds": [], "estimatedCost": { "amount": 0.67, "currency": "USD" } }
+```
 
 ## `renku cast design`
 
@@ -1807,7 +1879,8 @@ routinely requesting both. Text is presentation, not a machine parsing contract.
 Examples of direct reading across workflows:
 
 ```bash
-renku generation context --purpose cast.character-sheet --target cast:<id>
+renku generation context --purpose cast.character-sheet --target costume:<id>
+renku generation context --purpose cast.casting-candidate --target casting-round:<id>
 renku generation context --purpose location.sheet --target location:<id>
 renku generation context --purpose shot-plan.video-generation --target shot-plan:<id>
 renku generation context --purpose shot-plan.dialogue-audio --target shot-plan:<id>

@@ -214,7 +214,7 @@ function providers(): ProviderCredentialStatus[] {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 7,
+    version: 8,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -257,5 +257,6 @@ function settings(): ProjectSettingsDocument {
         maxConcurrentGenerations: 1,
       },
     },
+    casting: { routes: [] },
   };
 }

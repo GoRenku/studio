@@ -12,6 +12,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { GenerationAssetFiles } from './reference-assets.js';
 import { buildAssetFilePurposeContext } from './purposes/asset-file.js';
 import { buildCastPurposeContext } from './purposes/cast.js';
+import { buildCastCostumePurposeContext, buildCastingRoundPurposeContext } from './purposes/casting.js';
 import { buildLocationPurposeContext } from './purposes/location.js';
 import { buildLookbookPurposeContext } from './purposes/lookbook.js';
 import { buildProjectPurposeContext } from './purposes/project.js';
@@ -50,7 +51,8 @@ export const MEDIA_GENERATION_PURPOSE_BUILDERS: Record<MediaPurpose, MediaGenera
   'lookbook.image': buildLookbookPurposeContext,
   'lookbook.video-sheet': buildLookbookPurposeContext,
   'lookbook.storyboard-sheet': buildLookbookPurposeContext,
-  'cast.character-sheet': buildCastPurposeContext,
+  'cast.casting-candidate': buildCastingRoundPurposeContext,
+  'cast.character-sheet': buildCastCostumePurposeContext,
   'cast.profile': buildCastPurposeContext,
   'cast.voice-sample': buildCastPurposeContext,
   'location.sheet': buildLocationPurposeContext,
@@ -82,10 +84,13 @@ export function mediaGenerationOutputGuidance(
         ? { value: '1:1', rationale: 'Cast Profiles use a square Studio presentation.' }
         : purpose === 'lookbook.video-sheet' || purpose === 'lookbook.storyboard-sheet'
           ? { value: '4:3', rationale: 'Lookbook Sheets use the established sheet presentation.' }
+          : purpose === 'cast.casting-candidate'
+            ? { value: '4:3', rationale: 'A casting candidate shows a face close-up and a full-length figure side by side.' }
           : purpose === 'lookbook.image' || purpose === 'shot.image'
             ? { value: projectAspectRatio, rationale: 'Match the current Project aspect ratio.' }
             : null;
   const quality = purpose === 'project.cover'
+    || purpose === 'cast.casting-candidate'
     || purpose === 'lookbook.image'
     || purpose === 'cast.profile'
     || purpose === 'location.hero'

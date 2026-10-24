@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, like } from 'drizzle-orm';
 import type {
   SceneBeats,
   SceneBeatsRevisionSummary,
@@ -144,6 +144,19 @@ export function readStoredSceneBeatsRevision(input: {
     throw invalidStoredRevision(input.row.id, 'has a mismatched Scene id');
   }
   return parsed;
+}
+
+/** Every Scene Beats revision, current or past, whose beats name the Cast Member. */
+export function listSceneBeatsRevisionsNamingCastMember(
+  session: DatabaseSession,
+  castMemberId: string
+): SceneBeatsRevisionRecord[] {
+  return session.db
+    .select()
+    .from(sceneBeatsRevisions)
+    .where(like(sceneBeatsRevisions.document, `%${castMemberId}%`))
+    .all()
+    .filter((row) => readSceneBeats({ row }).beats.some((beat) => beat.castMemberIds.includes(castMemberId)));
 }
 
 export function readSceneBeats(input: { row: SceneBeatsRevisionRecord }): SceneBeats {

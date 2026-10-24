@@ -1,7 +1,7 @@
 import { isStructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationCostEstimate } from '@gorenku/studio-core/client';
 import type { GenerationCostEstimator } from '@gorenku/studio-codex';
-import { isEngineError, type CostEstimate, type MediaEngine, type ProviderContext } from '@gorenku/studio-engines';
+import { estimateImageCost, isEngineError, type CostEstimate, type MediaEngine, type ProviderContext } from '@gorenku/studio-engines';
 import { createEngineContext } from './engine-context.js';
 import { createRenkuMediaEngine } from './provider-registry.js';
 
@@ -14,6 +14,9 @@ export function createGenerationCostEstimator(options: {
   createProviderContext?: (input: { provider: string; homeDir?: string; signal: AbortSignal }) => Promise<ProviderContext>;
 } = {}): GenerationCostEstimator {
   return {
+    async estimateImage(modelKey) {
+      return toGenerationCostEstimate(estimateImageCost(modelKey), null);
+    },
     async estimate(input) {
       const controller = new AbortController();
       try {
@@ -43,7 +46,7 @@ export function createGenerationCostEstimator(options: {
   };
 }
 
-export function toGenerationCostEstimate(estimate: CostEstimate, requestSha256: string): GenerationCostEstimate {
+export function toGenerationCostEstimate(estimate: CostEstimate, requestSha256: string | null): GenerationCostEstimate {
   return {
     state: estimate.state,
     amountUsd: estimate.amountUsd ?? null,

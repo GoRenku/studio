@@ -32,6 +32,7 @@ export type ProjectAssetFileDestination =
     }
   | { kind: 'cast.characterSheet'; castMemberId: string; semanticName?: string }
   | { kind: 'cast.profile'; castMemberId: string }
+  | { kind: 'cast.castingCandidate'; castMemberId: string }
   | {
       kind: 'cast.voiceSample';
       castMemberId: string;

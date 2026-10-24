@@ -13,11 +13,7 @@ import type { ReadCastMemberResourceInput } from '../project-data-service-contra
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { readActiveScreenplayAnalysisId } from '../screenplay-analysis/persistence.js';
 import { characterArcFreshness, characterArcFreshnessHelp } from './freshness.js';
-import {
-  listCastMembersSharingCharacterArc,
-  readStoredCharacterArc,
-  type StoredCharacterArcRecord,
-} from './persistence.js';
+import { readStoredCharacterArc, type StoredCharacterArcRecord } from './persistence.js';
 import { readCharacterArcPresence } from './presence.js';
 import { readCharacterArcStoryStructure } from './story-structure.js';
 
@@ -26,29 +22,20 @@ export async function readCastMemberCharacterArcResource(
 ): Promise<CastMemberCharacterArcResource> {
   const { session } = await openProjectSession(input);
   try {
-    const viewed = requireStoredCharacterArc(session, input.castMemberId);
-    const owner = viewed.arc.kind === 'characterArcReference'
-      ? requireStoredCharacterArc(session, viewed.arc.castMemberId)
-      : viewed;
-    const arc = owner.arc as CharacterArc;
-    const sharingIds = new Set([
-      owner.castMemberId,
-      ...listCastMembersSharingCharacterArc(session, owner.castMemberId).map((record) => record.castMemberId),
-    ]);
-    const freshness = characterArcFreshness(session, owner.writtenAt);
+    const stored = requireStoredCharacterArc(session, input.castMemberId);
+    const freshness = characterArcFreshness(session, stored.writtenAt);
     return {
-      castMember: { id: viewed.castMemberId, name: viewed.name, ...(viewed.role ? { role: viewed.role } : {}) },
-      arc,
-      sharedWith: owner === viewed ? null : { ownerCastMemberId: owner.castMemberId, ownerName: owner.name },
+      castMember: { id: stored.castMemberId, name: stored.name, ...(stored.role ? { role: stored.role } : {}) },
+      arc: stored.arc,
       scenes: readCanonicalScreenplay(session).scenes.map((scene) => ({
         id: scene.id,
         heading: scene.heading,
         ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
         ...(scene.title ? { title: scene.title } : {}),
       })),
-      presence: readCharacterArcPresence(session, sharingIds),
+      presence: readCharacterArcPresence(session, stored.castMemberId),
       structure: readCharacterArcStoryStructure(session),
-      looks: readLooks(session, arc),
+      characterSheets: readCharacterSheets(session, stored.arc),
       freshness,
       freshnessHelp: characterArcFreshnessHelp(freshness),
     };
@@ -57,24 +44,19 @@ export async function readCastMemberCharacterArcResource(
   }
 }
 
-/** Whether the Cast Member has an own or shared arc, or why it has none yet. */
+/** Whether the Cast Member has an arc, or why it has none yet. */
 export function readCastMemberCharacterArcSummary(
   session: DatabaseSession,
   castMemberId: string
 ): CastMemberCharacterArcSummary {
-  const stored = readStoredCharacterArc(session, castMemberId);
-  if (stored?.arc.kind === 'characterArc') {
+  if (readStoredCharacterArc(session, castMemberId)) {
     return { kind: 'own' };
-  }
-  const owner = stored ? readStoredCharacterArc(session, stored.arc.castMemberId) : null;
-  if (owner?.arc.kind === 'characterArc') {
-    return { kind: 'shared', ownerCastMemberId: owner.castMemberId, ownerName: owner.name };
   }
   return { kind: 'notWritten', screenplayAnalyzed: readActiveScreenplayAnalysisId(session) !== null };
 }
 
-function readLooks(session: DatabaseSession, arc: CharacterArc): AssetFile[] {
-  const ids = [...new Set(arc.turningPoints.flatMap((point) => point.lookAssetFileId ? [point.lookAssetFileId] : []))];
+function readCharacterSheets(session: DatabaseSession, arc: CharacterArc): AssetFile[] {
+  const ids = [...new Set(arc.turningPoints.flatMap((point) => point.characterSheetAssetFileId ? [point.characterSheetAssetFileId] : []))];
   return ids.flatMap((id) => {
     const record = readAssetFileRecordIncludingDiscarded(session, id);
     return record && isAssetFileAvailableInSession(session, record) ? [toAssetFile(record)] : [];

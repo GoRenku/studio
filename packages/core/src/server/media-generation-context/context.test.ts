@@ -373,6 +373,7 @@ describe('media generation context', () => {
       coverage: null,
       shots: [],
     });
+    const casting = await castCostumeAndRound(projectData, homeDir);
     const cases = [
       ['image.create', { kind: 'shotPlan', id: imageCreateShotPlan.shotPlan.id }, 'shotPlan'],
       ['image.edit', { kind: 'assetFile', assetFileId: sourceAssetFile.id }, 'assetFile'],
@@ -381,7 +382,8 @@ describe('media generation context', () => {
       ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],
       ['lookbook.video-sheet', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],
       ['lookbook.storyboard-sheet', { kind: 'lookbook', id: storyboard.lookbook.id }, 'lookbook'],
-      ['cast.character-sheet', { kind: 'castMember', id: 'cast_test0002' }, 'castMember'],
+      ['cast.casting-candidate', { kind: 'castingRound', id: casting.roundId }, 'castingRound'],
+      ['cast.character-sheet', { kind: 'castCostume', id: casting.costumeId }, 'castCostume'],
       ['cast.profile', { kind: 'castMember', id: 'cast_test0002' }, 'castMember'],
       ['cast.voice-sample', { kind: 'castMember', id: 'cast_test0002' }, 'castMember'],
       ['location.sheet', { kind: 'location', id: 'location_test0001' }, 'location'],
@@ -432,8 +434,9 @@ describe('media generation context', () => {
       prompt: 'Earlier request.', request: { prompt: 'Earlier request.' },
     };
     const production = await projectData.writeProductionLookbook({ homeDir, document: productionLookbookDocument() });
+    const casting = await castCostumeAndRound(projectData, homeDir);
     const targets = [
-      ['cast.character-sheet', { kind: 'castMember', id: 'cast_test0002' }],
+      ['cast.character-sheet', { kind: 'castCostume', id: casting.costumeId }],
       ['location.sheet', { kind: 'location', id: 'location_test0001' }],
       ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }],
       ['lookbook.video-sheet', { kind: 'lookbook', id: production.lookbook.id }],
@@ -536,6 +539,7 @@ describe('media generation context', () => {
       'lookbook.image': ['2.39:1', 'medium'],
       'lookbook.video-sheet': ['4:3', 'high'],
       'lookbook.storyboard-sheet': ['4:3', 'high'],
+      'cast.casting-candidate': ['4:3', 'medium'],
       'cast.character-sheet': ['16:9', 'high'],
       'cast.profile': ['1:1', 'medium'],
       'cast.voice-sample': [null, null],
@@ -554,6 +558,38 @@ describe('media generation context', () => {
     }))).toEqual(expected);
   });
 });
+
+/** Gives cast_test0002 one Look with one costume and one casting round. */
+async function castCostumeAndRound(
+  projectData: ReturnType<typeof createProjectDataService>,
+  homeDir: string
+): Promise<{ costumeId: string; roundId: string }> {
+  const looks = await projectData.writeCastLooksPlan({
+    homeDir,
+    document: { kind: 'castLooksPlan', castMemberId: 'cast_test0002', looks: [{ name: 'Main', sceneIds: [] }] },
+  });
+  const lookId = looks.looks[0]!.id;
+  const wardrobe = await projectData.writeCastWardrobePlan({
+    homeDir,
+    document: {
+      kind: 'castWardrobePlan',
+      castMemberId: 'cast_test0002',
+      costumes: [{ name: 'Main', lookId, wardrobe: ['Dark robe'], continuityNotes: [], sceneIds: [] }],
+    },
+  });
+  const round = await projectData.createCastingRound({
+    homeDir,
+    document: {
+      kind: 'castingRoundCreate',
+      lookId,
+      routes: [{ provider: 'fal-ai', model: { key: 'test-model', name: 'Test Model' }, count: 2 }],
+      maxConcurrentGenerations: 2,
+      referenceAssetFileIds: [],
+      estimatedCost: null,
+    },
+  });
+  return { costumeId: wardrobe.costumes[0]!.id, roundId: round.round.id };
+}
 
 function beat(title: string, screenplayBlockId: string) {
   return {

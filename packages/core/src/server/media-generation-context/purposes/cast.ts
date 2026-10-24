@@ -17,11 +17,7 @@ export const buildCastPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   }
   const context = projectCastMemberContext(input.session, record, input.assetFiles);
   const voices = readCastMemberResourceFromSession(input.session, record.id).voices;
-  const kinds = input.purpose === 'cast.character-sheet'
-    ? ['production', 'storyboard'] as const
-    : input.purpose === 'cast.profile'
-      ? ['production'] as const
-      : [];
+  const kinds = input.purpose === 'cast.profile' ? ['production'] as const : [];
   const visualLanguage = readMediaGenerationLookbooks({ assetFiles: input.assetFiles, session: input.session, projectFolder: input.projectFolder, kinds: [...kinds] });
   const continuity = createReferenceSuggestion({
     id: 'cast-continuity',

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { StudioSelection } from '@gorenku/studio-core/client';
 import { toast } from 'sonner';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type {
@@ -28,14 +27,14 @@ import { CastMemberAssetFilesTab } from './cast-member-assets-tab';
 import { CastMemberDetailsTab } from './cast-member-details-tab';
 import { CastMemberArcEmptyState } from './arc/cast-member-arc-empty-state';
 import { CastMemberArcTab } from './arc/cast-member-arc-tab';
+import { CastMemberCastingTab } from './casting/cast-member-casting-tab';
 
 interface CastMemberPanelProps {
   projectName: string;
   castMemberId: string;
-  onSelect: (selection: StudioSelection) => void;
 }
 
-export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMemberPanelProps) {
+export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelProps) {
   const [resource, setResource] = useState<CastMemberResourceResponse | null>(null);
   const [assetFileCollection, setAssetFileCollection] =
     useState<StudioAssetFileCollection>({ items: [], selectedAssetFileId: null });
@@ -157,6 +156,7 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
       items={[
         { value: 'details', label: 'Details' },
         { value: 'arc', label: 'Arc', pending: resource.characterArc.kind === 'notWritten' },
+        { value: 'casting', label: 'Casting' },
         { value: 'assetFiles', label: 'Assets' },
       ]}
     >
@@ -176,12 +176,11 @@ export function CastMemberPanel({ projectName, castMemberId, onSelect }: CastMem
             screenplayAnalyzed={resource.characterArc.screenplayAnalyzed}
           />
         ) : (
-          <CastMemberArcTab
-            projectName={projectName}
-            castMemberId={castMemberId}
-            onOpenCastMember={(id) => onSelect({ type: 'castMember', id })}
-          />
+          <CastMemberArcTab projectName={projectName} castMemberId={castMemberId} />
         )}
+      </LineTabsContent>
+      <LineTabsContent value='casting' className='flex flex-col'>
+        <CastMemberCastingTab projectName={projectName} castMemberId={castMemberId} />
       </LineTabsContent>
       <LineTabsContent value='assetFiles'>
         <CastMemberAssetFilesTab

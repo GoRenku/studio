@@ -331,7 +331,6 @@ export function MovieStudioScreen({
                   key={selection.id}
                   projectName={project.project.projectName}
                   castMemberId={selection.id}
-                  onSelect={selectMovieStudioSurface}
                 />
               ) : selection.type === 'locations' ? (
                 <LocationOverviewPanel

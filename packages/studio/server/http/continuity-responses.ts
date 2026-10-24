@@ -95,8 +95,8 @@ export function toCastMemberResourceResponse(
   };
 }
 
-export type CastMemberCharacterArcResourceResponse = Omit<CastMemberCharacterArcResource, 'looks'> & {
-  looks: StudioAssetFileResponse[];
+export type CastMemberCharacterArcResourceResponse = Omit<CastMemberCharacterArcResource, 'characterSheets'> & {
+  characterSheets: StudioAssetFileResponse[];
 };
 
 export function toCastMemberCharacterArcResourceResponse(
@@ -105,7 +105,7 @@ export function toCastMemberCharacterArcResourceResponse(
 ): CastMemberCharacterArcResourceResponse {
   return {
     ...resource,
-    looks: resource.looks.map((look) => toStudioAssetFileResponse(projectName, look)),
+    characterSheets: resource.characterSheets.map((sheet) => toStudioAssetFileResponse(projectName, sheet)),
   };
 }
 

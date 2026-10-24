@@ -17,6 +17,9 @@ import {
 } from '../studio-coordination/resource-keys.js';
 import type { AssetFileSelectionTarget } from '../../client/asset-files.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
+import { readCastCostumeRecord } from '../database/access/casting/costumes.js';
+import { readCastLookRecord } from '../database/access/casting/looks.js';
+import { readCastingRoundRecord } from '../database/access/casting/rounds.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -33,6 +36,10 @@ export interface GeneratedMediaAttachmentDetails {
   assetFileType: string;
   mediaKind: 'image' | 'video';
   resourceKeys: string[];
+  /** Where `--select` selects this file when it is not the owner's own selection. */
+  selectionTarget?: AssetFileSelectionTarget;
+  /** The Casting Round a casting candidate belongs to. */
+  castingRoundId?: string;
 }
 
 export function castCharacterSheetAttachmentDestination(
@@ -227,13 +234,42 @@ const attachmentBuilders: Partial<
       'Storyboard Lookbook Sheet',
       'lookbook_sheet'
     ),
-  'cast.character-sheet': (input) =>
-    details(
-      input,
-      castCharacterSheetAttachmentDestination(requireTarget(input, 'castMember').id, input.title),
-      'Character Sheet',
-      'character_sheet'
-    ),
+  'cast.casting-candidate': (input) => {
+    const round = readCastingRoundRecord(input.session, requireTarget(input, 'castingRound').id);
+    const look = round ? readCastLookRecord(input.session, round.lookId) : null;
+    if (!round || !look) {
+      throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `Casting Round was not found: ${input.target.kind === 'castingRound' ? input.target.id : ''}.`);
+    }
+    return {
+      ...details(
+        input,
+        {
+          file: { kind: 'cast.castingCandidate', castMemberId: look.castMemberId },
+          owner: { kind: 'castMember', id: look.castMemberId },
+          resourceKeys: [studioCastMemberSurfaceResourceKey(look.castMemberId)],
+        },
+        'Casting Candidate',
+        'casting_candidate'
+      ),
+      castingRoundId: round.id,
+    };
+  },
+  'cast.character-sheet': (input) => {
+    const costumeId = requireTarget(input, 'castCostume').id;
+    const costume = readCastCostumeRecord(input.session, costumeId);
+    if (!costume) {
+      throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `Cast Costume was not found: ${costumeId}.`);
+    }
+    return {
+      ...details(
+        input,
+        castCharacterSheetAttachmentDestination(costume.castMemberId, input.title),
+        'Character Sheet',
+        'character_sheet'
+      ),
+      selectionTarget: { kind: 'castCostume', id: costume.id },
+    };
+  },
   'cast.profile': (input) =>
     details(
       input,
@@ -302,6 +338,7 @@ export function generationAttachmentAssetFileType(purpose: MediaPurpose): string
     'lookbook.image': 'lookbook_image',
     'lookbook.video-sheet': 'lookbook_sheet',
     'lookbook.storyboard-sheet': 'lookbook_sheet',
+    'cast.casting-candidate': 'casting_candidate',
     'cast.character-sheet': 'character_sheet',
     'cast.profile': 'cast_profile',
     'location.sheet': 'location_sheet',

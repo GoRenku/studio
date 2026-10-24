@@ -31,38 +31,38 @@ describe('character arcs', () => {
     };
   });
 
-  it('writes, lists and reads arcs, and shows a shared arc with its owner', async () => {
+  it('writes, lists and reads arcs', async () => {
     const report = await projectData.writeCharacterArcs({
       homeDir,
       document: writeDocument([
         { castMemberId: castIds.mehmed, arc: changeArc() },
-        { castMemberId: castIds.narrator, arc: { kind: 'characterArcReference', castMemberId: castIds.mehmed } },
+        { castMemberId: castIds.narrator, arc: flatArc() },
       ]),
     });
     expect(report.written).toEqual([castIds.mehmed, castIds.narrator]);
     expect(report.resourceKeys).toEqual(expect.arrayContaining([`surface:castMember:${castIds.mehmed}`]));
 
     const list = await projectData.listCharacterArcs({ homeDir });
-    expect(list.arcs.map((entry) => [entry.castMemberId, entry.kind, entry.freshness])).toEqual([
-      [castIds.narrator, 'characterArcReference', 'current'],
-      [castIds.mehmed, 'characterArc', 'current'],
+    expect(list.arcs.map((entry) => [entry.castMemberId, entry.arcType, entry.freshness])).toEqual([
+      [castIds.narrator, 'flat', 'current'],
+      [castIds.mehmed, 'positiveChange', 'current'],
     ]);
 
-    const shared = await projectData.readCastMemberCharacterArcResource({
+    const resource = await projectData.readCastMemberCharacterArcResource({
       homeDir,
       projectName: 'constantinople',
-      castMemberId: castIds.narrator,
+      castMemberId: castIds.mehmed,
     });
-    expect(shared.sharedWith).toEqual({ ownerCastMemberId: castIds.mehmed, ownerName: 'Mehmed II' });
-    expect(shared.arc.arcType).toBe('positiveChange');
-    expect(shared.scenes.map((scene) => scene.id)).toEqual(sceneIds);
+    expect(resource.castMember).toMatchObject({ id: castIds.mehmed, name: 'Mehmed II' });
+    expect(resource.arc.arcType).toBe('positiveChange');
+    expect(resource.scenes.map((scene) => scene.id)).toEqual(sceneIds);
 
     const castResource = await projectData.readCastMemberResource({
       homeDir,
       projectName: 'constantinople',
       castMemberId: castIds.narrator,
     });
-    expect(castResource.characterArc).toEqual({ kind: 'shared', ownerCastMemberId: castIds.mehmed, ownerName: 'Mehmed II' });
+    expect(castResource.characterArc).toEqual({ kind: 'own' });
   });
 
   it('replaces the complete set: a Cast Member left out of a new write loses its arc', async () => {
@@ -94,7 +94,7 @@ describe('character arcs', () => {
       document: writeDocument([{ castMemberId: castIds.mehmed, arc: changeArc() }]),
     });
     const stored = await projectData.readCharacterArc({ homeDir, castMemberId: castIds.mehmed });
-    const malformedLook = changeArc();
+    const malformedSheet = changeArc();
     const documents: Array<{ document: unknown; issuePath: string[] }> = [
       { document: null, issuePath: [] },
       { document: [], issuePath: [] },
@@ -104,11 +104,11 @@ describe('character arcs', () => {
         document: writeDocument([{
           castMemberId: castIds.mehmed,
           arc: {
-            ...malformedLook,
-            turningPoints: [{ ...malformedLook.turningPoints[0]!, lookAssetFileId: {} }, malformedLook.turningPoints[1]!],
+            ...malformedSheet,
+            turningPoints: [{ ...malformedSheet.turningPoints[0]!, characterSheetAssetFileId: {} }, malformedSheet.turningPoints[1]!],
           } as CharacterArc,
         }]),
-        issuePath: ['arcs', '0', 'arc', 'turningPoints', '0', 'lookAssetFileId'],
+        issuePath: ['arcs', '0', 'arc', 'turningPoints', '0', 'characterSheetAssetFileId'],
       },
     ];
     for (const { document, issuePath } of documents) {
@@ -157,31 +157,29 @@ describe('character arcs', () => {
     expect((await projectData.listCharacterArcs({ homeDir })).arcs).toEqual([]);
   });
 
-  it('rejects unknown fields, self references and references to arcs outside the document', async () => {
+  it('rejects unknown fields', async () => {
     await expect(projectData.validateCharacterArcs({
       homeDir,
       document: writeDocument([{ castMemberId: castIds.mehmed, arc: { ...changeArc(), mood: 'dark' } as CharacterArc }]),
     })).rejects.toMatchObject({
       issues: [expect.objectContaining({ location: expect.objectContaining({ path: ['arcs', '0', 'arc', 'mood'] }) })],
     });
-    await expect(projectData.validateCharacterArcs({
-      homeDir,
-      document: writeDocument([
-        { castMemberId: castIds.mehmed, arc: { kind: 'characterArcReference', castMemberId: castIds.mehmed } },
-        { castMemberId: castIds.narrator, arc: { kind: 'characterArcReference', castMemberId: castIds.mehmed } },
-      ]),
-    })).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: 'A Cast Member cannot share its own arc.' }),
-        expect.objectContaining({ message: expect.stringMatching(/own arc is in the same document/) }),
-      ]),
-    });
   });
 
-  it('accepts a look owned by a Cast Member sharing the arc and rejects other assets', async () => {
+  it("accepts the Cast Member's own character sheet and rejects other assets", async () => {
     const projectFolder = path.join(homeDir, 'projects', 'constantinople');
+    await fs.writeFile(path.join(projectFolder, 'mehmed-sheet.png'), 'png');
     await fs.writeFile(path.join(projectFolder, 'narrator-sheet.png'), 'png');
     await fs.writeFile(path.join(projectFolder, 'mehmed-reference.txt'), 'text');
+    const mehmedSheet = await createTestAssetFileFixture({
+      homeDir,
+      projectName: 'constantinople',
+      owner: { kind: 'castMember', id: castIds.mehmed },
+      projectRelativePath: 'mehmed-sheet.png' as ProjectRelativePath,
+      type: 'character_sheet',
+      mediaKind: 'image',
+      title: 'Mehmed II — Siege',
+    });
     const narratorSheet = await createTestAssetFileFixture({
       homeDir,
       projectName: 'constantinople',
@@ -200,53 +198,34 @@ describe('character arcs', () => {
       mediaKind: 'text',
       title: 'Mehmed reference',
     });
-    const withLook = (assetFileId: string): CharacterArc => {
+    const withCharacterSheet = (assetFileId: string): CharacterArc => {
       const arc = changeArc();
-      arc.turningPoints[0] = { ...arc.turningPoints[0]!, lookAssetFileId: assetFileId };
+      arc.turningPoints[0] = { ...arc.turningPoints[0]!, characterSheetAssetFileId: assetFileId };
       return arc;
     };
 
     await projectData.writeCharacterArcs({
       homeDir,
-      document: writeDocument([
-        { castMemberId: castIds.mehmed, arc: withLook(narratorSheet.id) },
-        { castMemberId: castIds.narrator, arc: { kind: 'characterArcReference', castMemberId: castIds.mehmed } },
-      ]),
+      document: writeDocument([{ castMemberId: castIds.mehmed, arc: withCharacterSheet(mehmedSheet.id) }]),
     });
     const resource = await projectData.readCastMemberCharacterArcResource({
       homeDir,
       projectName: 'constantinople',
       castMemberId: castIds.mehmed,
     });
-    expect(resource.looks.map((look) => look.id)).toEqual([narratorSheet.id]);
+    expect(resource.characterSheets.map((sheet) => sheet.id)).toEqual([mehmedSheet.id]);
 
     await expect(projectData.validateCharacterArcs({
       homeDir,
-      document: writeDocument([{ castMemberId: castIds.mehmed, arc: withLook(reference.id) }]),
+      document: writeDocument([{ castMemberId: castIds.mehmed, arc: withCharacterSheet(reference.id) }]),
     })).rejects.toMatchObject({
       issues: [expect.objectContaining({ message: expect.stringMatching(/available character sheet/) })],
     });
     await expect(projectData.validateCharacterArcs({
       homeDir,
-      document: writeDocument([{ castMemberId: castIds.mehmed, arc: withLook(narratorSheet.id) }]),
+      document: writeDocument([{ castMemberId: castIds.mehmed, arc: withCharacterSheet(narratorSheet.id) }]),
     })).rejects.toMatchObject({
-      issues: [expect.objectContaining({ message: expect.stringMatching(/sharing this arc/) })],
-    });
-  });
-
-  it('blocks deleting a Cast Member whose arc another Cast Member shares', async () => {
-    await projectData.writeCharacterArcs({
-      homeDir,
-      document: writeDocument([
-        { castMemberId: castIds.mehmed, arc: changeArc() },
-        { castMemberId: castIds.narrator, arc: { kind: 'characterArcReference', castMemberId: castIds.mehmed } },
-      ]),
-    });
-    await expect(projectData.applyCastOperations({
-      homeDir,
-      document: { kind: 'castOperations', operations: [{ operation: 'castMember.delete', castMemberId: castIds.mehmed }] },
-    })).rejects.toMatchObject({
-      issues: expect.arrayContaining([expect.objectContaining({ code: 'CHARACTER_ARC_REFERENCE_IN_USE' })]),
+      issues: [expect.objectContaining({ message: 'The character sheet must belong to this Cast Member.' })],
     });
   });
 

@@ -17,6 +17,7 @@ const mediaPurposes = [
   'lookbook.image',
   'lookbook.video-sheet',
   'lookbook.storyboard-sheet',
+  'cast.casting-candidate',
   'cast.character-sheet',
   'cast.profile',
   'cast.voice-sample',

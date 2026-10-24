@@ -47,7 +47,6 @@ export type {
   CastDesignDocument,
   CastDesignListReport,
   CastDesignReadReport,
-  CastDesignScope,
   CastDesignSummary,
   CastDesignWriteReport,
   CastOperationDocument,
@@ -138,6 +137,7 @@ export type {
 export * from './screenplay-analysis/index.js';
 export * from './profile-descriptions/index.js';
 export * from './character-arcs/index.js';
+export * from './casting/index.js';
 export {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,
