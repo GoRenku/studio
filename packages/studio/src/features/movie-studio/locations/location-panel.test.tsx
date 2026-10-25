@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   LocationResourceResponse,
   StudioAssetFileResponse,
@@ -13,6 +13,9 @@ import {
 import { readLocationResource } from '@/services/studio-continuity-api';
 import { LocationPanel } from './location-panel';
 import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(

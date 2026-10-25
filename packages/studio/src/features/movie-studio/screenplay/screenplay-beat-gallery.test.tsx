@@ -8,10 +8,13 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
 import { readScreenplayBeatGalleryResource } from '@/services/screenplay';
 import { ScreenplayBeatGallery } from './screenplay-beat-gallery';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 vi.mock('@/services/screenplay', () => ({
   readScreenplayBeatGalleryResource: vi.fn(),

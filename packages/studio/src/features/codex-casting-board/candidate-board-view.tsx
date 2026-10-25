@@ -4,13 +4,15 @@ import { CandidateTile } from '@/features/casting-views/candidate-tile';
 import { usePanelMediaUrl, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { actOnCastingBoard, castOnCastingBoard, requestFromCastingBoard } from '@/services/codex-casting-board';
 import { Button } from '@/ui/button';
-import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
 import { Input } from '@/ui/input';
 import { Progress } from '@/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/ui/tabs';
 import { boardCandidates, pendingTotal, roundRoutesLine, tabCandidates, tabCounts, type BoardCandidate, type CandidateTab } from './board-summaries';
+import { CandidatePreview, type CandidatePreviewSelection } from './candidate-preview';
 import type { CastingBoardInteraction } from './casting-board-interaction';
+import { CompareView } from './compare-view';
 
+const STATUS_ACTIONS = { shortlisted: 'shortlist', hidden: 'hide' } as const;
 const PRIMARY_BUTTON = 'bg-[var(--dd-primary)] font-semibold text-[var(--dd-primary-fg)] hover:bg-[var(--dd-primary)] hover:brightness-105';
 
 export function CandidateBoardView(input: CastingBoardInteraction & { board: CastingCandidateBoard }) {
@@ -18,7 +20,7 @@ export function CandidateBoardView(input: CastingBoardInteraction & { board: Cas
   const [tab, setTab] = useState<CandidateTab>('all');
   const [notes, setNotes] = useState('');
   const [comparing, setComparing] = useState(false);
-  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [preview, setPreview] = useState<CandidatePreviewSelection | null>(null);
   const candidates = boardCandidates(board);
   const shortlisted = tabCandidates(candidates, 'shortlist') as BoardCandidate[];
   const counts = tabCounts(board);
@@ -32,9 +34,12 @@ export function CandidateBoardView(input: CastingBoardInteraction & { board: Cas
   const cast = (assetFileId: string) => interaction.generate((connected, current) => castOnCastingBoard(connected, { sessionId: current.sessionId, assetFileId }));
   const requestMore = () => interaction.generate((connected, current) => requestFromCastingBoard(connected, { sessionId: current.sessionId, request: { kind: 'moreLikeShortlist', notes } }));
 
+  const toggleStatus = (candidate: BoardCandidate, status: 'shortlisted' | 'hidden') => {
+    void act({ kind: candidate.status === status ? 'restore' : STATUS_ACTIONS[status], assetFileId: candidate.assetFileId });
+  };
   const tileActions = (candidate: BoardCandidate) => ({
-    onShortlist: () => { void act({ kind: candidate.status === 'shortlisted' ? 'restore' : 'shortlist', assetFileId: candidate.assetFileId }); },
-    onHide: () => { void act({ kind: candidate.status === 'hidden' ? 'restore' : 'hide', assetFileId: candidate.assetFileId }); },
+    onShortlist: () => toggleStatus(candidate, 'shortlisted'),
+    onHide: () => toggleStatus(candidate, 'hidden'),
   });
 
   return (
@@ -46,7 +51,7 @@ export function CandidateBoardView(input: CastingBoardInteraction & { board: Cas
       </header>
       {notice}
       {comparing
-        ? <CompareView candidates={shortlisted} castAssetFileId={board.look.castAssetFileId} media={media} disabled={disabled || waiting} onCast={(assetFileId) => { void cast(assetFileId); }} />
+        ? <CompareView candidates={shortlisted} castAssetFileId={board.look.castAssetFileId} media={media} disabled={disabled} castDisabled={disabled || waiting} onCast={(assetFileId) => { void cast(assetFileId); }} onRemoveFromShortlist={(assetFileId) => { void act({ kind: 'restore', assetFileId }); }} />
         : (
           <>
             <Tabs value={tab} onValueChange={(next) => setTab(next as CandidateTab)} className='px-[18px]'>
@@ -72,7 +77,19 @@ export function CandidateBoardView(input: CastingBoardInteraction & { board: Cas
         <Button type='button' variant='outline' size='sm' disabled={disabled || waiting || shortlisted.length === 0} onClick={() => { void requestMore(); }}>More like the shortlist</Button>
         <Button type='button' size='sm' disabled={disabled || waiting || shortlisted.length !== 1} onClick={() => { void cast(shortlisted[0]!.assetFileId); }} className={PRIMARY_BUTTON}>Cast this Look</Button>
       </footer>
-      {preview ? <ImagePreviewDialog images={[{ src: preview.url, alt: preview.title, title: preview.title }]} currentIndex={0} onOpenChange={(open) => { if (!open) setPreview(null); }} /> : null}
+      {preview ? (
+        <CandidatePreview
+          selection={preview}
+          candidates={candidates}
+          castAssetFileId={board.look.castAssetFileId}
+          media={media}
+          disabled={disabled}
+          castDisabled={waiting}
+          onSelectionChange={setPreview}
+          onToggleStatus={toggleStatus}
+          onCast={(assetFileId) => { void cast(assetFileId); }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -84,7 +101,7 @@ function RoundSection(input: {
   media: PanelMediaLibrary;
   disabled: boolean;
   actionsFor: (candidate: BoardCandidate) => { onShortlist: () => void; onHide: () => void };
-  onOpen: (preview: { url: string; title: string }) => void;
+  onOpen: (selection: CandidatePreviewSelection) => void;
 }) {
   const { round } = input;
   const pending = pendingTotal(round);
@@ -99,8 +116,8 @@ function RoundSection(input: {
       </div>
       {pending > 0 ? <Progress aria-label={`Round ${round.number} progress`} value={round.candidates.length} max={round.expectedCount} className='h-1.5' /> : null}
       <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4'>
-        {shown.map((candidate) => (
-          <BoardTile key={candidate.assetFileId} candidate={candidate} isCast={candidate.assetFileId === input.castAssetFileId} media={input.media} disabled={input.disabled} actions={input.actionsFor(candidate)} onOpen={input.onOpen} />
+        {shown.map((candidate, index) => (
+          <BoardTile key={candidate.assetFileId} candidate={candidate} isCast={candidate.assetFileId === input.castAssetFileId} media={input.media} disabled={input.disabled} actions={input.actionsFor(candidate)} onOpen={() => input.onOpen({ assetFileIds: shown.map((entry) => entry.assetFileId), index })} />
         ))}
         {pendingTiles.map((tile) => <CandidateTile key={tile.key} status='candidate' isCast={false} pending={{ label: tile.label }} />)}
       </div>
@@ -114,10 +131,9 @@ function BoardTile(input: {
   media: PanelMediaLibrary;
   disabled: boolean;
   actions: { onShortlist: () => void; onHide: () => void };
-  onOpen: (preview: { url: string; title: string }) => void;
+  onOpen: () => void;
 }) {
   const { url } = usePanelMediaUrl(input.media, input.candidate.imageUri);
-  const title = `Round ${input.candidate.roundNumber} · ${input.candidate.model.name}`;
   return (
     <CandidateTile
       imageUrl={url}
@@ -127,32 +143,7 @@ function BoardTile(input: {
       disabled={input.disabled}
       onShortlist={input.actions.onShortlist}
       onHide={input.actions.onHide}
-      onOpen={url ? () => input.onOpen({ url, title }) : undefined}
+      onOpen={url ? input.onOpen : undefined}
     />
-  );
-}
-
-function CompareView(input: { candidates: BoardCandidate[]; castAssetFileId: string | null; media: PanelMediaLibrary; disabled: boolean; onCast: (assetFileId: string) => void }) {
-  return (
-    <div className='grid min-h-0 flex-1 content-start gap-3 overflow-y-auto px-[18px] pb-4 pt-1 sm:grid-cols-2'>
-      {input.candidates.map((candidate) => (
-        <CompareFigure key={candidate.assetFileId} candidate={candidate} isCast={candidate.assetFileId === input.castAssetFileId} media={input.media} disabled={input.disabled} onCast={() => input.onCast(candidate.assetFileId)} />
-      ))}
-    </div>
-  );
-}
-
-function CompareFigure(input: { candidate: BoardCandidate; isCast: boolean; media: PanelMediaLibrary; disabled: boolean; onCast: () => void }) {
-  const { url } = usePanelMediaUrl(input.media, input.candidate.imageUri);
-  return (
-    <figure className='m-0 flex flex-col gap-2'>
-      <CandidateTile imageUrl={url} status={input.candidate.status} isCast={input.isCast} />
-      <figcaption className='flex items-center gap-2 text-[12px] text-[var(--dd-muted-fg)]'>
-        <span className='flex-1'>Round {input.candidate.roundNumber} · {input.candidate.model.name}</span>
-        <Button type='button' size='sm' variant={input.isCast ? 'outline' : 'default'} disabled={input.disabled || input.isCast} onClick={input.onCast} className={input.isCast ? undefined : PRIMARY_BUTTON}>
-          {input.isCast ? 'Cast' : 'Cast this one'}
-        </Button>
-      </figcaption>
-    </figure>
   );
 }

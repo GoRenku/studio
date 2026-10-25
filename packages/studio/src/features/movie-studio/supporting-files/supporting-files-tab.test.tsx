@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectRelativePath, ProjectSupportingFile } from '@gorenku/studio-core/client';
 import { SupportingFilesTab } from './supporting-files-tab';
 import * as api from '@/services/supporting-files';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 vi.mock('@/ui/slider', () => ({ Slider: () => null }));
 

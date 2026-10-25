@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readSceneBeatsResource } from '@/services/screenplay';
 import { SceneBeatsTab } from './scene-beats-tab';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 vi.mock('@/services/screenplay', () => ({
   readSceneBeatsResource: vi.fn(),

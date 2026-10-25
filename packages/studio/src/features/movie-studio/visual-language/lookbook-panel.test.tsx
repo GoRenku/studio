@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { act, fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   Lookbook,
   LookbookImage,
@@ -16,6 +16,9 @@ import {
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
 import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(

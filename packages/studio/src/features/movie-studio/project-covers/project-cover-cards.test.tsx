@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
 import { ProjectCoverCards } from './project-cover-cards';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 describe('ProjectCoverCards', () => {
   it('composes fixed cover cards with preview, selection, and Trash actions', async () => {

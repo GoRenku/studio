@@ -6,9 +6,12 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { MediaCardPresentation } from './media-card-contract';
 import { MediaCard } from './media-card';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 describe('MediaCard', () => {
   afterEach(() => {

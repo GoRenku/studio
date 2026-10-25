@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode, type SyntheticEvent } from 'react';
 import { Button } from '@/ui/button';
 import {
   Dialog,
@@ -9,6 +9,9 @@ import {
   DialogTitle,
 } from '@/ui/dialog';
 import { useImageAspectRatio } from '@/ui/image-aspect-ratio';
+import { handleImageZoomKey, useImageZoom } from '@/ui/image-zoom';
+import { ImageZoomControls } from '@/ui/image-zoom-controls';
+import { ZoomableImage } from '@/ui/zoomable-image';
 
 export interface PreviewImage {
   src: string;
@@ -21,6 +24,10 @@ interface ImagePreviewDialogProps {
   currentIndex: number;
   onCurrentIndexChange?: (index: number) => void;
   onOpenChange: (open: boolean) => void;
+  /** Wheel, pinch and button zoom with drag to pan. On unless the screen has no use for it. */
+  zoomable?: boolean;
+  /** Controls for the shown image, placed beside the close button. */
+  actions?: ReactNode;
 }
 
 export function ImagePreviewDialog({
@@ -28,6 +35,8 @@ export function ImagePreviewDialog({
   currentIndex,
   onCurrentIndexChange,
   onOpenChange,
+  zoomable = true,
+  actions,
 }: ImagePreviewDialogProps) {
   const image = images[currentIndex] ?? null;
   const hasMultipleImages = images.length > 1;
@@ -62,17 +71,20 @@ export function ImagePreviewDialog({
         <DialogDescription className='sr-only'>
           {image?.alt ?? 'Expanded image preview.'}
         </DialogDescription>
-        <DialogClose asChild>
-          <Button
-            type='button'
-            variant='ghost'
-            size='icon'
-            className='absolute right-2 top-2 z-10 h-7 w-7 rounded-md bg-panel-bg/80 text-muted-foreground shadow-sm backdrop-blur-sm hover:bg-item-hover-bg hover:text-foreground'
-            aria-label='Close image preview'
-          >
-            <X className='h-3.5 w-3.5' />
-          </Button>
-        </DialogClose>
+        <div className='absolute right-2 top-2 z-10 flex items-center gap-1.5'>
+          {actions}
+          <DialogClose asChild>
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='h-7 w-7 rounded-md bg-panel-bg/80 text-muted-foreground shadow-sm backdrop-blur-sm hover:bg-item-hover-bg hover:text-foreground'
+              aria-label='Close image preview'
+            >
+              <X className='h-3.5 w-3.5' />
+            </Button>
+          </DialogClose>
+        </div>
         {hasMultipleImages && onCurrentIndexChange ? (
           <>
             <Button
@@ -109,17 +121,55 @@ export function ImagePreviewDialog({
               width: `min(calc(100vw - 3rem), calc((100vh - 3rem) * ${aspectRatio}))`,
             }}
           >
-            <img
-              key={image.src}
-              src={image.src}
-              alt={image.alt}
-              className='block h-full w-full object-contain'
-              onLoad={onImageLoad}
-            />
+            {zoomable ? (
+              <ZoomablePreviewImage key={image.src} image={image} onImageLoad={onImageLoad} />
+            ) : (
+              <img
+                key={image.src}
+                src={image.src}
+                alt={image.alt}
+                className='block h-full w-full object-contain'
+                onLoad={onImageLoad}
+              />
+            )}
           </div>
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Keyed by image so every image opens fitted. */
+function ZoomablePreviewImage({
+  image,
+  onImageLoad,
+}: {
+  image: PreviewImage;
+  onImageLoad: (event: SyntheticEvent<HTMLImageElement>) => void;
+}) {
+  const zoom = useImageZoom();
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (handleImageZoomKey(event.key, zoom)) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [zoom]);
+  return (
+    <>
+      <ZoomableImage
+        src={image.src}
+        alt={image.alt}
+        view={zoom.view}
+        onViewChange={zoom.onViewChange}
+        onLayoutChange={zoom.onLayoutChange}
+        onLoad={onImageLoad}
+        className='h-full w-full'
+      />
+      <ImageZoomControls zoom={zoom} className='absolute bottom-3 left-1/2 z-10 -translate-x-1/2' />
+    </>
   );
 }
 

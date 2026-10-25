@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import type { CastingSheetBoard } from '@gorenku/studio-codex/casting-board';
 import { castingSceneLabels, sceneSummary } from '@/features/casting-views/scene-labels';
-import { usePanelMediaUrl, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
+import { ExpandSheetButton, PickSheetAction } from '@/features/casting-views/sheet-actions';
+import { usePanelMediaUrl, usePanelMediaUrls, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { actOnCastingBoard, requestFromCastingBoard } from '@/services/codex-casting-board';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
+import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
 import type { CastingBoardInteraction } from './casting-board-interaction';
 
 type SheetCostume = CastingSheetBoard['costumes'][number];
@@ -14,6 +17,7 @@ export function SheetBoardView(input: CastingBoardInteraction & { board: Casting
   const scenes = castingSceneLabels(board.scenes);
   const picked = board.costumes.filter((costume) => costume.pickedAssetFileId).length;
   const disabled = !interaction.connected || interaction.busy;
+  const [preview, setPreview] = useState<{ costumeId: string; index: number } | null>(null);
   const pick = (costumeId: string, assetFileId: string) => interaction.run(async (connected, current) => {
     interaction.applySession((await actOnCastingBoard(connected, { sessionId: current.sessionId, action: { kind: 'pickSheet', costumeId, assetFileId } })).session);
   });
@@ -40,8 +44,8 @@ export function SheetBoardView(input: CastingBoardInteraction & { board: Casting
               ? <span className='text-[11.5px] text-[var(--dd-muted-fg)]'>No sheet yet</span>
               : (
                 <div className='grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5'>
-                  {board.sheets.map((sheet) => (
-                    <SheetButton key={sheet.assetFileId} sheet={sheet} costume={costume} media={media} disabled={disabled} onPick={() => { void pick(costume.id, sheet.assetFileId); }} />
+                  {board.sheets.map((sheet, index) => (
+                    <SheetButton key={sheet.assetFileId} sheet={sheet} costume={costume} media={media} disabled={disabled} onPick={() => { void pick(costume.id, sheet.assetFileId); }} onExpand={() => setPreview({ costumeId: costume.id, index })} />
                   ))}
                 </div>
               )}
@@ -54,7 +58,39 @@ export function SheetBoardView(input: CastingBoardInteraction & { board: Casting
           Send picks to agent
         </Button>
       </footer>
+      {preview ? <SheetPreview board={board} preview={preview} media={media} disabled={disabled} onPreviewChange={setPreview} onPick={(costumeId, assetFileId) => { void pick(costumeId, assetFileId); }} /> : null}
     </section>
+  );
+}
+
+/** The image viewer over every sheet, with Pick for the costume whose row it was opened from. */
+function SheetPreview(input: {
+  board: CastingSheetBoard;
+  preview: { costumeId: string; index: number };
+  media: PanelMediaLibrary;
+  disabled: boolean;
+  onPreviewChange: (preview: { costumeId: string; index: number } | null) => void;
+  onPick: (costumeId: string, assetFileId: string) => void;
+}) {
+  const { board, preview } = input;
+  const urls = usePanelMediaUrls(input.media, board.sheets.map((sheet) => sheet.imageUri));
+  const costume = board.costumes.find((candidate) => candidate.id === preview.costumeId);
+  const shown = board.sheets.flatMap((sheet) => {
+    const url = urls.get(sheet.imageUri);
+    return url ? [{ sheet, url }] : [];
+  });
+  const currentId = board.sheets[preview.index]?.assetFileId;
+  const index = shown.findIndex((entry) => entry.sheet.assetFileId === currentId);
+  const current = shown[index]?.sheet;
+  if (!costume || !current) return null;
+  return (
+    <ImagePreviewDialog
+      images={shown.map((entry) => ({ src: entry.url, alt: `Character sheet for ${costume.name}`, title: costume.name }))}
+      currentIndex={index}
+      onCurrentIndexChange={(next) => input.onPreviewChange({ ...preview, index: board.sheets.indexOf(shown[next]!.sheet) })}
+      onOpenChange={(open) => { if (!open) input.onPreviewChange(null); }}
+      actions={<PickSheetAction picked={current.assetFileId === costume.pickedAssetFileId} disabled={input.disabled} onPick={() => input.onPick(costume.id, current.assetFileId)} />}
+    />
   );
 }
 
@@ -68,24 +104,27 @@ function LookChip(input: { board: CastingSheetBoard; costume: SheetCostume }) {
   );
 }
 
-function SheetButton(input: { sheet: SheetImage; costume: SheetCostume; media: PanelMediaLibrary; disabled: boolean; onPick: () => void }) {
+function SheetButton(input: { sheet: SheetImage; costume: SheetCostume; media: PanelMediaLibrary; disabled: boolean; onPick: () => void; onExpand: () => void }) {
   const { url } = usePanelMediaUrl(input.media, input.sheet.imageUri);
   const picked = input.sheet.assetFileId === input.costume.pickedAssetFileId;
   return (
-    <Button
-      type='button'
-      variant='ghost'
-      aria-pressed={picked}
-      aria-label={`${picked ? 'Picked' : 'Pick'} for ${input.costume.name}`}
-      disabled={input.disabled}
-      onClick={() => { if (!picked) input.onPick(); }}
-      className={cn(
-        'relative block aspect-[4/3] h-auto overflow-hidden rounded-lg border border-[var(--dd-border)] bg-[var(--dd-muted)] p-0 hover:bg-[var(--dd-muted)] hover:ring-2 hover:ring-[var(--dd-active-border)]',
-        picked && 'ring-2 ring-[var(--dd-sel-border)]',
-      )}
-    >
-      {url ? <img src={url} alt='' className='size-full object-contain' /> : null}
-      {picked ? <span className='absolute right-1.5 top-1.5 rounded-full border border-[var(--dd-sel-border)] bg-[var(--dd-sel-bg)] px-2 py-px text-[10.5px] font-bold text-[var(--dd-sel-fg)]'>Picked</span> : null}
-    </Button>
+    <div className='relative'>
+      <Button
+        type='button'
+        variant='ghost'
+        aria-pressed={picked}
+        aria-label={`${picked ? 'Picked' : 'Pick'} for ${input.costume.name}`}
+        disabled={input.disabled}
+        onClick={() => { if (!picked) input.onPick(); }}
+        className={cn(
+          'relative block aspect-[4/3] h-auto w-full overflow-hidden rounded-lg border border-[var(--dd-border)] bg-[var(--dd-muted)] p-0 hover:bg-[var(--dd-muted)] hover:ring-2 hover:ring-[var(--dd-active-border)]',
+          picked && 'ring-2 ring-[var(--dd-sel-border)]',
+        )}
+      >
+        {url ? <img src={url} alt='' className='size-full object-contain' /> : null}
+        {picked ? <span className='absolute right-1.5 top-1.5 rounded-full border border-[var(--dd-sel-border)] bg-[var(--dd-sel-bg)] px-2 py-px text-[10.5px] font-bold text-[var(--dd-sel-fg)]'>Picked</span> : null}
+      </Button>
+      {url ? <ExpandSheetButton onClick={input.onExpand} className='absolute bottom-1.5 right-1.5' /> : null}
+    </div>
   );
 }
