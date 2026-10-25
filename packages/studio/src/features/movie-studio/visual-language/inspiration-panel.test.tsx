@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   InspirationAnalysis,
   InspirationFolder,
@@ -16,6 +16,9 @@ import {
   uploadInspirationImages,
 } from '@/services/studio-visual-language-api';
 import { InspirationPanel } from './inspiration-panel';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 vi.mock('sonner', () => ({
   toast: {

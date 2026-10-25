@@ -1,7 +1,7 @@
 import type { CastingCandidateStatus } from '@gorenku/studio-core/client';
-import { Star, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
+import { CandidateCastAction, CandidateStatusToggles } from './candidate-actions';
 
 interface CandidateTileProps {
   /** Omitted while the candidate is still being generated. */
@@ -17,9 +17,6 @@ interface CandidateTileProps {
   onCast?: () => void;
   onOpen?: () => void;
 }
-
-const OVERLAY_ICON_BUTTON =
-  'h-6 w-6 rounded-full bg-black/55 p-0 text-white hover:bg-black/70 hover:text-white';
 
 /** One casting candidate: the image, its model, and the shortlist, hide and cast actions the caller allows. */
 export function CandidateTile({
@@ -68,57 +65,22 @@ export function CandidateTile({
       ) : (
         <img src={imageUrl} alt={imageAlt} className='h-full w-full object-contain' />
       )}
-      {isCast ? (
-        <span className='absolute left-1.5 top-1.5 rounded-full border border-take-shot-selected-border bg-take-shot-selected-bg px-2 py-px text-[10.5px] font-bold text-foreground'>
-          Cast
-        </span>
-      ) : null}
-      {onShortlist || onHide ? (
-        <span className='absolute right-1.5 top-1.5 flex gap-1'>
-          {onShortlist ? (
-            <Button
-              type='button'
-              variant='ghost'
-              aria-label={shortlisted ? 'Remove from shortlist' : 'Shortlist'}
-              aria-pressed={shortlisted}
-              disabled={disabled}
-              className={cn(OVERLAY_ICON_BUTTON, shortlisted ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground' : null)}
-              onClick={onShortlist}
-            >
-              <Star className='h-3 w-3' />
-            </Button>
-          ) : null}
-          {onHide ? (
-            <Button
-              type='button'
-              variant='ghost'
-              aria-label={hidden ? 'Show again' : 'Hide'}
-              aria-pressed={hidden}
-              disabled={disabled}
-              className={cn(OVERLAY_ICON_BUTTON, hidden ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground' : null)}
-              onClick={onHide}
-            >
-              <X className='h-3 w-3' />
-            </Button>
-          ) : null}
-        </span>
-      ) : null}
+      {isCast ? <CandidateCastAction isCast className='absolute left-1.5 top-1.5' /> : null}
+      <CandidateStatusToggles
+        status={status}
+        disabled={disabled}
+        onShortlist={onShortlist}
+        onHide={onHide}
+        className='absolute right-1.5 top-1.5'
+      />
       {modelLabel ? (
         <figcaption className='absolute bottom-1.5 left-1.5 max-w-[calc(100%-4.5rem)] truncate rounded-full bg-black/60 px-[7px] py-px text-[10.5px] font-semibold text-white'>
           {modelLabel}
         </figcaption>
       ) : null}
-      {onCast && !isCast ? (
-        <Button
-          type='button'
-          size='sm'
-          disabled={disabled}
-          className='absolute bottom-1.5 right-1.5 h-6 px-2.5 text-[11px]'
-          onClick={onCast}
-        >
-          Cast
-        </Button>
-      ) : null}
+      {isCast ? null : (
+        <CandidateCastAction isCast={false} disabled={disabled} onCast={onCast} className='absolute bottom-1.5 right-1.5' />
+      )}
     </figure>
   );
 }

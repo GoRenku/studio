@@ -58,3 +58,22 @@ export function usePanelMediaUrl(media: PanelMediaLibrary, uri: string | null): 
   }, [media, uri]);
   return loaded && loaded.uri === uri ? { url: loaded.url, failed: loaded.failed } : { failed: false };
 }
+
+/** Projects several media URIs to their object URLs; a URI is missing from the result until it has loaded. */
+export function usePanelMediaUrls(media: PanelMediaLibrary, uris: string[]): ReadonlyMap<string, string> {
+  const [loaded, setLoaded] = useState<ReadonlyMap<string, string>>(new Map());
+  const key = uris.join('\n');
+  useEffect(() => {
+    let active = true;
+    for (const uri of key ? key.split('\n') : []) {
+      media.load(uri).then(
+        (url) => {
+          if (active) setLoaded((current) => (current.get(uri) === url ? current : new Map(current).set(uri, url)));
+        },
+        () => {},
+      );
+    }
+    return () => { active = false; };
+  }, [media, key]);
+  return loaded;
+}

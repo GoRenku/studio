@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CastingCandidateBoard, CastingSheetBoard } from '@gorenku/studio-codex/casting-board';
+import { loadRenderedImages, stubImageZoomLayout } from '@/ui/testing/image-zoom-layout';
 import { CastingBoardPanel } from './casting-board-panel';
 
 const integration = vi.hoisted(() => ({
@@ -38,6 +39,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const portrait = { key: 'acme-portrait', name: 'Acme Portrait' };
 const faces = { key: 'acme-faces', name: 'Acme Faces' };
+const studio = { key: 'acme-studio', name: 'Acme Studio' };
 
 // Fictional routes only: the board shows whatever models the round recorded.
 function candidateBoard(overrides: Partial<CastingCandidateBoard> = {}): CastingCandidateBoard {
@@ -136,5 +138,110 @@ describe('Casting board panel', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Pick for Harbor coat' })); });
     expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'pickSheet', costumeId: 'costume_1', assetFileId: 'sheet_1' } });
     expect(screen.getByText('1 of 1 picked')).toBeTruthy();
+  });
+
+  describe('zoom', () => {
+    let restoreLayout: () => void;
+    beforeEach(() => { restoreLayout = stubImageZoomLayout({ width: 800, height: 600 }, { width: 1600, height: 1200 }); });
+    afterEach(() => { restoreLayout(); });
+
+    const shortlistOfThree = () => {
+      const board = candidateBoard();
+      board.rounds[0]!.pending = [];
+      board.rounds[0]!.candidates = [
+        { assetFileId: 'af_1', status: 'shortlisted', model: portrait, imageUri: 'renku-casting-board://board/media/1' },
+        { assetFileId: 'af_2', status: 'shortlisted', model: faces, imageUri: 'renku-casting-board://board/media/2' },
+        { assetFileId: 'af_3', status: 'shortlisted', model: studio, imageUri: 'renku-casting-board://board/media/3' },
+      ];
+      return board;
+    };
+
+    it('opens a candidate large to zoom and keeps shortlist, hide and cast in the viewer', async () => {
+      await openBoard(candidateBoard());
+      await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Open casting candidate from acme faces' })); });
+      const viewer = await screen.findByRole('dialog');
+      loadRenderedImages();
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Zoom in' }));
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Fit to view' }));
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
+
+      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: candidateBoard({ revision: 2 }) }));
+      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Shortlist' })); });
+      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'shortlist', assetFileId: 'af_2' } });
+      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Hide' })); });
+      expect(integration.act).toHaveBeenLastCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'hide', assetFileId: 'af_2' } });
+
+      integration.cast.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_1', session: candidateBoard({ revision: 3, look: { id: 'look_1', name: 'Young', castAssetFileId: 'af_2' } }) }));
+      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Cast' })); });
+      expect(integration.cast).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', assetFileId: 'af_2' });
+    });
+
+    it('compares the favorite with one challenger at a time and keeps the zoom while switching', async () => {
+      await openBoard(shortlistOfThree());
+      fireEvent.click(screen.getByRole('button', { name: 'Compare 3' }));
+      const favorite = screen.getByRole('region', { name: 'Favorite' });
+      const challenger = screen.getByRole('region', { name: 'Challenger' });
+      await within(challenger).findByAltText('Round 1 · Acme Faces');
+      loadRenderedImages();
+      expect(within(favorite).getByRole('img', { name: 'Round 1 · Acme Portrait' })).toBeTruthy();
+      expect(within(challenger).getByRole('img', { name: 'Round 1 · Acme Faces' })).toBeTruthy();
+      expect(within(challenger).getByText('1 / 2')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+      expect(within(favorite).getByRole('img').style.transform).toContain('scale(0.75)');
+      expect(within(challenger).getByRole('img').style.transform).toContain('scale(0.75)');
+
+      fireEvent.click(within(challenger).getByRole('button', { name: 'Next challenger' }));
+      expect(within(challenger).getByText('2 / 2')).toBeTruthy();
+      loadRenderedImages();
+      expect(within(challenger).getByRole('img', { name: 'Round 1 · Acme Studio' }).style.transform).toContain('scale(0.75)');
+      expect(screen.getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+
+      fireEvent.click(within(challenger).getByRole('button', { name: 'Make favorite' }));
+      expect(within(favorite).getByRole('img', { name: 'Round 1 · Acme Studio' })).toBeTruthy();
+      expect(within(challenger).getByRole('img', { name: 'Round 1 · Acme Portrait' })).toBeTruthy();
+
+      integration.cast.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_1', session: shortlistOfThree() }));
+      await act(async () => { fireEvent.click(within(challenger).getByRole('button', { name: 'Cast' })); });
+      expect(integration.cast).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', assetFileId: 'af_1' });
+
+      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: shortlistOfThree() }));
+      await act(async () => { fireEvent.click(within(challenger).getByRole('button', { name: 'Remove from shortlist' })); });
+      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'restore', assetFileId: 'af_1' } });
+    });
+
+    it('folds the shortlist strip away and brings a thumbnail in as the challenger', async () => {
+      await openBoard(shortlistOfThree());
+      fireEvent.click(screen.getByRole('button', { name: 'Compare 3' }));
+      const strip = screen.getByRole('navigation', { name: 'Shortlist' });
+      fireEvent.click(within(strip).getByRole('button', { name: 'Compare round 1 · Acme Studio' }));
+      expect(within(screen.getByRole('region', { name: 'Challenger' })).getByText('2 / 2')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: /^Shortlist 3/ }));
+      expect(screen.queryByRole('navigation', { name: 'Shortlist' })).toBeNull();
+    });
+
+    it('opens a character sheet large from its corner button and picks it from the viewer', async () => {
+      const sheets: CastingSheetBoard = {
+        mode: 'sheets', sessionId: 'board', revision: 1, castMember: { id: 'cast_1', name: 'Ana' },
+        scenes: [{ id: 'scene_1', heading: 'EXT. HARBOR', productionNumber: '3' }],
+        looks: [{ id: 'look_1', name: 'Young', castImageUri: null }],
+        costumes: [{ id: 'costume_1', name: 'Harbor coat', lookId: 'look_1', sceneIds: ['scene_1'], pickedAssetFileId: null }],
+        sheets: [{ assetFileId: 'sheet_1', imageUri: 'renku-casting-board://board/media/4' }],
+        action: null, lastCompletedAction: null,
+      };
+      await openBoard(sheets);
+      fireEvent.click(await screen.findByRole('button', { name: 'View sheet large' }));
+      const viewer = await screen.findByRole('dialog');
+      loadRenderedImages();
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Zoom in' }));
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+
+      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: { ...sheets, revision: 2, costumes: [{ ...sheets.costumes[0]!, pickedAssetFileId: 'sheet_1' }] } }));
+      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Pick' })); });
+      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'pickSheet', costumeId: 'costume_1', assetFileId: 'sheet_1' } });
+      expect(within(viewer).getByText('Picked')).toBeTruthy();
+    });
   });
 });

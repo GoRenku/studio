@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { MediaCardCollectionDialog } from './media-card-collection-dialog';
 import type {
   MediaCardCollectionDialogState,
   MediaCardCollectionItem,
 } from './media-card-contract';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 describe('MediaCardCollectionDialog', () => {
   it('renders stable loading, error/retry, empty, and ready states', () => {

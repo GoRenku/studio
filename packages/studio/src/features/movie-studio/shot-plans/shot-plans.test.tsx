@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SceneShotPlansTab } from './scene-shot-plans-tab';
 import { ShotBriefGrid } from './shot-brief-grid';
 import { ShotPlanBeatLinks } from './shot-plan-beat-links';
@@ -22,6 +22,9 @@ import {
   deleteStudioShotPlan,
   setStudioShotSelectedImage,
 } from '@/services/studio-shot-plans-api';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 vi.mock('./use-scene-shot-plans');
 vi.mock('../scenes/use-scene-has-beats', () => ({

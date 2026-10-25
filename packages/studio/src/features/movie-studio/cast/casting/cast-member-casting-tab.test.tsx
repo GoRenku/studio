@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import {
   castLookCandidate,
@@ -10,6 +10,7 @@ import {
   setCastingCandidateStatus,
 } from '@/services/studio-cast-casting-api';
 import { CastMemberCastingTab } from './cast-member-casting-tab';
+import { loadRenderedImages, stubImageZoomLayout } from '@/ui/testing/image-zoom-layout';
 import { castCastingResource } from './casting-test-fixtures';
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
@@ -144,11 +145,12 @@ describe('CastMemberCastingTab', () => {
     expect(within(overalls).getByText('Scenes 2–3')).toBeTruthy();
     expect(within(overalls).getByText('Young look')).toBeTruthy();
     expect(within(overalls).getByText('Picked')).toBeTruthy();
-    expect(within(overalls).getAllByRole('button')).toHaveLength(2);
+    expect(within(overalls).getAllByRole('button', { name: /for Overalls/ })).toHaveLength(2);
+    expect(within(overalls).getAllByRole('button', { name: 'View sheet large' })).toHaveLength(2);
 
     const raincoat = screen.getByRole('heading', { name: 'Raincoat' }).parentElement!.parentElement!;
     expect(within(raincoat).queryByText('Picked')).toBeNull();
-    fireEvent.click(within(raincoat).getAllByRole('button')[1]!);
+    fireEvent.click(within(raincoat).getAllByRole('button', { name: /^Pick for Raincoat/ })[1]!);
 
     await waitFor(() =>
       expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_raincoat', 'asset_sheet_raincoat')
@@ -178,5 +180,60 @@ describe('CastMemberCastingTab', () => {
     });
 
     await waitFor(() => expect(readCastCasting).toHaveBeenCalledTimes(2));
+  });
+
+  describe('zoom', () => {
+    let restoreLayout: () => void;
+    beforeEach(() => { restoreLayout = stubImageZoomLayout({ width: 800, height: 600 }, { width: 1600, height: 1200 }); });
+    afterEach(() => { restoreLayout(); });
+
+    it('opens a candidate large to zoom, with shortlist, hide and cast in the viewer', async () => {
+      vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
+      vi.mocked(setCastingCandidateStatus).mockResolvedValue({} as never);
+      vi.mocked(castLookCandidate).mockResolvedValue({} as never);
+
+      render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+      await screen.findByText('Casting rounds · Young');
+      fireEvent.click(screen.getAllByRole('button', { name: 'Open casting candidate from lumen image' })[0]!);
+      const viewer = await screen.findByRole('dialog');
+      loadRenderedImages();
+
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Zoom in' }));
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Fit to view' }));
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
+
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Remove from shortlist' }));
+      await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_a', 'candidate'));
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Hide' }));
+      await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenLastCalledWith('grid', 'cast_ada', 'asset_young_a', 'hidden'));
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Cast' }));
+      await waitFor(() => expect(castLookCandidate).toHaveBeenCalledWith('grid', 'cast_ada', 'look_young', 'asset_young_a'));
+
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Show next image' }));
+      loadRenderedImages();
+      expect(within(viewer).getByText('Cast', { selector: 'span' })).toBeTruthy();
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
+    });
+
+    it('opens a character sheet large from its corner button and picks it from the viewer', async () => {
+      vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
+      vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
+
+      render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+      await screen.findByText('Character sheets');
+      const raincoat = screen.getByRole('heading', { name: 'Raincoat' }).parentElement!.parentElement!;
+      fireEvent.click(within(raincoat).getAllByRole('button', { name: 'View sheet large' })[1]!);
+      const viewer = await screen.findByRole('dialog');
+      loadRenderedImages();
+
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Actual pixels' }));
+      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('100%');
+
+      fireEvent.click(within(viewer).getByRole('button', { name: 'Pick' }));
+      await waitFor(() =>
+        expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_raincoat', 'asset_sheet_raincoat')
+      );
+    });
   });
 });

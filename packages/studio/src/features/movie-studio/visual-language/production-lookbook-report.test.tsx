@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import type {
   LookbookImage,
   ProjectRelativePath,
 } from '@gorenku/studio-core/client';
 import { VisualLanguageReport } from './visual-language-report';
 import type { LookbookReportSource } from './lookbook-report-images';
+import { stubResizeObserver } from '@/ui/testing/image-zoom-layout';
+
+beforeAll(stubResizeObserver);
 
 describe('Production Lookbook report', () => {
   it('renders shared Inspiration Analysis sections including Lineage', () => {
