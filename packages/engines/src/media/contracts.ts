@@ -42,6 +42,14 @@ export interface ProviderContext {
   signal: AbortSignal;
   requestTimeoutMs: number;
   operationTimeoutMs: number;
+  /**
+   * Set while estimating cost: cached provider metadata younger than
+   * `maxAgeMs` is used as is, an older entry gets one refresh attempt, and a
+   * failed refresh falls back to the cached copy. `failedRefreshes` holds the
+   * entries whose refresh already failed in this estimate, so they are not
+   * tried again.
+   */
+  cachedMetadataReuse?: { maxAgeMs: number; failedRefreshes: Set<string> };
 }
 
 export interface ProviderExecutionContext extends ProviderContext {
@@ -52,7 +60,7 @@ export interface MediaProvider {
   readonly id: string;
   /** The provider's API price for a route, or null when the provider publishes none. */
   readPrice?(model: string, context: ProviderContext): Promise<RoutePrice | null>;
-  /** An exact provider quote for one native request. */
+  /** The provider's quote for one native request, used when its price cannot be computed from the request. */
   quoteCost?(model: string, request: JsonValue, context: ProviderContext): Promise<CostQuote>;
   readInputSchema?(
     model: string,
@@ -104,12 +112,23 @@ export interface MediaEngine {
     request: ProviderRequest,
     context: ProviderContext,
   ): Promise<CostEstimate>;
-  /** The cached prices of one route: a recorded entry and the provider API price. */
-  readRoutePrices(
+  /**
+   * One output of a route at its schema defaults, for comparing routes before a
+   * request exists. `fields` set native fields over the defaults, such as an
+   * output size.
+   */
+  estimateRouteDefaultsCost(
     provider: string,
     model: string,
     context: ProviderContext,
-  ): Promise<{ recorded: RoutePrice | null; providerApi: RoutePrice | null }>;
+    fields?: Record<string, JsonValue>,
+  ): Promise<CostEstimate>;
+  /** The saved price estimates use for one route: a researched entry, else the provider API price. */
+  readRoutePrice(
+    provider: string,
+    model: string,
+    context: ProviderContext,
+  ): Promise<RoutePrice | null>;
   recordRoutePrice(
     provider: string,
     model: string,

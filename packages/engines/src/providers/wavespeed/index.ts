@@ -14,6 +14,7 @@ import {
 import { validateJsonSchema } from '../../shared/json-schema-validation.js';
 import { downloadProviderOutputs } from '../../shared/downloads.js';
 import { EngineError } from '../../shared/errors.js';
+import { isJsonObject, isJsonValue } from '../../shared/json-object.js';
 import { pollProviderJob } from '../../shared/polling.js';
 import { withProviderRetries } from '../../shared/retry.js';
 import { createRequestTimeoutFetch } from '../../shared/request-timeout.js';
@@ -157,7 +158,7 @@ async function uploadLocalFiles(
         true,
       );
       const body = await readJson(response, request.model);
-      const url = isRecord(body.data) ? body.data.download_url : undefined;
+      const url = isJsonObject(body.data) ? body.data.download_url : undefined;
       if (typeof url !== 'string' || url.length === 0) {
         throw new EngineError('ENGINE_UPLOAD_FAILED', 'WaveSpeed upload returned no URL.', {
           provider: 'wavespeed-ai', model: request.model,
@@ -243,7 +244,7 @@ async function readJson(
   requestId?: string,
 ): Promise<WaveSpeedResult> {
   const value = await response.json() as unknown;
-  if (!isRecord(value)) {
+  if (!isJsonValue(value) || !isJsonObject(value)) {
     throw new EngineError('ENGINE_OUTPUT_INVALID', 'WaveSpeed returned malformed JSON.', {
       provider: 'wavespeed-ai', model, requestId,
     });
@@ -252,29 +253,25 @@ async function readJson(
 }
 
 function readRequestId(value: WaveSpeedResult): string | undefined {
-  return isRecord(value.data) && typeof value.data.id === 'string' ? value.data.id : undefined;
+  return isJsonObject(value.data) && typeof value.data.id === 'string' ? value.data.id : undefined;
 }
 
 function readStatus(value: WaveSpeedResult): string | undefined {
-  return isRecord(value.data) && typeof value.data.status === 'string' ? value.data.status : undefined;
+  return isJsonObject(value.data) && typeof value.data.status === 'string' ? value.data.status : undefined;
 }
 
 function readError(value: WaveSpeedResult): string | undefined {
-  return isRecord(value.data) && typeof value.data.error === 'string' ? value.data.error : undefined;
+  return isJsonObject(value.data) && typeof value.data.error === 'string' ? value.data.error : undefined;
 }
 
 function readOutputs(value: WaveSpeedResult): string[] {
-  return isRecord(value.data) && Array.isArray(value.data.outputs)
+  return isJsonObject(value.data) && Array.isArray(value.data.outputs)
     ? value.data.outputs.filter((url): url is string => typeof url === 'string' && url.length > 0)
     : [];
 }
 
 function readTimings(value: WaveSpeedResult): JsonValue | undefined {
-  return isRecord(value.data) ? value.data.timings : undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  return isJsonObject(value.data) ? value.data.timings : undefined;
 }
 
 function requireCredential(model: string, context: ProviderContext): void {

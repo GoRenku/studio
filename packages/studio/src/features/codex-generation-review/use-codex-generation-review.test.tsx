@@ -48,7 +48,7 @@ function reviewFixture(): GenerationReview {
     requests: [{
       requestId: 'request', requestSha256: 'a'.repeat(64),
       preview: { kind: 'mediaGenerationPreview', provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Café', editable: true, references: [], configuration: {}, diagnostics: [], requestSha256: 'a'.repeat(64), estimate: null },
-      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image', billing: 'providerCharge' }],
+      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' }],
       controls: { groups: [] },
     }],
     drafts: [{ requestId: 'request', prompt: 'Café', values: {} }],

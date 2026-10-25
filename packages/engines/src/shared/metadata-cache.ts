@@ -6,6 +6,8 @@ import type {
   ProviderMetadataCache,
   ProviderMetadataCacheKey,
 } from '../media/contracts.js';
+import { EngineError } from './errors.js';
+import { isJsonValue, isUnknownObject } from './json-object.js';
 
 export function createMemoryProviderMetadataCache(): ProviderMetadataCache {
   const entries = new Map<string, CachedProviderMetadata>();
@@ -40,11 +42,15 @@ export function createFileSystemProviderMetadataCache(
       }
     },
     async write(key, entry) {
-      await mkdir(directory, { recursive: true });
       const destination = cachePath(directory, key);
       const temporary = `${destination}.${randomUUID()}.tmp`;
-      await writeFile(temporary, JSON.stringify(entry), { encoding: 'utf8', mode: 0o600 });
-      await rename(temporary, destination);
+      try {
+        await mkdir(directory, { recursive: true });
+        await writeFile(temporary, JSON.stringify(entry), { encoding: 'utf8', mode: 0o600 });
+        await rename(temporary, destination);
+      } catch (error) {
+        throw isPermissionDenied(error) ? cacheUnwritable(directory, key, error) : error;
+      }
     },
     async remove(key) {
       try {
@@ -73,32 +79,24 @@ function cachePath(directory: string, key: ProviderMetadataCacheKey): string {
 }
 
 function isCachedProviderMetadata(value: unknown): value is CachedProviderMetadata {
-  return isRecord(value)
+  return isUnknownObject(value)
     && (typeof value.body === 'string' || isJsonValue(value.body))
     && typeof value.fetchedAt === 'string';
 }
 
-function isJsonValue(value: unknown, depth = 0): boolean {
-  if (depth > 100) {
-    return false;
-  }
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
-    return true;
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value);
-  }
-  if (Array.isArray(value)) {
-    return value.every((entry) => isJsonValue(entry, depth + 1));
-  }
-  return isRecord(value)
-    && Object.values(value).every((entry) => isJsonValue(entry, depth + 1));
+/** The cache folder exists outside what this process may write, such as a sandbox's writable folders. */
+function cacheUnwritable(directory: string, key: ProviderMetadataCacheKey, cause: unknown): EngineError {
+  return new EngineError(
+    'ENGINE_METADATA_CACHE_UNWRITABLE',
+    `Renku cannot save provider data in ${directory}: writing there is not permitted.`,
+    { provider: key.provider, model: key.model, details: { directory }, cause },
+  );
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+function isPermissionDenied(error: unknown): boolean {
+  return isUnknownObject(error) && (error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'EROFS');
 }
 
 function isMissingFile(error: unknown): boolean {
-  return isRecord(error) && error.code === 'ENOENT';
+  return isUnknownObject(error) && error.code === 'ENOENT';
 }

@@ -13,10 +13,8 @@ function estimate(overrides: Partial<GenerationCostEstimate>): GenerationCostEst
 
 describe('GenerationCostEstimateView', () => {
   it.each([
-    ['quoted', { state: 'quoted', amountUsd: 0.84, basis: 'Provider quote for this request' }, '$0.84'],
     ['computed', { state: 'computed', amountUsd: 12.5 }, '$12.50'],
     ['missing', { state: 'missingPrice', amountUsd: null }, 'No price is known for this route'],
-    ['expired', { state: 'expired', amountUsd: null }, 'The recorded price has expired'],
     ['unpriced', { state: 'unpriced', amountUsd: null, basis: 'No video price tier matches this request.' }, 'No video price tier matches this request.'],
     ['host plan', { state: 'hostPlanUsage', amountUsd: null, basis: 'Uses your ChatGPT plan\'s Codex usage' }, 'Uses your ChatGPT plan\'s Codex usage'],
   ] as const)('shows the %s state', (_name, overrides, text) => {

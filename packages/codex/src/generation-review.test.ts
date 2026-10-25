@@ -10,7 +10,7 @@ import { consumeGenerationReview, respondToGenerationReview } from './generation
 import { GenerationReviewState } from './generation-review-state.js';
 import { createFakeCostEstimator } from './testing/fake-cost-estimator.js';
 
-const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'model-a', label: 'Model A', mediaKind: 'image' as const, billing: 'providerCharge' as const };
+const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'model-a', label: 'Model A', mediaKind: 'image' as const };
 const alternative = { ...route, model: 'model-b', label: 'Model B' };
 const third = { ...route, model: 'model-c', label: 'Model C' };
 const reviewFile = 'tmp/operations/media-generation/prepared.json';

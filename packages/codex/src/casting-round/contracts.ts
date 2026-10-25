@@ -3,9 +3,9 @@
  * This file is the `@gorenku/studio-codex/casting-round` package export; keep it free of runtime code.
  * Provider ids and model keys are opaque Skill data echoed back on consume.
  */
-import type { CastingEstimatedCost, CastingModelEstimate, CastingProviderEstimate, CastingRoute } from '@gorenku/studio-core/client';
+import type { CastingEstimatedCost, CastingModelEstimate, CastingProviderEstimate, CastingRoute, ImageDetailLevel } from '@gorenku/studio-core/client';
 
-/** One provider with a saved key that offers a model, priced for one image. */
+/** One provider with a saved key that offers a model, priced for one image at each detail level. */
 export interface CastingRoundProviderOption extends CastingProviderEstimate {
   providerLabel: string;
 }
@@ -28,6 +28,8 @@ export type CastingRoundAnswer =
     kind: 'generate';
     routes: CastingRoute[];
     maxConcurrentGenerations: number;
+    /** The detail level every candidate of the round is generated at. */
+    detail: ImageDetailLevel;
     /** Provider charges summed from the per-image estimates; null when any route has no price or none is charged. */
     estimatedCost: CastingEstimatedCost | null;
     castingDefaultsSaved: boolean;
@@ -51,6 +53,8 @@ export interface CastingRound {
   maxCountPerModel: number;
   /** The image lane's concurrency. */
   maxConcurrentGenerations: number;
+  /** The detail level the panel opens on: the Project's candidate detail. */
+  initialDetail: ImageDetailLevel;
   answer: CastingRoundAnswer | null;
 }
 
@@ -68,7 +72,7 @@ export interface CastingRoundOpenInput {
 export interface CastingRoundRespondInput {
   panelId: string;
   choice:
-    | { kind: 'generate'; routes: CastingRoute[]; maxConcurrentGenerations: number }
+    | { kind: 'generate'; routes: CastingRoute[]; maxConcurrentGenerations: number; detail: ImageDetailLevel }
     | { kind: 'canceled' };
   saveAsCastingDefaults: boolean;
 }
@@ -84,6 +88,8 @@ export type CastingRoundConsumeResult =
     lookId: string;
     routes: CastingRoute[];
     maxConcurrentGenerations: number;
+    /** Apply this level's native fields from the Default Model List to every candidate request. */
+    detail: ImageDetailLevel;
     referenceAssetFileIds: string[];
     estimatedCost: CastingEstimatedCost | null;
   }

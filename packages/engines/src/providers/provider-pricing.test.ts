@@ -43,7 +43,6 @@ describe('Pika pricing', () => {
       ] }],
       source: { kind: 'providerApi', url: 'https://api.dev.pika.art/catalog/apis/acme/video' },
       notes: [],
-      expiresAt: '2026-10-13T12:00:00.000Z',
     });
     await loadPikaOperationMetadata('acme/video', ctx);
     await createPikaMediaProvider().readPrice!('acme/video', ctx);
@@ -53,26 +52,37 @@ describe('Pika pricing', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('stays unpriced for units the vocabulary cannot express', async () => {
-    const fetch = fetchMock(() => Response.json({ api_id: 'acme/video', display_pricing: { components: [{ role: 'output', unit: { type: 'video_output_token' }, starting_at: { micro_usd: 10 } }] } }));
-    const price = await createPikaMediaProvider().readPrice!('acme/video', context(fetch));
+  it('stays unpriced for units the vocabulary cannot express, with one note naming them', async () => {
+    const fetch = fetchMock(() => Response.json({ api_id: 'acme/image', display_pricing: { components: [
+      { role: 'output', unit: { type: 'image_output_token', quantity: 1000000 }, starting_at: { micro_usd: 60000000 } },
+      { role: 'input', unit: { type: 'input_token', quantity: 1000000 }, starting_at: { micro_usd: 500000 } },
+    ] } }));
+    const price = await createPikaMediaProvider().readPrice!('acme/image', context(fetch));
     expect(price?.components).toEqual([]);
-    expect(price?.notes[0]).toContain('video output token');
+    expect(price?.notes).toEqual(['Pika bills this route per image output token and input token, which Renku cannot compute from the request.']);
   });
 
-  it('quotes the exact native request through the public quote endpoint', async () => {
-    const fetch = fetchMock(() => Response.json({ sell_usd: '0.84', micro_usd: 840000 }));
-    const quote = await createPikaMediaProvider().quoteCost!('acme/video', { prompt: 'x', duration: 5, image: { $file: '/tmp/a.png' } }, context(fetch));
-    expect(quote).toEqual({ amountUsd: 0.84, sourceUrl: 'https://api.dev.pika.art/catalog/apis/acme/video/quote' });
+  it('divides a price for a block of units by the block size', async () => {
+    const fetch = fetchMock(() => Response.json({ api_id: 'acme/voice', display_pricing: { components: [
+      { role: 'input', unit: { type: 'character', quantity: 1000 }, starting_at: { micro_usd: 150000 } },
+    ] } }));
+    const price = await createPikaMediaProvider().readPrice!('acme/voice', context(fetch));
+    expect(price?.components).toEqual([{ unit: 'character', unitPriceUsd: 0.00015, quantity: { kind: 'characters', pointer: '/text' } }]);
+  });
+
+  it('quotes one exact native request through the public quote endpoint', async () => {
+    const fetch = fetchMock(() => Response.json({ sell_usd: '0.09536', micro_usd: 95360 }));
+    const quote = await createPikaMediaProvider().quoteCost!('acme/image', { prompt: 'x', image: { $file: '/tmp/a.png' } }, context(fetch));
+    expect(quote).toEqual({ amountUsd: 0.09536, sourceUrl: 'https://api.dev.pika.art/catalog/apis/acme/image' });
     const [url, init] = fetch.mock.calls[0]!;
-    expect(String(url)).toBe('https://api.dev.pika.art/catalog/apis/acme/video/quote');
+    expect(String(url)).toBe('https://api.dev.pika.art/catalog/apis/acme/image/quote');
     expect(new Headers(init?.headers).has('X-API-Key')).toBe(false);
-    expect(JSON.parse(String(init?.body))).toMatchObject({ prompt: 'x', duration: 5 });
+    expect(JSON.parse(String(init?.body))).toMatchObject({ prompt: 'x' });
   });
 
-  it('rejects a quote without an amount', async () => {
-    const fetch = fetchMock(() => Response.json({}));
-    await expect(createPikaMediaProvider().quoteCost!('acme/video', {}, context(fetch))).rejects.toMatchObject({ code: 'ENGINE_PRICE_INVALID' });
+  it('reports a rejected quote with the provider reason', async () => {
+    const fetch = fetchMock(() => Response.json({ message: 'prompt: Field required' }, { status: 422 }));
+    await expect(createPikaMediaProvider().quoteCost!('acme/image', {}, context(fetch))).rejects.toMatchObject({ code: 'ENGINE_PRICE_INVALID', message: expect.stringContaining('prompt: Field required') });
   });
 });
 
@@ -82,7 +92,7 @@ describe('WaveSpeed pricing', () => {
       api_schema: { api_schemas: [{ type: 'model_run', method: 'POST', request_schema: { type: 'object' } }] } }] }));
     const ctx = context(fetch);
     const price = await createWaveSpeedMediaProvider().readPrice!('acme/video', ctx);
-    expect(price).toMatchObject({ components: [{ unit: 'request', unitPriceUsd: 0.9, quantity: { kind: 'constant', value: 1 } }], expiresAt: '2026-10-13T12:00:00.000Z' });
+    expect(price).toMatchObject({ components: [{ unit: 'request', unitPriceUsd: 0.9, quantity: { kind: 'constant', value: 1 } }] });
     await loadWaveSpeedInputSchema('acme/video', ctx);
     await createWaveSpeedMediaProvider().readPrice!('acme/video', ctx);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -91,29 +101,57 @@ describe('WaveSpeed pricing', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('quotes through the pricing endpoint with the model id and inputs', async () => {
-    const fetch = fetchMock(() => Response.json({ code: 200, data: { model_id: 'acme/video', unit_price: 0.02, currency: 'USD' } }));
-    const quote = await createWaveSpeedMediaProvider().quoteCost!('acme/video', { prompt: 'lake', duration: 1 }, context(fetch));
-    expect(quote).toEqual({ amountUsd: 0.02, sourceUrl: 'https://api.wavespeed.ai/api/v3/model/pricing' });
+  it('quotes the exact native request through the pricing endpoint', async () => {
+    const fetch = fetchMock(() => Response.json({ code: 200, data: { model_id: 'acme/video', unit_price: 9, currency: 'USD' } }));
+    const quote = await createWaveSpeedMediaProvider().quoteCost!('acme/video', { prompt: 'lake', duration: 10, resolution: '1080p' }, context(fetch));
+    expect(quote).toEqual({ amountUsd: 9, sourceUrl: 'https://api.wavespeed.ai/api/v3/model/pricing' });
     const [, init] = fetch.mock.calls[0]!;
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer test-key');
-    expect(JSON.parse(String(init?.body))).toEqual({ model_id: 'acme/video', inputs: { prompt: 'lake', duration: 1 } });
+    expect(JSON.parse(String(init?.body))).toEqual({ model_id: 'acme/video', inputs: { prompt: 'lake', duration: 10, resolution: '1080p' } });
   });
 
-  it('reports a rejected quote as a structured engine error', async () => {
-    const fetch = fetchMock(() => new Response('{}', { status: 400 }));
-    await expect(createWaveSpeedMediaProvider().quoteCost!('acme/video', {}, context(fetch))).rejects.toMatchObject({ code: 'ENGINE_REQUEST_REJECTED', httpStatus: 400 });
+  it('reuses a saved price for 30 days while estimating and keeps it when the refresh fails', async () => {
+    let available = true;
+    const fetch = fetchMock(() => available
+      ? Response.json({ code: 200, data: [{ model_id: 'acme/video', base_price: 0.9 }] })
+      : new Response('{}', { status: 503 }));
+    const ctx = context(fetch);
+    await createWaveSpeedMediaProvider().readPrice!('acme/video', ctx);
+    const estimating = { ...ctx, cachedMetadataReuse: { maxAgeMs: 30 * 24 * 60 * 60 * 1000, failedRefreshes: new Set<string>() } };
+    estimating.clock = () => new Date('2026-11-10T12:00:00.000Z');
+    await createWaveSpeedMediaProvider().readPrice!('acme/video', estimating);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    available = false;
+    estimating.clock = () => new Date('2026-11-12T12:00:00.000Z');
+    expect(await createWaveSpeedMediaProvider().readPrice!('acme/video', estimating)).toMatchObject({ components: [{ unitPriceUsd: 0.9 }] });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await createWaveSpeedMediaProvider().readPrice!('acme/video', estimating);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
 
 describe('Fal.ai pricing', () => {
+  it('uses the typical charge per call from past usage for a unit it cannot count', async () => {
+    const fetch = fetchMock((url, init) => url.endsWith('/estimate')
+      ? Response.json({ estimate_type: 'historical_api_price', total_cost: 0.831, currency: 'USD' })
+      : Response.json({ prices: [{ endpoint_id: 'acme/video', unit_price: 0.0214, unit: '1000 tokens', currency: 'USD' }], next_cursor: null, has_more: false }));
+    const ctx = context(fetch);
+    const price = await createFalMediaProvider().readPrice!('acme/video', ctx);
+    expect(price).toMatchObject({ components: [{ unit: 'request', unitPriceUsd: 0.831, quantity: { kind: 'constant', value: 1 } }] });
+    expect(price?.notes[0]).toContain('Typical Fal.ai charge per call');
+    const estimateCall = fetch.mock.calls.find(([url]) => String(url).endsWith('/estimate'))!;
+    expect(estimateCall[1]?.method).toBe('POST');
+    expect(JSON.parse(String(estimateCall[1]?.body))).toEqual({ estimate_type: 'historical_api_price', endpoints: { 'acme/video': { call_quantity: 1 } } });
+    await createFalMediaProvider().readPrice!('acme/video', ctx);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('maps a per-image unit price and keeps it fresh for a day without expiry headers', async () => {
     const fetch = fetchMock(() => Response.json({ prices: [{ endpoint_id: 'acme/image', unit_price: 0.025, unit: 'image', currency: 'USD' }], next_cursor: null, has_more: false }));
     const ctx = context(fetch);
     const price = await createFalMediaProvider().readPrice!('acme/image', ctx);
     expect(price).toMatchObject({
       components: [{ unit: 'image', unitPriceUsd: 0.025, quantity: { kind: 'field', pointer: '/num_images', default: 1 } }],
-      expiresAt: '2026-10-13T12:00:00.000Z',
     });
     expect(String(fetch.mock.calls[0]![0])).toBe('https://api.fal.ai/v1/models/pricing?endpoint_id=acme%2Fimage');
     expect(new Headers(fetch.mock.calls[0]![1]?.headers).get('Authorization')).toBe('Key test-key');

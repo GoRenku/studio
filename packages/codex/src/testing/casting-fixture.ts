@@ -16,9 +16,9 @@ export const CASTING_DEFAULT_MODELS = {
   formatVersion: 1,
   lanes: {
     image: [
-      { model: 'acme-portrait', name: 'Acme Portrait', providers: ['fal-ai', 'replicate'], recommendedFor: ['fal-ai'] },
-      { model: 'acme-faces', name: 'Acme Faces', providers: ['fal-ai'], recommendedFor: [] },
-      { model: 'acme-host-image', name: 'Acme Host Image', providers: ['codex'], recommendedFor: ['codex'] },
+      { model: 'acme-portrait', name: 'Acme Portrait', providers: [{ provider: 'fal-ai', route: 'route/acme-portrait', detail: { lowest: { size: 'small' }, mid: { size: 'medium' }, highest: { size: 'large' } } }, { provider: 'replicate', route: 'route/acme-portrait', detail: { lowest: { size: 'small' }, mid: { size: 'medium' }, highest: { size: 'large' } } }], recommendedFor: ['fal-ai'] },
+      { model: 'acme-faces', name: 'Acme Faces', providers: [{ provider: 'fal-ai', route: 'route/acme-faces', detail: { lowest: { size: 'small' }, mid: { size: 'medium' }, highest: { size: 'large' } } }], recommendedFor: [] },
+      { model: 'acme-host-image', name: 'Acme Host Image', providers: [{ provider: 'codex', route: 'route/acme-host-image', detail: { lowest: { size: 'small' }, mid: { size: 'medium' }, highest: { size: 'large' } } }], recommendedFor: ['codex'] },
     ],
     imageEdit: [],
     video: [],

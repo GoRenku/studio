@@ -18,16 +18,39 @@ export async function readStoredDefaultModelList(
   options: RenkuConfigPathOptions = {}
 ): Promise<StoredDefaultModelList | null> {
   const storePath = resolveDefaultModelListPath(options);
-  let contents: string;
+  const contents = await readStoredContents(storePath);
+  return contents === null ? null : parseStoredDefaultModelList(contents, storePath);
+}
+
+/**
+ * The source hash of the stored copy, which sync compares to skip unchanged
+ * content. Sync replaces the copy whole, so it reads only the hash and never
+ * requires the copy to match the current list shape.
+ */
+export async function readStoredDefaultModelListSha256(
+  options: RenkuConfigPathOptions = {}
+): Promise<string | null> {
+  const contents = await readStoredContents(resolveDefaultModelListPath(options));
+  if (contents === null) {
+    return null;
+  }
   try {
-    contents = await fs.readFile(storePath, 'utf8');
+    const value: unknown = JSON.parse(contents);
+    return typeof value === 'object' && value !== null && 'sha256' in value && typeof value.sha256 === 'string' ? value.sha256 : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readStoredContents(storePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(storePath, 'utf8');
   } catch (error) {
     if (isMissingFile(error)) {
       return null;
     }
     throw storeError(storePath, 'read', error);
   }
-  return parseStoredDefaultModelList(contents, storePath);
 }
 
 export async function writeStoredDefaultModelList(

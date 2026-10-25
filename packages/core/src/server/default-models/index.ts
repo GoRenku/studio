@@ -1,2 +1,2 @@
-export { readDefaultModelList, syncDefaultModelList } from './service.js';
+export { readDefaultModelList, readImageDetailFields, syncDefaultModelList } from './service.js';
 export { resolveDefaultModelListPath } from './store.js';

@@ -7,7 +7,6 @@ const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
 const route = z.object({
   provider: identity, providerLabel: identity, model: identity, label: identity,
   mediaKind: z.enum(['image', 'video', 'audio']),
-  billing: z.enum(['providerCharge', 'hostPlanUsage']).describe('hostPlanUsage for routes that run on the agent host\'s plan; providerCharge otherwise.'),
 }).strict();
 
 const issue = z.object({

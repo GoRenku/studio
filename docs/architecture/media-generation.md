@@ -220,7 +220,7 @@ retryable independently of errors from other panel operations.
 
 The Image Editing lane decides the default `image.edit` route; an unset model
 uses the Skill's recommendation for the lane provider. The Codex built-in image
-tool is one route option (`billing: 'hostPlanUsage'`, no regions, a style
+tool is one route option (plan usage, no regions, a style
 reference): the agent runs it with the built-in tool and imports the result with
 `codex` provenance. For a route that appears
 in a `## Codex panel` block, and only when the Codex panel probe advertises
@@ -535,17 +535,24 @@ Codex built-in and ordered multi-request Studio Preview use
 
 ## Cost estimates
 
-Prices are cached provider metadata owned by Engines
-([ADR 0117](../decisions/0117-cache-provider-prices-with-schemas-and-estimate-before-review.md)).
-`estimateCost` tries a live provider quote, then a fresh agent-recorded price,
-then the provider's API price, and evaluates prices with a closed unit and
-quantity vocabulary. The CLI composes the result into Core's
-`GenerationCostEstimate` display envelope: `generation prepare` and
-`generation preview show` attach it to Studio Preview, `generation estimate`
-prints it, and `renku studio mcp` injects the estimator into the Codex review,
-which also re-estimates edited controls through the app-only
-`generation.review.estimate`. Routes with `billing: 'hostPlanUsage'` are never
-estimated and show plan usage. A missing price is never shown as zero.
+Prices are saved provider metadata owned by Engines
+([ADR 0117](../decisions/0117-cache-provider-prices-with-schemas-and-estimate-before-review.md),
+[ADR 0128](../decisions/0128-estimate-generation-cost-from-saved-prices.md)).
+`estimateCost` uses the agent-recorded price, else the provider's API price,
+and evaluates it with a closed unit and quantity vocabulary. Providers that
+quote exact settings (Pika, WaveSpeed) are asked first, and the quote is saved
+per set of settings like a price; Fal.ai token-billed routes use Fal.ai's
+typical charge per call. While estimating, provider metadata and quotes are
+reused for up to 30 days, an
+older entry gets one refresh attempt with a 5 second timeout, and a failed
+refresh keeps the saved copy. The CLI composes the only
+`GenerationCostEstimator`, which returns plan usage for the Codex built-in
+provider (Core's `generationRouteBilling`) and Core's `GenerationCostEstimate`
+otherwise: `generation prepare` and `generation preview show` attach it to
+Studio Preview, `generation estimate` prints it, and `renku studio mcp` injects
+it into the Codex review, which also re-estimates edited controls through the
+app-only `generation.review.estimate`, and the casting picker. A missing price
+is never shown as zero.
 
 Draft estimates omit cleared optional controls and preserve unrepresented native
 fields. Control edits mark the displayed estimate outdated until the latest

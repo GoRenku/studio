@@ -4,7 +4,7 @@ import type {
 } from './contracts.js';
 import { EngineError } from '../shared/errors.js';
 import { estimateRouteCost } from '../pricing/estimate.js';
-import { readRecordedPrice, recordRoutePrice } from '../pricing/price-cache.js';
+import { readRoutePrice, recordRoutePrice } from '../pricing/price-cache.js';
 
 export function createMediaEngine(providers: Iterable<MediaProvider>): MediaEngine {
   const registry = new Map<string, MediaProvider>();
@@ -57,12 +57,11 @@ export function createMediaEngine(providers: Iterable<MediaProvider>): MediaEngi
         context,
       });
     },
-    async readRoutePrices(providerId, model, context) {
-      const provider = requireProvider(registry, providerId, model);
-      return {
-        recorded: await readRecordedPrice(providerId, model, context),
-        providerApi: provider.readPrice ? await provider.readPrice(model, context) : null,
-      };
+    estimateRouteDefaultsCost(providerId, model, context, fields) {
+      return estimateRouteCost({ provider: requireProvider(registry, providerId, model), model, fields, context });
+    },
+    readRoutePrice(providerId, model, context) {
+      return readRoutePrice({ provider: requireProvider(registry, providerId, model), model, context });
     },
     recordRoutePrice(providerId, model, price, context) {
       requireProvider(registry, providerId, model);

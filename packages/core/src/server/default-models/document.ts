@@ -1,15 +1,20 @@
 import { createDiagnosticError, StructuredError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import { GENERATION_LANES } from '../../client/generation-lanes.js';
-import type {
-  DefaultModelListEntry,
-  DefaultModelListLanes,
+import { GENERATION_LANES, type GenerationLane } from '../../client/generation-lanes.js';
+import {
+  IMAGE_DETAIL_LANES,
+  IMAGE_DETAIL_LEVELS,
+  type DefaultModelListEntry,
+  type DefaultModelListLanes,
+  type DefaultModelListProvider,
 } from '../../client/default-models.js';
+import type { JsonValue } from '../../client/json.js';
 
 export const DEFAULT_MODEL_LIST_FORMAT_VERSION = 1 as const;
 export const DEFAULT_MODEL_LIST_MAX_BYTES = 256 * 1024;
 
 const KEBAB_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MODEL_KEY = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const ROUTE_MAX_LENGTH = 256;
 
 /** The stored copy of the Skill's Default Model List. */
 export interface StoredDefaultModelList {
@@ -86,13 +91,13 @@ function readLanes(value: unknown, issues: DiagnosticIssue[]): DefaultModelListL
       issues.push(issue(['lanes', lane], `${lane} must be an array of model entries.`));
       continue;
     }
-    lanes[lane] = entries.flatMap((entry, index) => readEntry(entry, ['lanes', lane, String(index)], issues));
+    lanes[lane] = entries.flatMap((entry, index) => readEntry(entry, lane, ['lanes', lane, String(index)], issues));
     checkLaneUniqueness(lanes[lane], ['lanes', lane], issues);
   }
   return lanes;
 }
 
-function readEntry(value: unknown, path: string[], issues: DiagnosticIssue[]): DefaultModelListEntry[] {
+function readEntry(value: unknown, lane: GenerationLane, path: string[], issues: DiagnosticIssue[]): DefaultModelListEntry[] {
   if (!isRecord(value)) {
     issues.push(issue(path, 'Each model entry must be an object.'));
     return [];
@@ -104,10 +109,10 @@ function readEntry(value: unknown, path: string[], issues: DiagnosticIssue[]): D
   if (typeof value.name !== 'string' || value.name.trim() === '' || value.name.length > 128) {
     issues.push(issue([...path, 'name'], 'name must be a non-empty display name of at most 128 characters.'));
   }
-  const providers = readProviderList(value.providers, [...path, 'providers'], issues);
-  const recommendedFor = readProviderList(value.recommendedFor, [...path, 'recommendedFor'], issues, true);
+  const providers = readProviders(value.providers, lane, [...path, 'providers'], issues);
+  const recommendedFor = readProviderList(value.recommendedFor, [...path, 'recommendedFor'], issues);
   for (const provider of recommendedFor) {
-    if (!providers.includes(provider)) {
+    if (!providers.some((entry) => entry.provider === provider)) {
       issues.push(issue([...path, 'recommendedFor'], `recommendedFor lists ${provider}, which is not in providers.`));
     }
   }
@@ -117,9 +122,53 @@ function readEntry(value: unknown, path: string[], issues: DiagnosticIssue[]): D
   return [{ model: value.model as string, name: value.name as string, providers, recommendedFor }];
 }
 
-function readProviderList(value: unknown, path: string[], issues: DiagnosticIssue[], allowEmpty = false): string[] {
-  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
-    issues.push(issue(path, allowEmpty ? 'Must be an array of provider ids.' : 'Must be a non-empty array of provider ids.'));
+function readProviders(value: unknown, lane: GenerationLane, path: string[], issues: DiagnosticIssue[]): DefaultModelListProvider[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    issues.push(issue(path, 'Must be a non-empty array of { provider, route } entries.'));
+    return [];
+  }
+  const providers = value.flatMap((entry, index): DefaultModelListProvider[] => {
+    const entryPath = [...path, String(index)];
+    if (!isRecord(entry) || typeof entry.provider !== 'string' || !KEBAB_ID.test(entry.provider)) {
+      issues.push(issue([...entryPath, 'provider'], 'provider must be a kebab-case provider id.'));
+      return [];
+    }
+    if (typeof entry.route !== 'string' || entry.route.trim() !== entry.route || entry.route === '' || entry.route.length > ROUTE_MAX_LENGTH) {
+      issues.push(issue([...entryPath, 'route'], `route must be a non-empty provider route id of at most ${ROUTE_MAX_LENGTH} characters.`));
+      return [];
+    }
+    const route = { provider: entry.provider, route: entry.route };
+    if (!(IMAGE_DETAIL_LANES as readonly string[]).includes(lane)) {
+      if (entry.detail !== undefined) {
+        issues.push(issue([...entryPath, 'detail'], 'detail is only for image and image edit lanes.'));
+      }
+      return [route];
+    }
+    const detail = readDetail(entry.detail, [...entryPath, 'detail'], issues);
+    return detail ? [{ ...route, detail }] : [];
+  });
+  if (new Set(providers.map((entry) => entry.provider)).size !== providers.length) {
+    issues.push(issue(path, 'Each provider may be listed once.'));
+  }
+  return providers;
+}
+
+/** Each detail level is an object of native request fields; their names and values stay opaque Skill data. */
+function readDetail(value: unknown, path: string[], issues: DiagnosticIssue[]): DefaultModelListProvider['detail'] | undefined {
+  const levels = isRecord(value) ? value : undefined;
+  const valid = levels !== undefined
+    && Object.keys(levels).length === IMAGE_DETAIL_LEVELS.length
+    && IMAGE_DETAIL_LEVELS.every((level) => isRecord(levels[level]));
+  if (!valid) {
+    issues.push(issue(path, `detail must have ${IMAGE_DETAIL_LEVELS.join(', ')}, each an object of native request fields.`));
+    return undefined;
+  }
+  return Object.fromEntries(IMAGE_DETAIL_LEVELS.map((level) => [level, levels[level] as Record<string, JsonValue>])) as DefaultModelListProvider['detail'];
+}
+
+function readProviderList(value: unknown, path: string[], issues: DiagnosticIssue[]): string[] {
+  if (!Array.isArray(value)) {
+    issues.push(issue(path, 'Must be an array of provider ids.'));
     return [];
   }
   const providers = value.filter((provider): provider is string => typeof provider === 'string' && KEBAB_ID.test(provider));

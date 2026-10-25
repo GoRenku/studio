@@ -17,9 +17,9 @@ const defaultModels = {
   lanes: {
     image: [],
     imageEdit: [
-      { model: 'acme-retouch', name: 'Acme Retouch', providers: ['fal-ai', 'replicate'], recommendedFor: ['fal-ai'] },
-      { model: 'acme-restyle', name: 'Acme Restyle', providers: ['fal-ai'], recommendedFor: [] },
-      { model: 'acme-host-edit', name: 'Acme Host Edit', providers: ['codex'], recommendedFor: ['codex'] },
+      { model: 'acme-retouch', name: 'Acme Retouch', providers: [{ provider: 'fal-ai', route: 'route/acme-retouch', detail: { lowest: {}, mid: {}, highest: {} } }, { provider: 'replicate', route: 'route/acme-retouch', detail: { lowest: {}, mid: {}, highest: {} } }], recommendedFor: ['fal-ai'] },
+      { model: 'acme-restyle', name: 'Acme Restyle', providers: [{ provider: 'fal-ai', route: 'route/acme-restyle', detail: { lowest: {}, mid: {}, highest: {} } }], recommendedFor: [] },
+      { model: 'acme-host-edit', name: 'Acme Host Edit', providers: [{ provider: 'codex', route: 'route/acme-host-edit', detail: { lowest: {}, mid: {}, highest: {} } }], recommendedFor: ['codex'] },
     ],
     video: [],
     audio: [],
@@ -162,7 +162,7 @@ describe('Route Chooser', () => {
 
   it('fails clearly when the Default Model List names a provider this runtime does not know', async () => {
     await writeDefaultModels({ ...defaultModels, lanes: { ...defaultModels.lanes, imageEdit: [
-      { model: 'acme-retouch', name: 'Acme Retouch', providers: ['acme-unknown'], recommendedFor: [] },
+      { model: 'acme-retouch', name: 'Acme Retouch', providers: [{ provider: 'acme-unknown', route: 'route/acme-retouch', detail: { lowest: {}, mid: {}, highest: {} } }], recommendedFor: [] },
     ] } });
     expect((await callError('generation.route.choose', { project: 'movie', purpose: 'image.edit', lane: 'imageEdit' })).error.code).toBe('CODEX_ROUTE_CHOICE_INVALID');
     await writeDefaultModels(defaultModels);

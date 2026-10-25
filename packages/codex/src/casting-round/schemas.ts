@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { castingRouteSchema } from '@gorenku/studio-core/client';
+import { castingRouteSchema, IMAGE_DETAIL_LEVELS } from '@gorenku/studio-core/client';
 
 const castingIdentity = z.string().min(1).max(512);
 
@@ -39,6 +39,7 @@ export const castingRoundRespondSchema = z.object({
       kind: z.literal('generate'),
       routes: z.array(castingRouteInputSchema).min(1),
       maxConcurrentGenerations: z.number().int().min(1),
+      detail: z.enum(IMAGE_DETAIL_LEVELS),
     }).strict(),
     z.object({ kind: z.literal('canceled') }).strict(),
   ]),

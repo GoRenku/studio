@@ -22,7 +22,7 @@ export const CASTING_ROUND_URI = 'ui://renku/casting-round';
 export function registerCastingRoundOpening(server: McpServer, state: CastingRoundState, estimator: GenerationCostEstimator, homeDir?: string): void {
   registerAppTool(server, 'casting.round.open', {
     title: 'Open the Casting round panel',
-    description: 'Show the Casting round panel for one Look: brief, identity references, models, counts and approximate costs from local image prices. Requires a synced Default Model List. Supply the brief and optional strength notes; prices need no preparation or provider calls. Return immediately and end the turn; the round arrives as a message. This tool never executes generation.',
+    description: 'Show the Casting round panel for one Look: brief, identity references, models, counts and approximate costs from saved provider prices. Requires a synced Default Model List. Supply the brief and optional strength notes; prices need no preparation. Return immediately and end the turn; the round arrives as a message. This tool never executes generation.',
     inputSchema: castingRoundOpenSchema,
     annotations: { readOnlyHint: true, openWorldHint: true },
     _meta: { ui: { resourceUri: CASTING_ROUND_URI, visibility: ['model'] } },
@@ -66,7 +66,7 @@ export async function openCastingRound(
   const optionRecords = castingRoundOptions(entries, credentials.providers, input.notes ?? {}, lane.provider);
   const preselected = preselectCastingRoutes(optionRecords, { suggested: input.suggested, saved: settings.settings.casting.routes, lane });
   const [options, references] = await Promise.all([
-    estimateCastingRoundOptions(optionRecords, estimator),
+    estimateCastingRoundOptions(optionRecords, estimator, homeDir),
     readCastingRoundReferences(projectRef, input.references ?? [], media, homeDir),
   ]);
   const round = state.create({
@@ -80,6 +80,7 @@ export async function openCastingRound(
     initialTotal: preselected.reduce((total, route) => total + route.count, 0) || CASTING_ROUND_DEFAULT_TOTAL,
     maxCountPerModel: CASTING_ROUND_MAX_COUNT_PER_MODEL,
     maxConcurrentGenerations: lane.maxConcurrentGenerations,
+    initialDetail: settings.settings.casting.candidateDetail,
   }, { projectRef, media });
   return round;
 }

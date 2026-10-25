@@ -40,6 +40,7 @@ export interface GenerationCommandFlags {
   beat?: string | string[];
   provider?: string;
   model?: string;
+  detail?: string;
   routeIndex?: string[];
   query?: string;
   ifRevision?: string;

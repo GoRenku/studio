@@ -63,7 +63,7 @@ function ModelSelectRow({ id, lane, provider, value, defaultModels, onValueChang
   onValueChange: (model: GenerationLaneModel | null) => void;
 }) {
   const entries = defaultModels?.state === 'synced'
-    ? defaultModels.lanes[lane].filter((entry) => entry.providers.includes(provider))
+    ? defaultModels.lanes[lane].filter((entry) => entry.providers.some((offered) => offered.provider === provider))
     : [];
   // An unset lane model shows the Skill's recommendation for the provider as the selected family.
   const recommended = entries.find((entry) => entry.recommendedFor.includes(provider));

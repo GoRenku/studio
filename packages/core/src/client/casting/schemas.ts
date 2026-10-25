@@ -1,3 +1,5 @@
+import { IMAGE_DETAIL_LEVELS } from '../default-models.js';
+
 const nonEmptyString = { type: 'string', minLength: 1, pattern: '\\S' } as const;
 const idList = {
   type: 'array',
@@ -128,9 +130,11 @@ export const castingSettingsSchema = {
   $id: 'https://schemas.gorenku.com/studio/casting-settings.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: ['routes'],
+  required: ['routes', 'candidateDetail', 'characterSheetDetail'],
   properties: {
     routes: castingRoutes,
+    candidateDetail: { enum: IMAGE_DETAIL_LEVELS },
+    characterSheetDetail: { enum: IMAGE_DETAIL_LEVELS },
   },
   additionalProperties: false,
 } as const;

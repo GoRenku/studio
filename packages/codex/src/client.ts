@@ -1,4 +1,4 @@
-import type { GenerationLane, GenerationRouteBilling, JsonValue, MediaGenerationPreviewResource, MediaGenerationReferenceView } from '@gorenku/studio-core/client';
+import type { GenerationLane, JsonValue, MediaGenerationPreviewResource, MediaGenerationReferenceView } from '@gorenku/studio-core/client';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { NativeRequestControls } from './native-request-controls/contracts.js';
 
@@ -16,8 +16,6 @@ export interface GenerationReviewRoute {
   model: string;
   label: string;
   mediaKind: 'image' | 'video' | 'audio';
-  /** From the Skill's Route Description; host plan usage is never sent to the estimator. */
-  billing: GenerationRouteBilling;
 }
 
 export type GenerationReviewReference = Omit<MediaGenerationReferenceView, 'projectRelativePath' | 'browserUrl'> & {

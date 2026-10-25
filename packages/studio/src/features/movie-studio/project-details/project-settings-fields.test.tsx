@@ -128,6 +128,18 @@ describe('ProjectSettingsFields', () => {
     }));
   });
 
+  it('sets the casting candidate and character sheet detail levels', async () => {
+    const onChange = vi.fn();
+    render(<ProjectSettingsFields settings={settings()} onChange={onChange} providers={providers()} providersLoading={false} onRefreshProviders={() => undefined} defaultModels={null} />);
+    expect(screen.getByRole('combobox', { name: 'Candidate detail' }).textContent).toBe('Lowest');
+    expect(screen.getByRole('combobox', { name: 'Character sheet detail' }).textContent).toBe('Highest');
+    const trigger = screen.getByRole('combobox', { name: 'Candidate detail' });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Mid' }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ casting: { routes: [], candidateDetail: 'mid', characterSheetDetail: 'highest' } }));
+  });
+
   it('disables the model select when no models are available', () => {
     render(<ProjectSettingsFields settings={settings()} onChange={() => undefined} providers={providers()} providersLoading={false} onRefreshProviders={() => undefined} defaultModels={{ state: 'notSynced' }} />);
     const model = screen.getAllByRole('combobox', { name: 'Model' })[1]!;
@@ -191,9 +203,9 @@ function defaultModels(): DefaultModelListResource {
     lanes: {
       image: [],
       imageEdit: [
-        { model: 'fictional-edit', name: 'Fictional Edit', providers: ['fal-ai'], recommendedFor: ['fal-ai'] },
-        { model: 'fictional-edit-plus', name: 'Fictional Edit Plus', providers: ['fal-ai', 'replicate'], recommendedFor: [] },
-        { model: 'fictional-host-edit', name: 'Fictional Host Edit', providers: ['codex'], recommendedFor: ['codex'] },
+        { model: 'fictional-edit', name: 'Fictional Edit', providers: [{ provider: 'fal-ai', route: 'route/fictional-edit' }], recommendedFor: ['fal-ai'] },
+        { model: 'fictional-edit-plus', name: 'Fictional Edit Plus', providers: [{ provider: 'fal-ai', route: 'route/fictional-edit-plus' }, { provider: 'replicate', route: 'route/fictional-edit-plus' }], recommendedFor: [] },
+        { model: 'fictional-host-edit', name: 'Fictional Host Edit', providers: [{ provider: 'codex', route: 'route/fictional-host-edit' }], recommendedFor: ['codex'] },
       ],
       video: [],
       audio: [],
@@ -214,7 +226,7 @@ function providers(): ProviderCredentialStatus[] {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 8,
+    version: 9,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -257,6 +269,6 @@ function settings(): ProjectSettingsDocument {
         maxConcurrentGenerations: 1,
       },
     },
-    casting: { routes: [] },
+    casting: { routes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' },
   };
 }

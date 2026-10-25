@@ -23,6 +23,7 @@ import {
   type PikaMediaCategory,
   type PikaOperationMetadata,
 } from './metadata.js';
+import { isJsonObject } from '../../shared/json-object.js';
 
 export async function submitPikaJob(input: {
   metadata: PikaOperationMetadata;
@@ -270,7 +271,7 @@ async function readContentUrl(input: {
     );
   }
   const body = await readPikaResponseBody(response);
-  const url = isRecord(body) ? body.url : undefined;
+  const url = isJsonObject(body) ? body.url : undefined;
   if (typeof url !== 'string' || !isHttpsUrl(url)) {
     throw new EngineError(
       'ENGINE_OUTPUT_INVALID',
@@ -321,7 +322,7 @@ function pikaFetch(
 }
 
 function isFailedJobEnvelope(value: JsonValue | undefined): boolean {
-  return isRecord(value)
+  return isJsonObject(value)
     && typeof value.id === 'string'
     && value.status === 'failed';
 }
@@ -332,8 +333,4 @@ function isHttpsUrl(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

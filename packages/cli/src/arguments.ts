@@ -87,6 +87,7 @@ Options
   --provider           Provider id for generation schema or model discovery
   --model              Exact provider-native model id, or a Skill model key for settings generation set
   --model-name         Display name of the Skill model key for settings generation set
+  --detail             Image detail level for generation estimate: lowest, mid or highest
   --clear-model        Return a generation lane to the Skill recommendation
   --lane               Generation lane: image, image-edit, video or audio
   --choose-route       Choose provider and model before each generation: on or off
@@ -257,6 +258,9 @@ function createCliFlags() {
       type: 'string',
     },
     model: {
+      type: 'string',
+    },
+    detail: {
       type: 'string',
     },
     routeIndex: {

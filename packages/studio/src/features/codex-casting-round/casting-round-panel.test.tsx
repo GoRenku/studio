@@ -2,7 +2,7 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GenerationCostEstimate } from '@gorenku/studio-core/client';
+import { hostPlanUsageEstimate, type GenerationCostEstimate } from '@gorenku/studio-core/client';
 import type { CastingRound, CastingRoundRespondInput } from '@gorenku/studio-codex/casting-round';
 import { CastingRoundPanel } from './casting-round-panel';
 import { clampTotal, splitTotal } from './round-counts';
@@ -44,6 +44,9 @@ const estimate: GenerationCostEstimate = {
   state: 'computed', amountUsd: 0.04, basis: 'Fixture', observedAt: '2026-10-24T00:00:00.000Z', sourceUrl: null, notes: [], requestSha256: 'request',
 };
 
+/** The same estimate at every detail level. */
+const atEveryLevel = (value: GenerationCostEstimate) => ({ lowest: value, mid: value, highest: value });
+
 // Fictional routes only: the panel renders whatever models and prices the round lists.
 function roundFixture(overrides: Partial<CastingRound> = {}): CastingRound {
   return {
@@ -55,16 +58,17 @@ function roundFixture(overrides: Partial<CastingRound> = {}): CastingRound {
     references: [],
     options: [
       { model: portrait, note: 'Wide range of faces', providers: [
-        { provider: 'acme-cloud', providerLabel: 'Acme Cloud', billing: 'providerCharge', estimate: { ...estimate } },
-        { provider: 'acme-alt', providerLabel: 'Acme Alt', billing: 'providerCharge', estimate: { ...estimate, amountUsd: 0.03 } },
+        { provider: 'acme-cloud', providerLabel: 'Acme Cloud', estimates: atEveryLevel({ ...estimate }) },
+        { provider: 'acme-alt', providerLabel: 'Acme Alt', estimates: atEveryLevel({ ...estimate, amountUsd: 0.03 }) },
       ] },
-      { model: faces, note: null, providers: [{ provider: 'acme-cloud', providerLabel: 'Acme Cloud', billing: 'providerCharge', estimate: { ...estimate, amountUsd: 0.02 } }] },
-      { model: host, note: null, providers: [{ provider: 'acme-host', providerLabel: 'Acme Host', billing: 'hostPlanUsage', estimate: null }] },
+      { model: faces, note: null, providers: [{ provider: 'acme-cloud', providerLabel: 'Acme Cloud', estimates: atEveryLevel({ ...estimate, amountUsd: 0.02 }) }] },
+      { model: host, note: null, providers: [{ provider: 'acme-host', providerLabel: 'Acme Host', estimates: atEveryLevel(hostPlanUsageEstimate(null)) }] },
     ],
     preselected: [{ provider: 'acme-cloud', model: portrait, count: 10 }],
     initialTotal: 10,
     maxCountPerModel: 50,
     maxConcurrentGenerations: 4,
+    initialDetail: 'lowest',
     answer: null,
     ...overrides,
   };
@@ -99,7 +103,7 @@ describe('Casting round panel', () => {
     expect(screen.getByText('Wide range of faces')).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Acme Portrait provider' }).textContent).toContain('Acme Cloud · $0.04 each');
     expect(screen.getByText('$0.02')).toBeTruthy();
-    expect(screen.getByText('ChatGPT plan')).toBeTruthy();
+    expect(screen.getByText('Uses your ChatGPT plan\'s Codex usage')).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: 'Acme Portrait' })).toHaveLength(1);
     expect(totalValue()).toBe('10');
     expect(screen.getByText('$0.40')).toBeTruthy();
@@ -108,7 +112,7 @@ describe('Casting round panel', () => {
 
   it('shows the existing estimate warnings and source for the picked provider', async () => {
     const round = roundFixture();
-    round.options[0]!.providers[0]!.estimate = { ...estimate, notes: ['Base price only; output settings can change the charge.'], sourceUrl: 'https://example.test/pricing' };
+    round.options[0]!.providers[0]!.estimates = atEveryLevel({ ...estimate, notes: ['Base price only; output settings can change the charge.'], sourceUrl: 'https://example.test/pricing' });
     await openRound({ options: round.options });
     expect(screen.getByText('Base price only; output settings can change the charge.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Price source' }).getAttribute('href')).toBe('https://example.test/pricing');
@@ -116,7 +120,7 @@ describe('Casting round panel', () => {
 
   it('keeps an unestimated provider selectable without showing a known total', async () => {
     const round = roundFixture();
-    round.options[0]!.providers[0]!.estimate = null;
+    round.options[0]!.providers[0]!.estimates = atEveryLevel({ ...estimate, state: 'missingPrice', amountUsd: null, basis: 'No price is known for this route' });
     await openRound({ options: round.options });
     expect(screen.getByText('No estimate for Acme Portrait')).toBeTruthy();
     expect(screen.queryByText('$0.40')).toBeNull();
@@ -146,17 +150,29 @@ describe('Casting round panel', () => {
   it('sends the ticked models and counts, saves defaults only when ticked and posts a neutral notice', async () => {
     await openRound();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Acme Faces' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: "Save these models and counts as this project's casting defaults" }));
+    fireEvent.click(screen.getByRole('checkbox', { name: "Save these models, counts and detail as this project's casting defaults" }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Ask agent to generate 10' })); });
     expect(integration.respond).toHaveBeenCalledWith(integration.bridge, {
       panelId: 'panel',
-      choice: { kind: 'generate', maxConcurrentGenerations: 4, routes: [
+      choice: { kind: 'generate', maxConcurrentGenerations: 4, detail: 'lowest', routes: [
         { provider: 'acme-cloud', model: portrait, count: 5 },
         { provider: 'acme-cloud', model: faces, count: 5 },
       ] },
       saveAsCastingDefaults: true,
     });
-    expect(integration.notify.mock.calls[0]![2]).toBe('10 candidates on 2 models, 4 at a time · estimated $0.30');
+    expect(integration.notify.mock.calls[0]![2]).toBe('10 candidates on 2 models, lowest detail, 4 at a time · estimated $0.30');
+  });
+
+  it('opens on the project candidate detail and prices and sends the level the director picks', async () => {
+    const round = roundFixture({ initialDetail: 'mid' });
+    round.options[0]!.providers[0]!.estimates = { lowest: { ...estimate, amountUsd: 0.066 }, mid: { ...estimate, amountUsd: 0.139 }, highest: { ...estimate, amountUsd: 0.205 } };
+    await openRound(round);
+    expect(screen.getByRole('radio', { name: 'Mid' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByText('$1.39')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Highest' }));
+    expect(screen.getByText('$2.05')).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Ask agent to generate 10' })); });
+    expect(integration.respond.mock.calls[0]![1]).toMatchObject({ choice: { detail: 'highest' } });
   });
 
   it('opens each model on its preselected provider and prices and sends that provider', async () => {

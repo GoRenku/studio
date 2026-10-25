@@ -28,4 +28,18 @@ describe('provider metadata caches', () => {
     expect(await cache.read(key)).toBeNull();
     expect(await fs.readdir(directory)).toEqual([]);
   });
+
+  it('reports a cache folder it may not write as a structured error naming the folder', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-engine-cache-'));
+    await fs.chmod(directory, 0o500);
+    try {
+      await expect(createFileSystemProviderMetadataCache(directory).write(key, entry)).rejects.toMatchObject({
+        code: 'ENGINE_METADATA_CACHE_UNWRITABLE',
+        message: `Renku cannot save provider data in ${directory}: writing there is not permitted.`,
+        details: { directory },
+      });
+    } finally {
+      await fs.chmod(directory, 0o700);
+    }
+  });
 });

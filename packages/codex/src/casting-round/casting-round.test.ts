@@ -6,13 +6,6 @@ import type { CastingRound, CastingRoundConsumeResult } from './contracts.js';
 const estimator = createFakeCostEstimator(0.05);
 let fixture: CastingFixture;
 
-// Fictional routes only: the Skill names the models and the exact routes it prices.
-const estimateRequests = [
-  { provider: 'fal-ai', modelKey: 'acme-portrait', route: 'acme/portrait/v1', request: { prompt: 'Candidate', aspect_ratio: '4:3' } },
-  { provider: 'replicate', modelKey: 'acme-portrait', route: 'acme/portrait', request: { prompt: 'Candidate', aspect_ratio: '4:3' } },
-  { provider: 'fal-ai', modelKey: 'acme-faces', route: 'acme/faces/v1', request: { prompt: 'Candidate', aspect_ratio: '4:3' } },
-];
-
 beforeAll(async () => {
   fixture = await createCastingFixture({ estimator });
 });
@@ -23,14 +16,14 @@ afterAll(async () => {
 
 async function open(input: Record<string, unknown> = {}): Promise<CastingRound> {
   return (await fixture.call<{ round: CastingRound }>('casting.round.open', {
-    project: 'movie', lookId: fixture.looks.young.id, brief: ['A girl of about 16', 'Neutral backdrop'], estimateRequests, ...input,
+    project: 'movie', lookId: fixture.looks.young.id, brief: ['A girl of about 16', 'Neutral backdrop'], ...input,
   })).round;
 }
 
 describe('Casting round panel', () => {
   beforeEach(async () => {
     estimator.calls.length = 0;
-    await fixture.service.setCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie', casting: { routes: [] } });
+    await fixture.service.setCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie', casting: { routes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' } });
     await fixture.service.updateGenerationLaneSettings({ homeDir: fixture.homeDir, projectName: 'movie', lane: 'image', provider: 'fal-ai', model: null, chooseRouteBeforeGenerating: true });
   });
 
@@ -44,47 +37,25 @@ describe('Casting round panel', () => {
   });
 
   it('offers one option per model with its providers with saved keys, notes and per-image prices', async () => {
-    const round = await open({ notes: { 'acme-portrait': 'Wide range of faces' }, estimateRequests });
+    const round = await open({ notes: { 'acme-portrait': 'Wide range of faces' } });
     expect(round.castMember.name).toBe('Ana Komnene');
     expect(round.look).toEqual({ id: fixture.looks.young.id, name: 'Young' });
-    expect(round.options.map((option) => [option.model.key, option.providers.map((entry) => [entry.provider, entry.billing, entry.estimate?.state ?? null])])).toEqual([
-      ['acme-portrait', [['fal-ai', 'providerCharge', 'computed'], ['replicate', 'providerCharge', 'computed']]],
-      ['acme-faces', [['fal-ai', 'providerCharge', 'computed']]],
-      ['acme-host-image', [['codex', 'hostPlanUsage', null]]],
+    expect(round.initialDetail).toBe('lowest');
+    expect(round.options.map((option) => [option.model.key, option.providers.map((entry) => [entry.provider, entry.estimates.lowest.state])])).toEqual([
+      ['acme-portrait', [['fal-ai', 'computed'], ['replicate', 'computed']]],
+      ['acme-faces', [['fal-ai', 'computed']]],
+      ['acme-host-image', [['codex', 'hostPlanUsage']]],
     ]);
-    expect(round.options[0]).toMatchObject({ note: 'Wide range of faces', providers: [{ providerLabel: expect.any(String), estimate: { amountUsd: 0.05 } }, {}] });
+    expect(round.options[0]).toMatchObject({ note: 'Wide range of faces', providers: [{ providerLabel: expect.any(String), estimates: { lowest: { amountUsd: 0.05 }, highest: { amountUsd: 0.05 } } }, {}] });
     expect(round.options[1]!.note).toBeNull();
     expect(estimator.calls).toEqual(expect.arrayContaining([
-      expect.objectContaining({ provider: 'fal-ai', model: 'acme/portrait/v1', request: estimateRequests[0]!.request }),
-      expect.objectContaining({ provider: 'fal-ai', model: 'acme/faces/v1', request: estimateRequests[2]!.request }),
+      expect.objectContaining({ provider: 'fal-ai', model: 'route/acme-portrait', fields: { size: 'small' }, requestSha256: null }),
+      expect.objectContaining({ provider: 'fal-ai', model: 'route/acme-portrait', fields: { size: 'large' }, requestSha256: null }),
+      expect.objectContaining({ provider: 'replicate', model: 'route/acme-portrait', requestSha256: null }),
+      expect.objectContaining({ provider: 'fal-ai', model: 'route/acme-faces', requestSha256: null }),
     ]));
-    expect(round.options[0]!.providers[1]!.estimate?.amountUsd).toBe(0.05);
+    expect(round.options[0]!.providers[1]!.estimates.mid.amountUsd).toBe(0.05);
     expect(round.maxConcurrentGenerations).toBeGreaterThan(0);
-  });
-
-  it('rejects a round without prepared requests and lists every paid option to prepare', async () => {
-    const failure = await fixture.callError('casting.round.open', {
-      project: 'movie', lookId: fixture.looks.young.id, brief: ['Brief'], estimateRequests: [],
-    });
-    expect(failure.error.code).toBe('CODEX_CASTING_ROUND_INVALID');
-    expect(failure.issues).toHaveLength(3);
-    expect(estimator.calls).toEqual([]);
-  });
-
-  it('requires the estimate requests in the tool input schema', async () => {
-    const result = await fixture.client.callTool({ name: 'casting.round.open', arguments: {
-      project: 'movie', lookId: fixture.looks.young.id, brief: ['Brief'],
-    } });
-    expect(result.isError).toBe(true);
-    expect(estimator.calls).toEqual([]);
-  });
-
-  it.each([{}, [], null])('rejects an estimate request without a prepared native object (%j)', async (request) => {
-    const result = await fixture.client.callTool({ name: 'casting.round.open', arguments: {
-      project: 'movie', lookId: fixture.looks.young.id, brief: ['Brief'], estimateRequests: [{ ...estimateRequests[0], request }],
-    } });
-    expect(result.isError).toBe(true);
-    expect(estimator.calls).toEqual([]);
   });
 
   it('lists the image lane provider first for each model', async () => {
@@ -101,51 +72,54 @@ describe('Casting round panel', () => {
   });
 
   it('preselects the casting defaults, and the agent suggestion over them', async () => {
-    await fixture.service.setCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie', casting: { routes: [{ provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 3 }] } });
-    expect((await open()).preselected).toEqual([{ provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 3 }]);
+    await fixture.service.setCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie', casting: { routes: [{ provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 3 }], candidateDetail: 'mid', characterSheetDetail: 'highest' } });
+    const fromDefaults = await open();
+    expect(fromDefaults.preselected).toEqual([{ provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 3 }]);
+    expect(fromDefaults.initialDetail).toBe('mid');
     const suggested = await open({ suggested: [{ provider: 'codex', model: { key: 'acme-host-image', name: 'Acme Host Image' }, count: 6 }] });
     expect(suggested.preselected).toEqual([{ provider: 'codex', model: { key: 'acme-host-image', name: 'Acme Host Image' }, count: 6 }]);
     expect(suggested.initialTotal).toBe(6);
   });
 
   it('rejects notes for models the image lane does not list', async () => {
-    const failure = await fixture.callError('casting.round.open', { project: 'movie', lookId: fixture.looks.young.id, brief: ['Brief'], estimateRequests, notes: { 'acme-unknown': 'Nope' } });
+    const failure = await fixture.callError('casting.round.open', { project: 'movie', lookId: fixture.looks.young.id, brief: ['Brief'], notes: { 'acme-unknown': 'Nope' } });
     expect(failure.error.code).toBe('CODEX_CASTING_ROUND_INVALID');
   });
 
   it('records one generate answer, saves defaults only when asked and is consumed once', async () => {
-    const round = await open({ estimateRequests });
+    const round = await open();
     const routes = [
       { provider: 'fal-ai', model: { key: 'acme-portrait', name: 'Acme Portrait' }, count: 4 },
       { provider: 'codex', model: { key: 'acme-host-image', name: 'Acme Host Image' }, count: 2 },
     ];
     const answered = (await fixture.call<{ round: CastingRound }>('casting.round.respond', {
-      panelId: round.panelId, choice: { kind: 'generate', routes, maxConcurrentGenerations: 3 }, saveAsCastingDefaults: false,
+      panelId: round.panelId, choice: { kind: 'generate', routes, maxConcurrentGenerations: 3, detail: 'mid' }, saveAsCastingDefaults: false,
     })).round;
-    expect(answered.answer).toEqual({ kind: 'generate', routes, maxConcurrentGenerations: 3, estimatedCost: { amount: 0.2, currency: 'USD' }, castingDefaultsSaved: false });
+    expect(answered.answer).toEqual({ kind: 'generate', routes, maxConcurrentGenerations: 3, detail: 'mid', estimatedCost: { amount: 0.2, currency: 'USD' }, castingDefaultsSaved: false });
     expect((await fixture.service.showCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie' })).casting.routes).toEqual([]);
     expect((await fixture.callError('casting.round.respond', { panelId: round.panelId, choice: { kind: 'canceled' }, saveAsCastingDefaults: false })).error.code).toBe('CODEX_CASTING_ROUND_INVALID');
 
     const consumed = await fixture.call<CastingRoundConsumeResult>('casting.round.consume', { panelId: round.panelId });
-    expect(consumed).toEqual({ status: 'generate', panelId: round.panelId, lookId: fixture.looks.young.id, routes, maxConcurrentGenerations: 3, referenceAssetFileIds: [], estimatedCost: { amount: 0.2, currency: 'USD' } });
+    expect(consumed).toEqual({ status: 'generate', panelId: round.panelId, lookId: fixture.looks.young.id, routes, maxConcurrentGenerations: 3, detail: 'mid', referenceAssetFileIds: [], estimatedCost: { amount: 0.2, currency: 'USD' } });
     expect(await fixture.call<CastingRoundConsumeResult>('casting.round.consume', { panelId: round.panelId })).toEqual({ status: 'alreadyConsumed', panelId: round.panelId });
   });
 
-  it('writes the casting defaults through Core when the save box is ticked', async () => {
-    const round = await open({ estimateRequests });
+  it('writes the casting defaults and candidate detail through Core when the save box is ticked, keeping the sheet detail', async () => {
+    await fixture.service.setCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie', casting: { routes: [], candidateDetail: 'lowest', characterSheetDetail: 'mid' } });
+    const round = await open();
     const routes = [{ provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 5 }];
     const answered = (await fixture.call<{ round: CastingRound }>('casting.round.respond', {
-      panelId: round.panelId, choice: { kind: 'generate', routes, maxConcurrentGenerations: 2 }, saveAsCastingDefaults: true,
+      panelId: round.panelId, choice: { kind: 'generate', routes, maxConcurrentGenerations: 2, detail: 'highest' }, saveAsCastingDefaults: true,
     })).round;
     expect(answered.answer).toMatchObject({ estimatedCost: { amount: 0.25, currency: 'USD' }, castingDefaultsSaved: true });
-    expect((await fixture.service.showCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie' })).casting.routes).toEqual(routes);
+    expect((await fixture.service.showCastingSettings({ homeDir: fixture.homeDir, projectName: 'movie' })).casting).toEqual({ routes, candidateDetail: 'highest', characterSheetDetail: 'mid' });
   });
 
   it('rejects providers that do not offer a model and a model listed twice', async () => {
     const round = await open();
     const failure = await fixture.callError('casting.round.respond', {
       panelId: round.panelId,
-      choice: { kind: 'generate', maxConcurrentGenerations: 2, routes: [
+      choice: { kind: 'generate', maxConcurrentGenerations: 2, detail: 'lowest', routes: [
         { provider: 'replicate', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 1 },
         { provider: 'fal-ai', model: { key: 'acme-portrait', name: 'Acme Portrait' }, count: 1 },
         { provider: 'replicate', model: { key: 'acme-portrait', name: 'Acme Portrait' }, count: 1 },

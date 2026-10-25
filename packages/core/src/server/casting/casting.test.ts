@@ -250,10 +250,14 @@ describe('casting', () => {
 
   it('saves casting defaults in Project Settings', async () => {
     const routes = [{ provider: 'fal-ai', model: { key: 'model-a', name: 'Model A' }, count: 4 }];
-    const report = await projectData.setCastingSettings({ ...project, homeDir, casting: { routes } });
-    expect(report.casting).toEqual({ routes });
-    expect((await projectData.showCastingSettings({ homeDir })).casting.routes).toEqual(routes);
-    await expect(projectData.setCastingSettings({ ...project, homeDir, casting: { routes: [{ ...routes[0], count: 0 }] } }))
+    expect((await projectData.showCastingSettings({ homeDir })).casting).toEqual({ routes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' });
+    const casting = { routes, candidateDetail: 'mid', characterSheetDetail: 'highest' };
+    const report = await projectData.setCastingSettings({ ...project, homeDir, casting });
+    expect(report.casting).toEqual(casting);
+    expect((await projectData.showCastingSettings({ homeDir })).casting).toEqual(casting);
+    await expect(projectData.setCastingSettings({ ...project, homeDir, casting: { ...casting, routes: [{ ...routes[0], count: 0 }] } }))
+      .rejects.toMatchObject({ code: 'CASTING_DOCUMENT_INVALID' });
+    await expect(projectData.setCastingSettings({ ...project, homeDir, casting: { ...casting, candidateDetail: '4K' } }))
       .rejects.toMatchObject({ code: 'CASTING_DOCUMENT_INVALID' });
   });
 });

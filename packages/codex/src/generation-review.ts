@@ -6,7 +6,7 @@ import type { GenerationReviewInput } from './generation-review-schemas.js';
 import { GenerationReviewState, preparedRoute, sameRoute, type GenerationReviewSource } from './generation-review-state.js';
 import { assertReviewSources } from './generation-review-sources.js';
 import { reviewError } from './diagnostics.js';
-import { hostPlanUsageEstimate, type GenerationCostEstimator } from './generation-review-estimate.js';
+import type { GenerationCostEstimator } from './generation-review-estimate.js';
 
 export async function openGenerationReview(state: GenerationReviewState, input: GenerationReviewInput, estimator: GenerationCostEstimator, homeDir?: string): Promise<GenerationReview> {
   validateOpeningInput(input);
@@ -55,9 +55,7 @@ async function prepareRequest(input: {
   if (input.request.expectedRequestSha256 && read.requestSha256 !== input.request.expectedRequestSha256) throw reviewError('CODEX_REVIEW_STALE', 'The request changed after validation. Validate the current bytes before opening a review.');
   const route = input.request.routes.find((candidate) => sameRoute(candidate, read.document));
   if (!route) throw reviewError('CODEX_REVIEW_INVALID', 'The prepared route is missing from the declared choices.');
-  const estimate = route.billing === 'hostPlanUsage'
-    ? hostPlanUsageEstimate(read.requestSha256)
-    : await input.estimator.estimate({ homeDir: input.homeDir, provider: read.document.provider, model: read.document.model, request: read.document.request, requestSha256: read.requestSha256 });
+  const estimate = await input.estimator.estimate({ homeDir: input.homeDir, provider: read.document.provider, model: read.document.model, request: read.document.request, requestSha256: read.requestSha256 });
   const preview = await projectMediaGenerationPreview({ projectName: read.projectRef.name, homeDir: input.homeDir, documentPath: input.request.reviewFile, document: read.document, requestSha256: read.requestSha256, estimate });
   const references = new Map<string, string>();
   const { documentPath: _documentPath, references: localReferences, ...safePreview } = preview;

@@ -1,14 +1,6 @@
 import type { GenerationCostEstimate } from '@gorenku/studio-core/client';
 import { Badge } from '@/ui/badge';
-
-const STATE_LABELS: Record<GenerationCostEstimate['state'], string> = {
-  quoted: 'Provider quote',
-  computed: 'Estimated from the current price',
-  missingPrice: 'No price is known for this route',
-  expired: 'The recorded price has expired',
-  unpriced: 'This price cannot be estimated',
-  hostPlanUsage: 'Plan usage',
-};
+import { estimateStateLabel, formatUsd } from './generation-cost-estimate-format';
 
 /**
  * The one place an estimate is formatted. Amounts come from Engines; an
@@ -33,19 +25,10 @@ export function GenerationCostEstimateView({ estimate, outdated = false, refresh
         {refreshing ? <span role='status' className='text-xs text-muted-foreground'>Updating…</span> : null}
       </div>
       <p className='m-0 truncate text-xs text-muted-foreground' title={estimate.basis}>
-        {estimate.state === 'hostPlanUsage' || estimate.state === 'unpriced' ? estimate.basis : amount ? `${STATE_LABELS[estimate.state]} · ${estimate.basis}` : STATE_LABELS[estimate.state]}
+        {estimate.state === 'hostPlanUsage' || estimate.state === 'unpriced' ? estimate.basis : amount ? `${estimateStateLabel(estimate.state)} · ${estimate.basis}` : estimateStateLabel(estimate.state)}
       </p>
       {estimate.notes.map((note) => <p key={note} className='m-0 text-xs text-muted-foreground'>{note}</p>)}
       {estimate.sourceUrl ? <a className='text-xs text-muted-foreground underline' href={estimate.sourceUrl} target='_blank' rel='noreferrer'>Price source</a> : null}
     </section>
   );
-}
-
-function formatUsd(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: amount < 1 ? 4 : 2,
-  }).format(amount);
 }

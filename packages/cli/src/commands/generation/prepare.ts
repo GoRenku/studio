@@ -4,7 +4,7 @@ import type { GenerationCommandInput } from './command.js';
 import { loadGenerationRequest } from './request-file.js';
 import { validateLoadedGenerationRequest } from './validate.js';
 import { deliverGenerationPreviews } from './preview.js';
-import { estimateLoadedGenerationRequest } from './estimate.js';
+import { estimateGenerationDocument } from './estimate.js';
 
 export async function prepareGenerationRequest(input: GenerationCommandInput) {
   const documentPath = requiredFlag(
@@ -17,7 +17,7 @@ export async function prepareGenerationRequest(input: GenerationCommandInput) {
     projectDataService: input.runtime.projectDataService,
   });
   const validation = await validateLoadedGenerationRequest(input, loaded);
-  const estimate = await estimateLoadedGenerationRequest(input, loaded);
+  const estimate = await estimateGenerationDocument(input, loaded);
   const preview = await projectMediaGenerationPreview({
     projectName: loaded.projectRef.name,
     homeDir: input.runtime.homeDir,

@@ -1,8 +1,8 @@
 import type { JsonValue, ProviderContext } from '../../media/contracts.js';
 import { assertValidJsonSchema } from '../../shared/json-schema-validation.js';
-import { retrieveProviderMetadata } from '../../shared/metadata-retrieval.js';
+import { PROVIDER_CATALOG_MAX_AGE_MS, retrieveProviderMetadata } from '../../shared/metadata-retrieval.js';
 import { EngineError } from '../../shared/errors.js';
-import { API_PRICE_DEFAULT_MAX_AGE_MS } from '../../pricing/price-cache.js';
+import { isJsonObject } from '../../shared/json-object.js';
 
 export const PIKA_ORIGIN = 'https://api.dev.pika.art';
 
@@ -27,7 +27,7 @@ export async function loadPikaOperationMetadata(
     );
   }
   const body = (await loadPikaCatalogRecord(model, context)).body;
-  if (!isRecord(body)) {
+  if (!isJsonObject(body)) {
     throw invalidMetadata(model);
   }
   if (body.api_id !== model) {
@@ -40,14 +40,14 @@ export async function loadPikaOperationMetadata(
       { provider: 'pika', model },
     );
   }
-  if (!isRecord(body.call) || body.call.method !== 'POST') {
+  if (!isJsonObject(body.call) || body.call.method !== 'POST') {
     throw invalidMetadata(model);
   }
   const path = body.call.path;
   if (typeof path !== 'string' || !isSafeMediaPath(path)) {
     throw invalidMetadata(model);
   }
-  if (!isRecord(body.input_schema)) {
+  if (!isJsonObject(body.input_schema)) {
     throw invalidMetadata(model);
   }
   assertValidJsonSchema({ provider: 'pika', model, schema: body.input_schema });
@@ -64,7 +64,7 @@ export function loadPikaCatalogRecord(model: string, context: ProviderContext) {
   return retrieveProviderMetadata({
     key: { provider: 'pika', model, url: `${PIKA_ORIGIN}/catalog/apis/${model}?expand=inputs` },
     context,
-    defaultMaxAgeMs: API_PRICE_DEFAULT_MAX_AGE_MS,
+    defaultMaxAgeMs: PROVIDER_CATALOG_MAX_AGE_MS,
   });
 }
 
@@ -100,8 +100,4 @@ function invalidMetadata(model: string): EngineError {
     `Pika metadata for "${model}" does not contain a valid asynchronous media contract.`,
     { provider: 'pika', model },
   );
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

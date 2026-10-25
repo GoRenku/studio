@@ -1,6 +1,7 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { AssetFile } from '../asset-files.js';
 import type { CastMemberId } from '../cast-members.js';
+import type { ImageDetailLevel } from '../default-models.js';
 import type { GenerationLaneModel } from '../project-settings.js';
 import type { SceneId } from '../screenplay/organization.js';
 
@@ -106,6 +107,10 @@ export interface CastingRoundCreateDocument {
 /** Project-level casting defaults that pre-fill the Casting Round panel. */
 export interface CastingSettings {
   routes: CastingRoute[];
+  /** Detail of casting candidates; low by default, since all but one are discarded. */
+  candidateDetail: ImageDetailLevel;
+  /** Detail of character sheets, which are kept as identity references. */
+  characterSheetDetail: ImageDetailLevel;
 }
 
 export interface CastingRoundView extends CastingRound {

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { estimateCastingRoundCost, type CastingRoundCostEstimate, type CastingRoute } from '@gorenku/studio-core/client';
+import { estimateCastingRoundCost, IMAGE_DETAIL_LEVELS, type CastingRoundCostEstimate, type CastingRoute, type ImageDetailLevel } from '@gorenku/studio-core/client';
 import type { CastingRound, CastingRoundModelOption, CastingRoundProviderOption, CastingRoundReference } from '@gorenku/studio-codex/casting-round';
 import { CodexPanelNotice } from '@/features/codex-panels/codex-panel-notice';
 import { useCodexAnswerPanel } from '@/features/codex-panels/use-codex-answer-panel';
 import { usePanelMediaLibrary, usePanelMediaUrl, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
+import { formatUsd, shortEstimateLabel } from '@/features/media-generation-request/generation-cost-estimate-format';
 import { GenerationCostEstimateView } from '@/features/media-generation-request/generation-cost-estimate-view';
 import { connectCastingRoundApp, createCastingRoundApp, notifyCastingRound, respondToCastingRound } from '@/services/codex-casting-round';
 import { cn } from '@/lib/utils';
@@ -11,17 +12,19 @@ import { Alert, AlertDescription } from '@/ui/alert';
 import { Button } from '@/ui/button';
 import { Checkbox } from '@/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/ui/toggle-group';
 import { CountStepper } from './count-stepper';
 import {
   answeredSummary,
   chosenProvider,
   clampTotal,
   countsTotal,
-  formatUsd,
   splitTotal,
   type RoundCounts,
   type RoundProviders,
 } from './round-counts';
+
+const DETAIL_LABELS: Record<ImageDetailLevel, string> = { lowest: 'Lowest', mid: 'Mid', highest: 'Highest' };
 
 const CASTING_ROUND_PANEL = {
   appName: 'Renku casting round',
@@ -63,10 +66,11 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
   const [providers, setProviders] = useState<RoundProviders>(() => initialProviders(round));
   const [untickedTotal, setUntickedTotal] = useState(round.initialTotal);
   const [saveAsDefaults, setSaveAsDefaults] = useState(false);
+  const [detail, setDetail] = useState<ImageDetailLevel>(round.initialDetail);
   const modelKeys = round.options.map((option) => option.model.key);
   const tickedKeys = modelKeys.filter((key) => counts[key]);
   const total = tickedKeys.length > 0 ? countsTotal(counts) : untickedTotal;
-  const estimate = estimateCastingRoundCost(round.options, tickedRoutes(round, counts, providers));
+  const estimate = estimateCastingRoundCost(round.options, tickedRoutes(round, counts, providers), detail);
   const disabled = !interaction.connected || interaction.busy;
   const subject = `${round.castMember.name} · ${round.look.name}`;
   const notice = <CodexPanelNotice error={interaction.error} notificationPending={interaction.notificationPending} busy={interaction.busy} onRetryNotification={() => { void interaction.retryNotification(); }} />;
@@ -86,7 +90,7 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
     void interaction.answer(
       (connected, current) => respondToCastingRound(connected, {
         panelId: current.panelId,
-        choice: choice === 'canceled' ? { kind: 'canceled' } : { kind: 'generate', routes: tickedRoutes(current, counts, providers), maxConcurrentGenerations: current.maxConcurrentGenerations },
+        choice: choice === 'canceled' ? { kind: 'canceled' } : { kind: 'generate', routes: tickedRoutes(current, counts, providers), maxConcurrentGenerations: current.maxConcurrentGenerations, detail },
         saveAsCastingDefaults: saveAsDefaults,
       }),
       (connected, answered) => notifyCastingRound(connected, answered, answeredSummary(answered)),
@@ -121,6 +125,13 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
           <CountStepper label='Candidates' value={total} min={Math.max(1, tickedKeys.length)} max={Math.max(1, tickedKeys.length) * round.maxCountPerModel} disabled={disabled} onChange={changeTotal} />
           <span className='text-[12px] text-[var(--dd-muted-fg)]'>split across the models you pick · run {round.maxConcurrentGenerations} at a time</span>
         </div>
+        <div className='flex flex-wrap items-center gap-2.5'>
+          <span id='casting-round-detail-label' className='text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dd-muted-fg)]'>Detail</span>
+          <ToggleGroup type='single' aria-labelledby='casting-round-detail-label' value={detail} disabled={disabled} onValueChange={(next) => { if (next) setDetail(next as ImageDetailLevel); }}>
+            {IMAGE_DETAIL_LEVELS.map((level) => <ToggleGroupItem key={level} value={level}>{DETAIL_LABELS[level]}</ToggleGroupItem>)}
+          </ToggleGroup>
+          <span className='text-[12px] text-[var(--dd-muted-fg)]'>image size for every candidate; higher shows more detail and costs more</span>
+        </div>
         {round.options.length === 0
           ? <p className='m-0 text-[12px] text-[var(--dd-muted-fg)]'>No provider with a saved API key offers an image model.</p>
           : (
@@ -129,6 +140,7 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
                 <ModelCard
                   key={option.model.key}
                   option={option}
+                  detail={detail}
                   provider={chosenProvider(option, providers)}
                   count={counts[option.model.key] ?? 0}
                   max={round.maxCountPerModel}
@@ -143,7 +155,7 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
         <EstimateLine estimate={estimate} total={total} ticked={tickedKeys.length > 0} />
         <div className='flex items-center gap-2'>
           <Checkbox id='casting-round-save-defaults' checked={saveAsDefaults} disabled={disabled} onCheckedChange={(checked) => setSaveAsDefaults(checked === true)} />
-          <label htmlFor='casting-round-save-defaults' className='text-[12.5px]'>Save these models and counts as this project&apos;s casting defaults</label>
+          <label htmlFor='casting-round-save-defaults' className='text-[12.5px]'>Save these models, counts and detail as this project&apos;s casting defaults</label>
         </div>
       </div>
       <footer className='flex flex-wrap items-center justify-end gap-2.5 border-t border-[var(--dd-border)] px-[18px] py-3'>
@@ -185,6 +197,7 @@ function ReferenceThumbnail(input: { reference: CastingRoundReference; media: Pa
 
 function ModelCard(input: {
   option: CastingRoundModelOption;
+  detail: ImageDetailLevel;
   provider: CastingRoundProviderOption;
   count: number;
   max: number;
@@ -209,23 +222,17 @@ function ModelCard(input: {
           </SelectTrigger>
           <SelectContent position='popper'>
             {option.providers.map((entry) => (
-              <SelectItem key={entry.provider} value={entry.provider}>{entry.providerLabel} · {priceLabel(entry)}</SelectItem>
+              <SelectItem key={entry.provider} value={entry.provider}>{entry.providerLabel} · {priceLabel(entry, input.detail)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       ) : (
         <span className='text-[11.5px] text-[var(--dd-muted-fg)]'>{provider.providerLabel}</span>
       )}
-      <ProviderEstimate provider={provider} />
+      <GenerationCostEstimateView estimate={provider.estimates[input.detail]} label='Per candidate' />
       {option.note ? <span className='text-[11.5px]'>{option.note}</span> : null}
     </div>
   );
-}
-
-function ProviderEstimate({ provider }: { provider: CastingRoundProviderOption }) {
-  if (provider.billing === 'hostPlanUsage') return <span className='text-[11.5px] text-[var(--dd-muted-fg)]'>ChatGPT plan</span>;
-  if (provider.estimate) return <GenerationCostEstimateView estimate={provider.estimate} label='Per candidate' />;
-  return <span className='text-[11.5px] text-[var(--dd-muted-fg)]'>No estimate</span>;
 }
 
 function EstimateLine(input: { estimate: CastingRoundCostEstimate; total: number; ticked: boolean }) {
@@ -248,9 +255,9 @@ function EstimateTotal(input: { estimate: CastingRoundCostEstimate; total: numbe
   return <>No estimate for {estimate.unpriced.join(', ')}</>;
 }
 
-function priceLabel(provider: CastingRoundProviderOption): string {
-  if (provider.billing === 'hostPlanUsage') return 'ChatGPT plan';
-  return provider.estimate !== null && provider.estimate.amountUsd !== null ? `${formatUsd(provider.estimate.amountUsd, 4)} each` : 'No estimate';
+function priceLabel(provider: CastingRoundProviderOption, detail: ImageDetailLevel): string {
+  const estimate = provider.estimates[detail];
+  return estimate.amountUsd === null ? shortEstimateLabel(estimate) : `${shortEstimateLabel(estimate)} each`;
 }
 
 function tickedRoutes(round: CastingRound, counts: RoundCounts, providers: RoundProviders): CastingRoute[] {

@@ -9,9 +9,9 @@ import { respondToGenerationReview } from './generation-review-responses.js';
 import { GenerationReviewState } from './generation-review-state.js';
 import { createFakeCostEstimator } from './testing/fake-cost-estimator.js';
 
-// Fictional routes: estimates depend only on the route's billing and the injected estimator.
-const charged = { provider: 'acme-video', providerLabel: 'Acme Video', model: 'acme/clip', label: 'Acme Clip', mediaKind: 'video' as const, billing: 'providerCharge' as const };
-const hosted = { provider: 'acme-host', providerLabel: 'Acme Host', model: 'acme/host-image', label: 'Acme Host Image', mediaKind: 'image' as const, billing: 'hostPlanUsage' as const };
+// Fictional routes: estimates depend only on the injected estimator.
+const charged = { provider: 'acme-video', providerLabel: 'Acme Video', model: 'acme/clip', label: 'Acme Clip', mediaKind: 'video' as const };
+const hosted = { provider: 'acme-host', providerLabel: 'Acme Host', model: 'acme/host-image', label: 'Acme Host Image', mediaKind: 'image' as const };
 const controls = { groups: [{ label: 'Video', fields: [{ key: '/duration', label: 'Duration', kind: 'integer' as const, initialValue: 5 }] }] };
 const service = createProjectDataService();
 let root: string;
@@ -55,14 +55,13 @@ describe('generation review estimates', () => {
     expect(estimator.calls).toEqual([expect.objectContaining({ provider: charged.provider, model: charged.model, request: { prompt: 'Rain', duration: 5 } })]);
   });
 
-  it('never calls the estimator for host plan usage routes', async () => {
+  it('leaves the billing decision to the estimator for every route', async () => {
     const estimator = createFakeCostEstimator();
-    const review = await openGenerationReview(new GenerationReviewState(), {
+    await openGenerationReview(new GenerationReviewState(), {
       project: 'movie', lane: 'image',
       requests: [{ reviewFile: 'tmp/operations/media-generation/image.json', routes: [hosted], controls: { groups: [] } }],
     }, estimator, homeDir);
-    expect(review.requests[0]!.preview.estimate).toMatchObject({ state: 'hostPlanUsage', amountUsd: null });
-    expect(estimator.calls).toEqual([]);
+    expect(estimator.calls).toEqual([expect.objectContaining({ provider: hosted.provider, model: hosted.model })]);
   });
 
   it('re-estimates edited control values without changing the request file', async () => {

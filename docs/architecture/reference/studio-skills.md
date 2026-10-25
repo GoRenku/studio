@@ -165,7 +165,8 @@ operational companions that teach agents how to use those contracts.
   the estimated cost; a consumed Submit, or Ask off, is Renku's confirmation.
   Host approval is separate: it asks once honestly, and once in chat if refused.
 - Researches and records a price with `renku generation price record` only when
-  a review estimate is missing or expired for a route without API pricing.
+  a review estimate is `missingPrice` for a route without API pricing; recorded
+  prices do not expire.
 - Uses the Codex image lane only when the active harness exposes the built-in
   image-generation capability; otherwise it reports unavailability and asks
   before choosing Fal.ai or Pika.

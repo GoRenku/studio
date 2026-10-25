@@ -155,7 +155,7 @@ describe('image edit panel', () => {
   });
 
   it('renders a host plan route with no regions, a style reference and no controls', async () => {
-    await openPanel(imageEditSessionFixture({ route: imageEditRouteFixture({ regionModes: null, styleReference: true, billing: 'hostPlanUsage', controls: { groups: [] } }), initialWholeImageInstruction: 'Warmer dusk.' }));
+    await openPanel(imageEditSessionFixture({ route: imageEditRouteFixture({ provider: 'codex', regionModes: null, styleReference: true, controls: { groups: [] } }), initialWholeImageInstruction: 'Warmer dusk.' }));
     expect(screen.queryByRole('heading', { name: 'Regions' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Output' })).toBeNull();
     expect(screen.getByRole('button', { name: 'From visual language' })).toBeTruthy();

@@ -47,7 +47,7 @@ const opening = {
   lane: 'image',
   requests: [{
     reviewFile: 'tmp/operations/media-generation/request.json',
-    routes: [{ provider: 'acme-images', providerLabel: 'Acme Images', model: 'image-model', label: 'Image model', mediaKind: 'image', billing: 'providerCharge' }],
+    routes: [{ provider: 'acme-images', providerLabel: 'Acme Images', model: 'image-model', label: 'Image model', mediaKind: 'image' }],
     controls: { groups: [{ label: 'Image settings', fields: [{ key: '/resolution', label: 'Resolution', kind: 'enum', required: true, initialValue: '2K', options: [{ label: '2K', value: '2K' }, { label: '4K', value: '4K' }] }] }] },
   }],
 };

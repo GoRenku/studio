@@ -36,7 +36,7 @@ beforeEach(() => {
     reviewId: 'review', revision: 1, lane: 'video', phase: 'ready', diagnostics: [],
     requests: [{
       requestId: 'request', requestSha256: 'a'.repeat(64),
-      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'video-model', label: 'Video model', mediaKind: 'video', billing: 'providerCharge' }],
+      routes: [{ provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'video-model', label: 'Video model', mediaKind: 'video' }],
       controls: { groups: [{ label: 'Video settings', fields: [
         { key: '/resolution', label: 'Resolution', kind: 'enum', options: [{ value: '768P', label: '768P' }, { value: '1080P', label: '1080P' }] },
         { key: '/duration', label: 'Duration (seconds)', kind: 'integer' },

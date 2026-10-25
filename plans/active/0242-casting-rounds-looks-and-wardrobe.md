@@ -49,15 +49,11 @@ Changed during implementation (2026-10-23):
   candidates made the chat jump (user feedback, 2026-10-23).
 - **One model card per model, with a provider menu.** Cards list the providers
   with saved keys that offer the model, the image lane's provider first.
-- **The round reuses the generation estimator.** `estimateRequests` supplies a
-  prepared one-candidate request per model/provider, including its intended
-  operation route, explicit output count and cost-affecting settings. Every
-  offered paid model/provider requires a request before the panel opens;
-  missing requests return structured issues to the agent. Codex never
-  synthesizes an empty request. Each option retains `GenerationCostEstimate`
-  unchanged; Core aggregates the total for both Codex and React, and Studio
-  uses its shared estimate view for warnings and sources. The Default Model
-  List holds model choices, not operation-route mappings.
+- **The round reuses the generation estimator.** Codex prices every offered
+  model/provider from its Default Model List route at the route's defaults
+  (plan 0243, ADR 0128); the agent prepares no requests. Each option retains
+  `GenerationCostEstimate` unchanged; Core aggregates the total for both Codex
+  and React, and Studio uses its shared estimate view for warnings and sources.
 - **Each candidate records its round route's model key** (`casting_candidate.model_key`,
   `media import --casting-model`), so tiles show which model made each
   candidate when a round uses several models. Core also checks the candidate
@@ -65,23 +61,17 @@ Changed during implementation (2026-10-23):
 
 ## Review Attention
 
-- **Estimate repair on 2026-10-24:** `casting.round.open.estimateRequests` is
-  required and must cover every offered paid model/provider, including alternate
-  providers and unselected models. The agent receives all missing pairs as
-  structured issues before any estimator runs. This prevents a panel full of
-  skipped estimates when the agent omits preparation. Genuine unavailable prices
-  remain selectable with the estimator's explanation; host-plan options require
-  no request. No Settings, database, generation or confirmation-policy changes.
+- **Estimate repair superseded on 2026-10-24:** the required
+  `estimateRequests` input is removed; plan 0243 prices offered routes from the
+  Default Model List instead.
 - **Scope correction confirmed on 2026-10-24:** Big Fish consolidation is a
   one-time local data conversion, not a reusable product feature. No merge
   operation is exposed through Core, CLI or skills. Screenplay-to-cast skills
   resolve cues to people before creating cast and use Looks for age changes.
-- **Estimate correction approved on 2026-10-24:** remove the empty-request
-  fallback and its Default Model List route mapping; replace the separate
-  casting price union with the existing estimate envelope and separate billing.
-  Add Core's browser-safe `estimateCastingRoundCost` as the sole casting
-  aggregation entrypoint. No database, command, Settings or confirmation-policy
-  changes are part of this correction. Missing estimates remain selectable.
+- **Estimate correction approved on 2026-10-24:** casting uses the existing
+  estimate envelope; Core's browser-safe `estimateCastingRoundCost` is the sole
+  casting aggregation entrypoint. Plan 0243 later reintroduced the Default
+  Model List route per provider so casting prices need no agent preparation.
 - **Behavior beyond the literal request, and why it is needed:**
   - **Cast Looks** (`cast_look`) become a stored domain concept. Casting
     "per age or per significant physique change" needs somewhere to keep the
@@ -685,7 +675,7 @@ renku generation context --purpose cast.character-sheet --target costume:<id>
 
 | Tool | Visibility | Purpose |
 |---|---|---|
-| `casting.round.open` | model | `{ project, lookId, brief: string[], notes?: { [modelKey]: string }, references?: string[], suggested?: routes, estimateRequests: [{ provider, modelKey, route, request }] }`. The Skill supplies one prepared one-image request for every offered paid model/provider, so Codex never builds a route or request. Missing pairs are structured errors before the panel opens. The agent ends its turn after calling it. |
+| `casting.round.open` | model | `{ project, lookId, brief: string[], notes?: { [modelKey]: string }, references?: string[], suggested?: routes }`. Codex prices each offered model/provider from its Default Model List route at the route's defaults. The agent ends its turn after calling it. |
 | `casting.round.respond` | app | `{ panelId, choice: { kind: 'generate', routes, maxConcurrentGenerations } \| { kind: 'canceled' }, saveAsCastingDefaults }` |
 | `casting.round.consume` | model | Returns `generate` (confirmed plan), `canceled` or `alreadyConsumed`. |
 | `casting.board.open` | model | `{ project, mode: 'candidates', lookId }` or `{ project, mode: 'sheets', castMemberId }` |

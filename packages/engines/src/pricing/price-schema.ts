@@ -1,11 +1,12 @@
 import type { JsonValue } from '../media/contracts.js';
 import { EngineError } from '../shared/errors.js';
 import { PRICE_UNITS, type PriceComponent, type PriceQuantity, type PriceTier, type RoutePrice } from './contracts.js';
+import { isUnknownObject } from '../shared/json-object.js';
 
 /** Validates a recorded or provider-derived route price; every issue is reported together. */
 export function parseRoutePrice(value: unknown, owner: { provider: string; model: string }): RoutePrice {
   const issues: string[] = [];
-  if (!isRecord(value)) {
+  if (!isUnknownObject(value)) {
     throw invalidPrice(owner, ['The price must be a JSON object.']);
   }
   if (value.currency !== 'USD') {issues.push('currency must be "USD".');}
@@ -13,11 +14,10 @@ export function parseRoutePrice(value: unknown, owner: { provider: string; model
   const components = Array.isArray(value.components)
     ? value.components.map((component, index) => readComponent(component, `components[${index}]`, issues))
     : [];
-  const source = isRecord(value.source) ? value.source : undefined;
+  const source = isUnknownObject(value.source) ? value.source : undefined;
   if (!source || (source.kind !== 'providerApi' && source.kind !== 'recorded')) {issues.push('source.kind must be providerApi or recorded.');}
   if (!source || !isTimestamp(source.observedAt)) {issues.push('source.observedAt must be an ISO timestamp.');}
   if (source?.url !== undefined && typeof source.url !== 'string') {issues.push('source.url must be a string.');}
-  if (!isTimestamp(value.expiresAt)) {issues.push('expiresAt must be an ISO timestamp.');}
   if (!Array.isArray(value.notes) || value.notes.some((note) => typeof note !== 'string')) {issues.push('notes must be an array of strings.');}
   if (issues.length > 0) {
     throw invalidPrice(owner, issues);
@@ -30,13 +30,12 @@ export function parseRoutePrice(value: unknown, owner: { provider: string; model
       ...(typeof source!.url === 'string' ? { url: source!.url } : {}),
       observedAt: source!.observedAt as string,
     },
-    expiresAt: value.expiresAt as string,
     notes: value.notes as string[],
   };
 }
 
 function readComponent(value: unknown, path: string, issues: string[]): PriceComponent | undefined {
-  if (!isRecord(value)) {
+  if (!isUnknownObject(value)) {
     issues.push(`${path} must be an object.`);
     return undefined;
   }
@@ -53,7 +52,7 @@ function readComponent(value: unknown, path: string, issues: string[]): PriceCom
 }
 
 function readQuantity(value: unknown, path: string, issues: string[]): PriceQuantity | undefined {
-  if (!isRecord(value)) {
+  if (!isUnknownObject(value)) {
     issues.push(`${path} must be an object.`);
     return undefined;
   }
@@ -75,7 +74,7 @@ function readTiers(value: unknown, path: string, issues: string[]): PriceTier[] 
     return undefined;
   }
   return value.flatMap((tier, index) => {
-    if (!isRecord(tier) || !isRecord(tier.when) || Object.keys(tier.when).length === 0
+    if (!isUnknownObject(tier) || !isUnknownObject(tier.when) || Object.keys(tier.when).length === 0
       || !Object.keys(tier.when).every(isPointer) || !isPrice(tier.unitPriceUsd)) {
       issues.push(`${path}[${index}] must have a non-empty when map of JSON Pointers and a non-negative unitPriceUsd.`);
       return [];
@@ -102,8 +101,4 @@ function isPointer(value: unknown): value is string {
 
 function isTimestamp(value: unknown): value is string {
   return typeof value === 'string' && Number.isFinite(Date.parse(value));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

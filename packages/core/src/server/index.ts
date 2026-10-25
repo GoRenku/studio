@@ -54,6 +54,7 @@ export { DEFAULT_PROJECT_SETTINGS } from './project-settings/document.js';
 export { resolveGenerationWorkflowPolicy } from './project-settings/index.js';
 export {
   readDefaultModelList,
+  readImageDetailFields,
   resolveDefaultModelListPath,
   syncDefaultModelList,
 } from './default-models/index.js';

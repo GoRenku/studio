@@ -1,14 +1,13 @@
 import { StructuredError } from '@gorenku/studio-diagnostics';
-import type { GenerationCostEstimate, GenerationRouteBilling } from '../generation-cost-estimate.js';
+import type { ImageDetailLevel } from '../default-models.js';
+import type { GenerationCostEstimate } from '../generation-cost-estimate.js';
 import type { GenerationLaneModel } from '../project-settings.js';
 import type { CastingRoute } from './model.js';
 
-/** One provider's existing Engines estimate for one casting candidate. */
+/** One provider's estimate for one casting candidate at each detail level; host plan routes carry plan usage. */
 export interface CastingProviderEstimate {
   provider: string;
-  billing: GenerationRouteBilling;
-  /** Host plan usage needs no provider estimate. */
-  estimate: GenerationCostEstimate | null;
+  estimates: Record<ImageDetailLevel, GenerationCostEstimate>;
 }
 
 export interface CastingModelEstimate {
@@ -24,8 +23,8 @@ export interface CastingRoundCostEstimate {
   hostPlanOnly: boolean;
 }
 
-/** Aggregates Engines estimates by candidate count; provider pricing stays in Engines. */
-export function estimateCastingRoundCost(options: CastingModelEstimate[], routes: CastingRoute[]): CastingRoundCostEstimate {
+/** Aggregates the estimates of one detail level by candidate count; provider pricing stays in Engines. */
+export function estimateCastingRoundCost(options: CastingModelEstimate[], routes: CastingRoute[], detail: ImageDetailLevel): CastingRoundCostEstimate {
   const breakdown: CastingRoundCostEstimate['breakdown'] = [];
   const unpriced: string[] = [];
   let hostCount = 0;
@@ -35,12 +34,13 @@ export function estimateCastingRoundCost(options: CastingModelEstimate[], routes
     if (!option || !provider) {
       throw new StructuredError({ code: 'CASTING_ROUND_ESTIMATE_ROUTE_INVALID', message: 'Estimate a model and provider offered for this Casting Round.' });
     }
-    if (provider.billing === 'hostPlanUsage') {
+    const estimate = provider.estimates[detail];
+    if (estimate.state === 'hostPlanUsage') {
       hostCount += 1;
-    } else if (provider.estimate === null || provider.estimate.amountUsd === null) {
+    } else if (estimate.amountUsd === null) {
       unpriced.push(option.model.name);
     } else {
-      breakdown.push({ name: option.model.name, amountUsd: roundUsd(provider.estimate.amountUsd * route.count) });
+      breakdown.push({ name: option.model.name, amountUsd: roundUsd(estimate.amountUsd * route.count) });
     }
   }
   return {

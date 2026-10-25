@@ -31,7 +31,6 @@ export {
 export type {
   CostEstimate,
   CostEstimateState,
-  CostQuote,
   PriceComponent,
   PriceQuantity,
   PriceTier,
@@ -43,7 +42,6 @@ export {
   createMemoryProviderMetadataCache,
 } from './shared/metadata-cache.js';
 export { createFalMediaProvider } from './providers/fal-ai/index.js';
-export { estimateImageCost } from './providers/image-pricing.js';
 export { createReplicateMediaProvider } from './providers/replicate/index.js';
 export { createWaveSpeedMediaProvider } from './providers/wavespeed/index.js';
 export { createPikaMediaProvider } from './providers/pika/index.js';

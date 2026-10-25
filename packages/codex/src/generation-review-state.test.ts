@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GenerationReviewRequest, GenerationReviewResponse } from './client.js';
 import { GenerationReviewState, type GenerationReviewSource } from './generation-review-state.js';
 
-const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-route', label: 'Image model', mediaKind: 'image' as const, billing: 'providerCharge' as const };
+const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-route', label: 'Image model', mediaKind: 'image' as const };
 const alternative = { ...route, model: 'other-image-route', label: 'Other image model' };
 
 function fixture(project = 'movie', reviewId = 'review', requestId = 'request') {

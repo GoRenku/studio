@@ -5,6 +5,7 @@ import { outputFormat, saveElevenLabsAudioStream } from '../audio-output.js';
 import { requestElevenLabsAudio } from '../client.js';
 import { elevenLabsDialogueInputSchema } from './dialogue-schema.js';
 import type { ElevenLabsOperation } from './registry.js';
+import { isJsonObject } from '../../../shared/json-object.js';
 
 const MAX_DISTINCT_VOICES = 10;
 
@@ -72,7 +73,7 @@ function distinctVoiceIssues(value: JsonValue | undefined): DialogueInputIssue[]
     return [];
   }
   const voices = new Set(value.flatMap((line) => (
-    isRecord(line) && typeof line.voice === 'string' ? [line.voice] : []
+    isJsonObject(line) && typeof line.voice === 'string' ? [line.voice] : []
   )));
   if (voices.size <= MAX_DISTINCT_VOICES) {
     return [];
@@ -85,15 +86,11 @@ function distinctVoiceIssues(value: JsonValue | undefined): DialogueInputIssue[]
 }
 
 function dialogueSettings(value: JsonValue | undefined): DialogueSettings | undefined {
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     return undefined;
   }
   return {
     ...(typeof value.stability === 'number' ? { stability: value.stability } : {}),
     ...(typeof value.similarity === 'number' ? { similarity: value.similarity } : {}),
   };
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

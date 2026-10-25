@@ -1,6 +1,7 @@
 import type { JsonValue, ProviderContext } from '../../media/contracts.js';
 import { retrieveProviderMetadata } from '../../shared/metadata-retrieval.js';
 import { EngineError } from '../../shared/errors.js';
+import { isJsonObject } from '../../shared/json-object.js';
 
 export async function loadReplicateInputSchema(
   model: string,
@@ -17,10 +18,10 @@ export async function loadReplicateInputSchema(
   });
   const version = parsed.version
     ? metadata.body
-    : isRecord(metadata.body) ? metadata.body.latest_version : undefined;
+    : isJsonObject(metadata.body) ? metadata.body.latest_version : undefined;
   const schema = readPath(version, ['openapi_schema', 'components', 'schemas', 'Input']);
   const components = readPath(version, ['openapi_schema', 'components']);
-  if (!isRecord(schema) || !isRecord(components)) {
+  if (!isJsonObject(schema) || !isJsonObject(components)) {
     throw new EngineError(
       'ENGINE_METADATA_INVALID',
       `Replicate metadata for ${model} does not contain an input schema.`,
@@ -50,14 +51,10 @@ export function parseReplicateModel(model: string): {
 function readPath(value: JsonValue | undefined, path: string[]): JsonValue | undefined {
   let current = value;
   for (const segment of path) {
-    if (!isRecord(current)) {
+    if (!isJsonObject(current)) {
       return undefined;
     }
     current = current[segment];
   }
   return current;
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

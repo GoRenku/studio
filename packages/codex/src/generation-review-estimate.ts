@@ -3,38 +3,28 @@ import { readMediaGenerationReview } from '@gorenku/studio-core/server';
 import { createDiagnosticError, StructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationReviewEstimateInput } from './client.js';
 import { reviewError } from './diagnostics.js';
-import { preparedRoute, type GenerationReviewState } from './generation-review-state.js';
+import type { GenerationReviewState } from './generation-review-state.js';
 import { assertReviewSources } from './generation-review-sources.js';
 import { removeJsonPointer, writeJsonPointer } from './native-request-controls/json-pointer.js';
 import { nativeRequestControlList, nativeRequestValuesIssues } from './native-request-controls/validation.js';
 
 /**
- * Estimates one native request. The CLI composition root injects the Engines
+ * Estimates one native request, or one output of a route at its defaults,
+ * including host plan routes. The CLI composition root injects the
  * implementation; Codex never imports Engines and never reads prices.
  */
 export interface GenerationCostEstimator {
-  /** Local approximate price lookup; never prepares requests or calls a provider. */
-  estimateImage(modelKey: string): Promise<GenerationCostEstimate>;
   estimate(input: {
     homeDir?: string;
     provider: string;
     model: string;
-    request: JsonValue;
-    requestSha256: string;
+    /** Omitted to price one output of the route at its defaults. */
+    request?: JsonValue;
+    /** With no request: native fields set over the route's defaults, such as a detail level's output size. */
+    fields?: Record<string, JsonValue>;
+    /** Null when estimating a route at its defaults rather than a request file. */
+    requestSha256: string | null;
   }): Promise<GenerationCostEstimate>;
-}
-
-/** Routes the Skill marks as host plan usage are never sent to the estimator. */
-export function hostPlanUsageEstimate(requestSha256: string): GenerationCostEstimate {
-  return {
-    state: 'hostPlanUsage',
-    amountUsd: null,
-    basis: 'Uses your ChatGPT plan\'s Codex usage',
-    observedAt: null,
-    sourceUrl: null,
-    notes: [],
-    requestSha256,
-  };
 }
 
 /** Re-estimates one review request with the panel's edited native control values. */
@@ -52,7 +42,6 @@ export async function estimateReviewDraft(
   const issues = nativeRequestValuesIssues(request.controls, input.values, (path, message) => createDiagnosticError('CODEX_REVIEW_INVALID', message, { path: path.map(String) }), ['values']);
   if (issues.length > 0) throw new StructuredError({ code: 'CODEX_REVIEW_INVALID', message: 'The estimated values are invalid.', issues });
   const source = binding.sources[index]!;
-  if (preparedRoute(request).billing === 'hostPlanUsage') return hostPlanUsageEstimate(source.requestSha256);
   await assertReviewSources(binding, homeDir);
   const read = await readMediaGenerationReview({ projectName: binding.project, homeDir, documentPath: source.reviewFile, expectedRequestSha256: source.requestSha256 });
   const omitted = nativeRequestControlList(request.controls)

@@ -1,45 +1,85 @@
 import type { JsonValue, MediaProvider, ProviderContext } from '../media/contracts.js';
-import { isEngineError } from '../shared/errors.js';
-import type { CostEstimate, RoutePrice } from './contracts.js';
+import type { CostEstimate, PriceComponent, RoutePrice } from './contracts.js';
 import { evaluateRoutePrice } from './price-evaluation.js';
-import { isFresh, readRecordedPrice } from './price-cache.js';
+import { readRoutePrice } from './price-cache.js';
+import { readSavedQuote } from './quote-cache.js';
 import { withSchemaDefaults } from './request-defaults.js';
 
+/** Saved prices and schemas are reused this long while estimating; prices change rarely. */
+export const ESTIMATE_METADATA_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** The longest an estimate waits for one refresh of old provider metadata. */
+export const ESTIMATE_REFRESH_TIMEOUT_MS = 5_000;
+
 /**
- * Estimates one native request: a live provider quote, then a fresh recorded
- * entry, then the provider's API price. A missing price is never zero.
+ * Estimates one native request, or one output of a route at its defaults.
+ * A provider that quotes exact settings is asked through its saved quote,
+ * reused like a price; otherwise, or when the quote fails, the saved price of
+ * the route is evaluated after filling the route's schema defaults. Old
+ * metadata and quotes get one quick refresh that falls back to the saved copy.
+ * A missing price is never zero.
  */
 export async function estimateRouteCost(input: {
   provider: MediaProvider;
   model: string;
-  request: JsonValue;
+  /** Omitted to price one output of the route at its defaults. */
+  request?: JsonValue;
+  /** With no request: native fields set over the route's defaults, such as an output size. */
+  fields?: Record<string, JsonValue>;
   context: ProviderContext;
 }): Promise<CostEstimate> {
-  const prepared = await withSchemaDefaults(input);
-  const request = prepared.request;
-  const notes: string[] = [...prepared.notes];
-  const now = (input.context.clock ?? (() => new Date()))().toISOString();
-  if (input.provider.quoteCost) {
-    try {
-      const quote = await input.provider.quoteCost(input.model, request, input.context);
-      return { state: 'quoted', amountUsd: quote.amountUsd, basis: 'Provider quote for this request', observedAt: now, sourceUrl: quote.sourceUrl, notes };
-    } catch (error) {
-      if (!isEngineError(error) || error.code === 'ENGINE_CANCELLED') {throw error;}
-      notes.push(`The provider quote was unavailable: ${error.message}`);
-    }
+  const context: ProviderContext = {
+    ...input.context,
+    requestTimeoutMs: Math.min(input.context.requestTimeoutMs, ESTIMATE_REFRESH_TIMEOUT_MS),
+    cachedMetadataReuse: { maxAgeMs: ESTIMATE_METADATA_MAX_AGE_MS, failedRefreshes: new Set() },
+  };
+  const atDefaults = input.request === undefined;
+  const prepared = await withSchemaDefaults({ ...input, request: input.request ?? { ...input.fields }, context, fillRequiredText: atDefaults });
+  const quoted = input.provider.quoteCost
+    ? await readSavedQuote({ provider: input.provider, model: input.model, request: prepared.request, context })
+    : null;
+  if (quoted?.quote) {
+    return {
+      state: 'computed',
+      amountUsd: quoted.quote.amountUsd,
+      basis: quoteBasis(input),
+      observedAt: quoted.observedAt,
+      sourceUrl: quoted.quote.sourceUrl,
+      notes: prepared.notes,
+    };
   }
-  const recorded = await readRecordedPrice(input.provider.id, input.model, input.context);
-  if (recorded && isFresh(recorded, input.context)) {
-    return fromPrice(recorded, request, [...notes, ...recorded.notes]);
+  const price = await readRoutePrice({ provider: input.provider, model: input.model, context });
+  const request = price && atDefaults ? withOneOutput(price, prepared.request) : prepared.request;
+  const estimate: CostEstimate = price
+    ? fromPrice(price, request, [...prepared.notes, ...price.notes])
+    : { state: 'missingPrice', basis: 'No price is known for this route', notes: prepared.notes };
+  return estimate.state === 'computed' || !quoted ? estimate : { ...estimate, notes: [...estimate.notes, quoted.note] };
+}
+
+function quoteBasis(input: { request?: JsonValue; fields?: Record<string, JsonValue> }): string {
+  if (input.request !== undefined) {return 'Provider quote for these settings';}
+  return input.fields && Object.keys(input.fields).length > 0
+    ? 'Provider quote for one output at the given settings'
+    : 'Provider quote for one output at default settings';
+}
+
+/** Sets every top-level image count field the price reads to one. */
+function withOneOutput(price: RoutePrice, request: JsonValue): JsonValue {
+  if (request === null || typeof request !== 'object' || Array.isArray(request)) {
+    return request;
   }
-  const apiPrice = input.provider.readPrice ? await input.provider.readPrice(input.model, input.context) : null;
-  if (apiPrice) {
-    return fromPrice(apiPrice, request, [...notes, ...apiPrice.notes]);
+  const fields = price.components.flatMap((component) => {
+    const field = /^\/([^/~]+)$/.exec(imageCountPointer(component) ?? '')?.[1];
+    return field ? [[field, 1] as const] : [];
+  });
+  return { ...request, ...Object.fromEntries(fields) };
+}
+
+function imageCountPointer(component: PriceComponent): string | undefined {
+  if (component.quantity.kind === 'imageMegapixels') {
+    return component.quantity.countPointer;
   }
-  if (recorded) {
-    return { state: 'expired', basis: 'The recorded price has expired', observedAt: recorded.source.observedAt, sourceUrl: recorded.source.url, notes };
-  }
-  return { state: 'missingPrice', basis: 'No price is known for this route', notes };
+  return component.unit === 'image' && component.quantity.kind === 'field' ? component.quantity.pointer : undefined;
 }
 
 function fromPrice(price: RoutePrice, request: JsonValue, notes: string[]): CostEstimate {

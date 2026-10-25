@@ -36,18 +36,23 @@ export interface RoutePriceSource {
 }
 
 /**
- * The cached price for one provider route. An empty `components` list means the
+ * The saved price for one provider route. An empty `components` list means the
  * provider publishes a price this vocabulary cannot express; `notes` say why.
  */
 export interface RoutePrice {
   currency: 'USD';
   components: PriceComponent[];
   source: RoutePriceSource;
-  expiresAt: string;
   notes: string[];
 }
 
-export type CostEstimateState = 'quoted' | 'computed' | 'missingPrice' | 'expired' | 'unpriced';
+export type CostEstimateState = 'computed' | 'missingPrice' | 'unpriced';
+
+/** A provider's quote for one native request, saved like a price. */
+export interface CostQuote {
+  amountUsd: number;
+  sourceUrl: string;
+}
 
 /** A missing price is never an amount of zero. */
 export interface CostEstimate {
@@ -57,10 +62,4 @@ export interface CostEstimate {
   observedAt?: string;
   sourceUrl?: string;
   notes: string[];
-}
-
-/** A provider's exact quote for one native request. */
-export interface CostQuote {
-  amountUsd: number;
-  sourceUrl: string;
 }

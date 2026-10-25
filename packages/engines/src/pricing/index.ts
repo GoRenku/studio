@@ -1,7 +1,6 @@
 export type {
   CostEstimate,
   CostEstimateState,
-  CostQuote,
   PriceComponent,
   PriceQuantity,
   PriceTier,
@@ -11,9 +10,4 @@ export type {
 export { estimateRouteCost } from './estimate.js';
 export { evaluateRoutePrice } from './price-evaluation.js';
 export { parseRoutePrice } from './price-schema.js';
-export {
-  API_PRICE_DEFAULT_MAX_AGE_MS,
-  isFresh,
-  readRecordedPrice,
-  recordRoutePrice,
-} from './price-cache.js';
+export { readRoutePrice, recordRoutePrice } from './price-cache.js';

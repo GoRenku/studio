@@ -15,13 +15,13 @@ export function routeChoiceProviderOptions(
   entries: DefaultModelListEntry[],
   credentials: ProviderCredentialStatus[],
 ): RouteChoiceProviderOption[] {
-  const providers = [...new Set(entries.flatMap((entry) => entry.providers))];
+  const providers = [...new Set(entries.flatMap((entry) => entry.providers.map((offered) => offered.provider)))];
   return providers.map((provider) => {
     const identity = providerIdentity(provider, credentials);
     return {
       ...identity,
       models: entries
-        .filter((entry) => entry.providers.includes(provider))
+        .filter((entry) => entry.providers.some((offered) => offered.provider === provider))
         .map((entry) => ({ key: entry.model, name: entry.name, recommended: entry.recommendedFor.includes(provider) })),
     };
   });

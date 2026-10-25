@@ -3,7 +3,10 @@ import {
   GENERATION_LANES,
   GENERATION_LANE_SLUGS,
   HOST_GENERATION_PROVIDER,
+  IMAGE_DETAIL_LEVELS,
+  type CastingSettings,
   type DefaultModelListResource,
+  type ImageDetailLevel,
   type GenerationLane,
   type ProjectGenerationSettings,
   type ProjectSettingsDocument,
@@ -14,7 +17,9 @@ import { AppSettingsDialog } from '@/features/settings/app-settings-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/accordion';
 import { Button } from '@/ui/button';
 import { GenerationLaneSection, type ProviderOption } from './generation-lane-section';
-import { SettingsSwitchRow } from './project-settings-rows';
+import { SettingsSelectRow, SettingsSwitchRow } from './project-settings-rows';
+
+const DETAIL_OPTIONS = IMAGE_DETAIL_LEVELS.map((level) => ({ value: level, label: { lowest: 'Lowest', mid: 'Mid', highest: 'Highest' }[level] }));
 
 export function ProjectSettingsFields({ settings, onChange, providers, providersLoading, onRefreshProviders, defaultModels }: {
   settings: ProjectSettingsDocument;
@@ -29,6 +34,7 @@ export function ProjectSettingsFields({ settings, onChange, providers, providers
     onChange({ ...settings, screenplayImport: { ...settings.screenplayImport, [field]: value } });
   };
   const updateGeneration = (generation: ProjectGenerationSettings) => onChange({ ...settings, generation });
+  const updateCasting = (casting: Partial<CastingSettings>) => onChange({ ...settings, casting: { ...settings.casting, ...casting } });
   const mediaProviders = providers?.filter((provider) => provider.configured && provider.provider !== 'world-labs') ?? [];
   const generalProviders = mediaProviders.filter((provider) => provider.provider !== 'elevenlabs').map((provider) => ({ value: provider.provider, label: provider.label }));
   const audioProviders = mediaProviders.map((provider) => ({ value: provider.provider, label: provider.label }));
@@ -42,7 +48,7 @@ export function ProjectSettingsFields({ settings, onChange, providers, providers
   const noApiKeys = providers !== null && !providersLoading && !providers.some((provider) => provider.configured);
   const providerStatus = { providers, providersLoading, onRefreshProviders };
   return (
-    <Accordion type='multiple' defaultValue={['screenplay-import', 'generation', ...GENERATION_LANES.map((lane) => `lane-${GENERATION_LANE_SLUGS[lane]}`)]}>
+    <Accordion type='multiple' defaultValue={['screenplay-import', 'generation', ...GENERATION_LANES.map((lane) => `lane-${GENERATION_LANE_SLUGS[lane]}`), 'casting']}>
       <AccordionItem value='screenplay-import'>
         <AccordionTrigger className='py-3'>Screenplay Import</AccordionTrigger>
         <AccordionContent>
@@ -72,6 +78,13 @@ export function ProjectSettingsFields({ settings, onChange, providers, providers
       {GENERATION_LANES.map((lane, index) => (
         <GenerationLaneSection key={lane} lane={lane} settings={settings.generation[lane]} providerOptions={laneProviderOptions[lane]} providerStatus={providerStatus} defaultModels={defaultModels} headingRef={index === 0 ? imageHeadingRef : undefined} onChange={(laneSettings) => updateGeneration({ ...settings.generation, [lane]: laneSettings })} />
       ))}
+      <AccordionItem value='casting'>
+        <AccordionTrigger className='py-3'>Casting</AccordionTrigger>
+        <AccordionContent>
+          <SettingsSelectRow<ImageDetailLevel> id='casting-candidate-detail' label='Candidate detail' description='Image size for casting candidates. Lower is cheaper and faster for comparing many faces.' value={settings.casting.candidateDetail} options={DETAIL_OPTIONS} onValueChange={(candidateDetail) => updateCasting({ candidateDetail })} />
+          <SettingsSelectRow<ImageDetailLevel> id='casting-character-sheet-detail' label='Character sheet detail' description='Image size for the character sheets kept as identity references.' value={settings.casting.characterSheetDetail} options={DETAIL_OPTIONS} onValueChange={(characterSheetDetail) => updateCasting({ characterSheetDetail })} />
+        </AccordionContent>
+      </AccordionItem>
     </Accordion>
   );
 }

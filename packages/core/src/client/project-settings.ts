@@ -4,7 +4,7 @@ import type { GenerationLane } from './generation-lanes.js';
 export const STUDIO_PROJECT_SETTINGS_RESOURCE_KEY = 'project-settings' as const;
 
 export interface ProjectSettingsDocument {
-  version: 8;
+  version: 9;
   screenplayImport: {
     createContinuitySubjects: boolean;
     generateContinuityImages: boolean;

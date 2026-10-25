@@ -1,5 +1,6 @@
 import type { EngineLogger } from '../../media/contracts.js';
 import { EngineError } from '../../shared/errors.js';
+import { isUnknownObject } from '../../shared/json-object.js';
 
 const WORLD_LABS_BASE_URL = 'https://api.worldlabs.ai';
 const POLL_INTERVAL_MS = 2_000;
@@ -124,8 +125,8 @@ async function uploadSourceImage(
     method: 'POST',
     body: { file_name: image.fileName, extension: image.extension, kind: 'image' },
   });
-  const mediaAsset = isRecord(prepared.media_asset) ? prepared.media_asset : null;
-  const upload = isRecord(prepared.upload_info) ? prepared.upload_info : null;
+  const mediaAsset = isUnknownObject(prepared.media_asset) ? prepared.media_asset : null;
+  const upload = isUnknownObject(prepared.upload_info) ? prepared.upload_info : null;
   const mediaAssetId = requireString(
     mediaAsset?.media_asset_id,
     'World Labs did not return a media asset id.',
@@ -280,12 +281,12 @@ function readCompletedWorld(value: unknown): {
   worldId: string;
   fullResolutionSpzUrl: string;
 } {
-  if (!isRecord(value)) {
+  if (!isUnknownObject(value)) {
     throw invalidOutput('World Labs completed without a World response.');
   }
-  const assets = isRecord(value.assets) ? value.assets : null;
-  const splats = assets && isRecord(assets.splats) ? assets.splats : null;
-  const urls = splats && isRecord(splats.spz_urls) ? splats.spz_urls : null;
+  const assets = isUnknownObject(value.assets) ? value.assets : null;
+  const splats = assets && isUnknownObject(assets.splats) ? assets.splats : null;
+  const urls = splats && isUnknownObject(splats.spz_urls) ? splats.spz_urls : null;
   return {
     worldId: requireString(value.world_id, 'World Labs did not return a World id.'),
     fullResolutionSpzUrl: requireString(urls?.full_res, 'World Labs did not return a full-resolution SPZ.'),
@@ -305,12 +306,8 @@ function invalidOutput(message: string, requestId?: string): EngineError {
   });
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function isStringRecord(value: unknown): value is Record<string, string> {
-  return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
+  return isUnknownObject(value) && Object.values(value).every((entry) => typeof entry === 'string');
 }
 
 function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {

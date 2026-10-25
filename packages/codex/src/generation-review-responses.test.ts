@@ -17,7 +17,7 @@ beforeEach(() => {
 
 function fixture() {
   const state = new GenerationReviewState();
-  const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' as const, billing: 'providerCharge' as const };
+  const route = { provider: 'fal-ai', providerLabel: 'Fal.ai', model: 'image-model', label: 'Image model', mediaKind: 'image' as const };
   const request: GenerationReviewRequest = {
     requestId: 'request', requestSha256: 'a'.repeat(64), routes: [route], controls: { groups: [] },
     preview: { kind: 'mediaGenerationPreview', ...route, prompt: 'Café\n@Image1', editable: true, references: [], configuration: {}, diagnostics: [], requestSha256: 'a'.repeat(64), estimate: null },

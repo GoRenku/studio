@@ -4,6 +4,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import type { JsonValue } from '../media/contracts.js';
 import { EngineError } from './errors.js';
+import { isJsonObject } from './json-object.js';
 
 const draft7Ajv = new Ajv({ allErrors: true, strict: false });
 const draft2020Ajv = new Ajv2020({ allErrors: true, strict: false });
@@ -81,7 +82,7 @@ function compileJsonSchema(input: {
 }
 
 function jsonSchemaCompiler(schema: JsonValue): Ajv | Ajv2020 {
-  const declaredDialect = isRecord(schema) ? schema.$schema : undefined;
+  const declaredDialect = isJsonObject(schema) ? schema.$schema : undefined;
   if (declaredDialect !== undefined && typeof declaredDialect !== 'string') {
     throw new Error('JSON Schema $schema must be a string.');
   }
@@ -111,15 +112,11 @@ function containsDraft2020Keyword(value: JsonValue): boolean {
   if (Array.isArray(value)) {
     return value.some(containsDraft2020Keyword);
   }
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     return false;
   }
   return Object.keys(value).some((key) => draft2020Keywords.has(key))
     || Object.values(value).some(containsDraft2020Keyword);
-}
-
-function isRecord(value: JsonValue): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function sanitizeAjvErrors(errors: ErrorObject[] | null | undefined): JsonValue {

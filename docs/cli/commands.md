@@ -110,15 +110,20 @@ query parameters.
 ## `renku settings casting`
 
 Show or replace the Project's casting defaults: the models and counts that
-pre-fill the Casting Round panel. The panel's save box writes the same value.
+pre-fill the Casting Round panel, and the image detail of candidates and
+character sheets. The panel's save box writes the models, counts and the
+round's candidate detail.
 
 ```bash
 renku settings casting show --json
 renku settings casting set --file <casting-json> --json
 ```
 
-The file is `{ "routes": [{ "provider", "model": { "key", "name" }, "count" }] }`
-with Skill provider ids and model guide keys; `routes` may be empty.
+The file is
+`{ "routes": [{ "provider", "model": { "key", "name" }, "count" }], "candidateDetail", "characterSheetDetail" }`
+with Skill provider ids and model guide keys; `routes` may be empty. Each
+detail is `lowest`, `mid` or `highest` (defaults `lowest` and `highest`); the
+Default Model List says what each level means for each image route.
 Concurrency comes from the image lane's `maxConcurrentGenerations`.
 
 ## `renku settings generation`
@@ -2064,29 +2069,43 @@ provider recovery. Provenance assembly, validation, or write failures identify
 completed media, the provider request id when available, and any complete
 temporary provenance file; they must not trigger another generation. Validation
 failures retain Core diagnostics and do not publish invalid provenance.
-Estimate one prepared request without delivering Preview:
+Estimate one prepared request without delivering Preview, or one output of a
+route at its defaults before any request exists (for example to compare
+models in a chat casting round):
 
 ```bash
 renku generation estimate --file tmp/operations/media-generation/request.json --json
+renku generation estimate --provider <provider> --model <exact-provider-api-id> --json
 ```
 
-It returns Core's `GenerationCostEstimate`: `state` (`quoted`, `computed`,
-`missingPrice`, `expired` or `unpriced`), `amountUsd` (null whenever no amount
-is known, never 0 for a missing price), `basis`, `observedAt`, `sourceUrl`,
-`notes` and `requestSha256`. Engines tries a live provider quote, then a fresh
-recorded price, then the provider's API price. A failed estimate returns
+The route form needs no Project; take the route from the provider's entry in
+the Default Model List. A route that defaults to several outputs is still
+priced for one, and `requestSha256` is null. Add `--detail lowest|mid|highest`
+to price an image route at that detail level's native fields from the synced
+Default Model List.
+
+It returns Core's `GenerationCostEstimate`: `state` (`computed`,
+`missingPrice`, `unpriced` or `hostPlanUsage`), `amountUsd` (null whenever no
+amount is known, never 0 for a missing price), `basis`, `observedAt`,
+`sourceUrl`, `notes` and `requestSha256`. Engines uses the saved price only: a
+recorded price, else the provider's API price, reused for up to 30 days with
+one quick refresh after that. Providers that quote exact settings (Pika,
+WaveSpeed) are asked first and their quote is saved the same way. Codex
+built-in requests return `hostPlanUsage`. A failed estimate returns
 `missingPrice` with the reason in `notes`; it never blocks generation.
 
-Show or record the cached price of one route:
+Show or record the saved price of one route:
 
 ```bash
 renku generation price show --provider <provider> --model <exact-provider-api-id> --json
 renku generation price record --provider <provider> --model <exact-provider-api-id> --file tmp/scratch/price.json --json
 ```
 
-`show` returns `{ provider, model, recorded, providerApi }`, each null or
-`{ price, ageHours, expired }`. `record` stores an agent-researched `RoutePrice`
-in the provider metadata cache:
+`show` returns `{ provider, model, price }`, where `price` is null or
+`{ price, ageHours }` for the price estimates use (`price.source.kind` is
+`recorded` or `providerApi`). `record` stores an agent-researched `RoutePrice`
+in the provider metadata cache; it does not expire, and recording again
+replaces it:
 
 ```json
 {
@@ -2098,7 +2117,6 @@ in the provider metadata cache:
     "tiers": [{ "when": { "/resolution": "1080p" }, "unitPriceUsd": 0.2 }]
   }],
   "source": { "kind": "recorded", "url": "https://provider.example/pricing", "observedAt": "2026-10-12T10:00:00Z" },
-  "expiresAt": "2026-10-26T10:00:00Z",
   "notes": []
 }
 ```
@@ -2106,8 +2124,7 @@ in the provider metadata cache:
 Units are `request`, `image`, `megapixel`, `second`, `character` and `credit`;
 quantities are `constant`, request `field` (JSON Pointer with optional default),
 `characters` and `imageMegapixels` (a guessed image size times an optional
-image count field). Engines validates the entry (`ENGINE_PRICE_INVALID`) and caps
-its expiry at 14 days after `observedAt`.
+image count field). Engines validates the entry (`ENGINE_PRICE_INVALID`).
 
 Publish the Skill's Default Model List for Studio Settings and the Codex Route
 Chooser:

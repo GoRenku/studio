@@ -2,10 +2,8 @@ import { StructuredError } from '@gorenku/studio-diagnostics';
 import { notifyStudioGenerationPreviews } from '@gorenku/studio-core/server';
 import type { GenerationCommandInput } from './command.js';
 import type { StudioGenerationPreviewsNotification } from '@gorenku/studio-core/server';
-import { HOST_GENERATION_PROVIDER, type MediaGenerationPreviewResource } from '@gorenku/studio-core/client';
-import { hostPlanUsageEstimate } from '@gorenku/studio-codex';
-import { estimateLoadedGenerationRequest } from './estimate.js';
-import { loadGenerationRequest } from './request-file.js';
+import type { MediaGenerationPreviewResource } from '@gorenku/studio-core/client';
+import { estimateGenerationDocument } from './estimate.js';
 
 export async function showGenerationPreview(input: GenerationCommandInput) {
   const files = flagValues(input.flags.file);
@@ -36,22 +34,17 @@ export async function showGenerationPreview(input: GenerationCommandInput) {
   };
 }
 
-/** Host built-in routes run on the host's plan; every other route gets an Engines estimate. */
 async function withEstimate(
   input: GenerationCommandInput,
   documentPath: string,
   preview: MediaGenerationPreviewResource,
 ): Promise<MediaGenerationPreviewResource> {
-  if (preview.provider === HOST_GENERATION_PROVIDER.provider) {
-    return { ...preview, estimate: hostPlanUsageEstimate(preview.requestSha256!) };
-  }
-  const loaded = await loadGenerationRequest({
-    file: documentPath,
+  const read = await input.runtime.projectDataService.readMediaGenerationReview({
     projectName: input.runtime.projectName,
     homeDir: input.runtime.homeDir,
-    projectDataService: input.runtime.projectDataService,
+    documentPath,
   });
-  return { ...preview, estimate: await estimateLoadedGenerationRequest(input, loaded) };
+  return { ...preview, estimate: await estimateGenerationDocument(input, read) };
 }
 
 export async function deliverGenerationPreviews(

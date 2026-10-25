@@ -29,7 +29,7 @@ describe('Default Model List route', () => {
       syncedAt: '2026-10-12T10:00:00.000Z',
       lanes: {
         image: [],
-        imageEdit: [{ model: 'fictional-edit', name: 'Fictional Edit', providers: ['provider-one'], recommendedFor: ['provider-one'] }],
+        imageEdit: [{ model: 'fictional-edit', name: 'Fictional Edit', providers: [{ provider: 'provider-one', route: 'route/fictional-edit' }], recommendedFor: ['provider-one'] }],
         video: [],
         audio: [],
       },

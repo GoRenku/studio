@@ -1,6 +1,7 @@
 import {
   HOST_GENERATION_PROVIDER,
   type CastingRoute,
+  type DefaultModelListProvider,
   type DefaultModelListEntry,
   type GenerationLaneSettings,
   type ProviderCredentialStatus,
@@ -16,7 +17,10 @@ export interface CastingRoundProviderRecord {
   provider: string;
   providerLabel: string;
   recommended: boolean;
-  billing: 'providerCharge' | 'hostPlanUsage';
+  /** The Skill's image lane route on this provider, priced at its defaults. */
+  route: string;
+  /** The native fields of each detail level on this route, from the Default Model List. */
+  detail: NonNullable<DefaultModelListProvider['detail']>;
 }
 
 /** An offered model before it is priced. */
@@ -39,15 +43,11 @@ export function castingRoundOptions(
   laneProvider: string,
 ): CastingRoundOptionRecord[] {
   return entries.flatMap((entry) => {
-    const providers = entry.providers.flatMap((provider) => {
+    // Core requires detail levels on every image lane provider entry.
+    const providers = entry.providers.flatMap(({ provider, route, detail }) => {
       const identity = providerIdentity(provider, credentials);
       return identity.available
-        ? [{
-            provider,
-            providerLabel: identity.label,
-            recommended: entry.recommendedFor.includes(provider),
-            billing: provider === HOST_GENERATION_PROVIDER.provider ? 'hostPlanUsage' as const : 'providerCharge' as const,
-          }]
+        ? [{ provider, providerLabel: identity.label, recommended: entry.recommendedFor.includes(provider), route, detail: detail! }]
         : [];
     });
     const rank = (record: CastingRoundProviderRecord) => {

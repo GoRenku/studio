@@ -6,7 +6,7 @@ import { castingRouteSchema, castingSettingsSchema } from '../../client/casting/
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 8,
+  version: 9,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -51,6 +51,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
   },
   casting: {
     routes: [],
+    candidateDetail: 'lowest',
+    characterSheetDetail: 'highest',
   },
 };
 
@@ -96,7 +98,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation', 'casting'],
   properties: {
-    version: { const: 8 },
+    version: { const: 9 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -213,7 +215,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 7 Project Settings contract.'
+      'Use the complete current version 9 Project Settings contract.'
     );
   });
 }

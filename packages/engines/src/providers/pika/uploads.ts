@@ -17,6 +17,7 @@ import { createRequestTimeoutFetch } from '../../shared/request-timeout.js';
 import { withProviderRetries } from '../../shared/retry.js';
 import { pikaHttpError, readPikaResponseBody } from './errors.js';
 import { PIKA_ORIGIN, type PikaMediaCategory } from './metadata.js';
+import { isJsonObject } from '../../shared/json-object.js';
 
 const INPUT_SIZE_LIMITS: Record<PikaMediaCategory, number> = {
   image: 20 * 1024 * 1024,
@@ -201,7 +202,7 @@ async function requestUploadGrant(
     classify: retryDecision,
   });
   const value = await readPikaResponseBody(response);
-  if (!isRecord(value)
+  if (!isJsonObject(value)
     || typeof value.upload_url !== 'string'
     || typeof value.url !== 'string'
     || !isStringRecord(value.headers)
@@ -254,7 +255,7 @@ function validateMarkerSchemaLocations(
     });
     return;
   }
-  if (!isRecord(value)) {
+  if (!isJsonObject(value)) {
     return;
   }
   for (const [key, entry] of Object.entries(value)) {
@@ -274,9 +275,9 @@ function propertySchemas(schema: JsonValue, key: string, root: JsonValue): JsonV
   const schemas = expandSchemas(schema, root);
   const matches: JsonValue[] = [];
   for (const candidate of schemas) {
-    if (isRecord(candidate.properties) && candidate.properties[key] !== undefined) {
+    if (isJsonObject(candidate.properties) && candidate.properties[key] !== undefined) {
       matches.push(candidate.properties[key]);
-    } else if (isRecord(candidate.additionalProperties)) {
+    } else if (isJsonObject(candidate.additionalProperties)) {
       matches.push(candidate.additionalProperties);
     }
   }
@@ -309,7 +310,7 @@ function combineSchemas(schemas: JsonValue[]): JsonValue {
 }
 
 function expandSchemas(schema: JsonValue, root: JsonValue, seen = new Set<JsonValue>()): Record<string, JsonValue>[] {
-  if (!isRecord(schema) || seen.has(schema)) {
+  if (!isJsonObject(schema) || seen.has(schema)) {
     return [];
   }
   seen.add(schema);
@@ -334,7 +335,7 @@ function resolveLocalReference(reference: string, root: JsonValue): JsonValue | 
   }
   let value: JsonValue | undefined = root;
   for (const segment of reference.slice(2).split('/')) {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
       return undefined;
     }
     value = value[segment.replace(/~1/g, '/').replace(/~0/g, '~')];
@@ -396,9 +397,5 @@ function isHttpsUrl(value: string): boolean {
 }
 
 function isStringRecord(value: JsonValue | undefined): value is Record<string, string> {
-  return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string');
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  return isJsonObject(value) && Object.values(value).every((entry) => typeof entry === 'string');
 }

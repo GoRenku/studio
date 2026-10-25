@@ -24,6 +24,11 @@ describe('provider metadata retrieval', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('reports an unreadable provider response as a structured metadata error', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response('{"models": [', { headers: { 'content-type': 'application/json' } }));
+    await expect(retrieveProviderMetadata({ key, context: providerContext(fetchMock) })).rejects.toMatchObject({ code: 'ENGINE_METADATA_INVALID' });
+  });
+
   it('conditionally refreshes expired metadata and keeps its exact body on 304', async () => {
     const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
       expect(new Headers(init?.headers).get('if-none-match')).toBe('schema-1');

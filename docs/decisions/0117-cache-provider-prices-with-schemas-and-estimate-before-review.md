@@ -7,6 +7,11 @@ Status: accepted
 Supersedes the pricing removal in
 [ADR 0086](0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md).
 
+Superseded in part by
+[ADR 0128](0128-estimate-generation-cost-from-saved-prices.md): no live quotes,
+no price expiry, research only for a missing price, billing decided in Core,
+and casting priced from Default Model List routes.
+
 ## Context
 
 No review surface showed a cost. Some providers publish prices or quotes

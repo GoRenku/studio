@@ -1,23 +1,26 @@
 import { isStructuredError } from '@gorenku/studio-diagnostics';
-import type { GenerationCostEstimate } from '@gorenku/studio-core/client';
+import { generationRouteBilling, hostPlanUsageEstimate, type GenerationCostEstimate } from '@gorenku/studio-core/client';
 import type { GenerationCostEstimator } from '@gorenku/studio-codex';
-import { estimateImageCost, isEngineError, type CostEstimate, type MediaEngine, type ProviderContext } from '@gorenku/studio-engines';
+import { isEngineError, type CostEstimate, type MediaEngine, type ProviderContext } from '@gorenku/studio-engines';
 import { createEngineContext } from './engine-context.js';
+import { engineErrorSuggestion } from './engine-errors.js';
 import { createRenkuMediaEngine } from './provider-registry.js';
 
 /**
- * Composes the Engines estimate into Core's display envelope. A failed
- * estimate never blocks a review: it is reported as a missing price.
+ * The one estimator every review, preview and picker uses. Host plan routes
+ * get the plan usage envelope; every other route gets the Engines estimate
+ * from saved prices. A failed estimate never blocks a review: it is reported
+ * as a missing price.
  */
 export function createGenerationCostEstimator(options: {
   mediaEngine?: MediaEngine;
   createProviderContext?: (input: { provider: string; homeDir?: string; signal: AbortSignal }) => Promise<ProviderContext>;
 } = {}): GenerationCostEstimator {
   return {
-    async estimateImage(modelKey) {
-      return toGenerationCostEstimate(estimateImageCost(modelKey), null);
-    },
     async estimate(input) {
+      if (generationRouteBilling(input.provider) === 'hostPlanUsage') {
+        return hostPlanUsageEstimate(input.requestSha256);
+      }
       const controller = new AbortController();
       try {
         const context = await (options.createProviderContext ?? createEngineContext)({
@@ -25,8 +28,10 @@ export function createGenerationCostEstimator(options: {
           homeDir: input.homeDir,
           signal: controller.signal,
         });
-        const estimate = await (options.mediaEngine ?? createRenkuMediaEngine())
-          .estimateCost(input.provider, { model: input.model, input: input.request }, context);
+        const engine = options.mediaEngine ?? createRenkuMediaEngine();
+        const estimate = input.request === undefined
+          ? await engine.estimateRouteDefaultsCost(input.provider, input.model, context, input.fields)
+          : await engine.estimateCost(input.provider, { model: input.model, input: input.request }, context);
         return toGenerationCostEstimate(estimate, input.requestSha256);
       } catch (error) {
         if (!isEngineError(error) && !isStructuredError(error)) {
@@ -38,7 +43,7 @@ export function createGenerationCostEstimator(options: {
           basis: 'The estimate is unavailable',
           observedAt: null,
           sourceUrl: null,
-          notes: [error.message],
+          notes: [error.message, ...(isEngineError(error) ? [engineErrorSuggestion(error)].filter((note): note is string => Boolean(note)) : [])],
           requestSha256: input.requestSha256,
         };
       }
@@ -46,7 +51,7 @@ export function createGenerationCostEstimator(options: {
   };
 }
 
-export function toGenerationCostEstimate(estimate: CostEstimate, requestSha256: string | null): GenerationCostEstimate {
+function toGenerationCostEstimate(estimate: CostEstimate, requestSha256: string | null): GenerationCostEstimate {
   return {
     state: estimate.state,
     amountUsd: estimate.amountUsd ?? null,

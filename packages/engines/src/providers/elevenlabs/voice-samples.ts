@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import type { EngineLogger } from '../../media/contracts.js';
 import { EngineError } from '../../shared/errors.js';
+import { isUnknownObject } from '../../shared/json-object.js';
 
 const ACCEPTED_API_BASE_URLS = new Set([
   'https://api.elevenlabs.io',
@@ -56,7 +57,7 @@ export async function fetchElevenLabsVoiceSampleAudio(
     throw httpError(metadataResponse.status, 'voice metadata');
   }
   const metadata = await metadataResponse.json() as unknown;
-  if (!isRecord(metadata)) {
+  if (!isUnknownObject(metadata)) {
     throw outputError('ElevenLabs voice metadata was malformed.');
   }
   const sample = readSample(metadata);
@@ -94,7 +95,7 @@ function readSample(metadata: Record<string, unknown>): {
   url?: string;
 } | null {
   const candidate = Array.isArray(metadata.samples) ? metadata.samples[0] : undefined;
-  if (!isRecord(candidate)) {
+  if (!isUnknownObject(candidate)) {
     return null;
   }
   const id = typeof candidate.sample_id === 'string' ? candidate.sample_id : undefined;
@@ -128,8 +129,4 @@ function outputError(message: string): EngineError {
   return new EngineError('ENGINE_OUTPUT_INVALID', message, {
     provider: 'elevenlabs', model: 'voice-sample-audio',
   });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

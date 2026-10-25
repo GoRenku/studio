@@ -3,6 +3,7 @@ import {
   EngineError,
   type EngineErrorCode,
 } from '../../shared/errors.js';
+import { isJsonObject, isJsonValue } from '../../shared/json-object.js';
 
 export interface PikaJob {
   id: string;
@@ -33,7 +34,7 @@ export function parsePikaJob(
     requestId?: string;
   },
 ): PikaJob {
-  if (!isRecord(value)
+  if (!isJsonObject(value)
     || typeof value.id !== 'string'
     || value.id.length === 0
     || !isJobStatus(value.status)) {
@@ -46,7 +47,7 @@ export function parsePikaJob(
   if (value.status !== 'failed') {
     return { id: value.id, status: value.status };
   }
-  const error = isRecord(value.error) && typeof value.error.code === 'string'
+  const error = isJsonObject(value.error) && typeof value.error.code === 'string'
     ? { code: value.error.code }
     : { code: 'provider_error' };
   return { id: value.id, status: value.status, error };
@@ -189,26 +190,4 @@ function normalizeJobErrorCode(value: string | undefined): string {
 
 function isJobStatus(value: JsonValue | undefined): value is PikaJob['status'] {
   return value === 'queued' || value === 'running' || value === 'completed' || value === 'failed';
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isJsonValue(value: unknown, depth = 0): value is JsonValue {
-  if (depth > 100) {
-    return false;
-  }
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
-    return true;
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value);
-  }
-  if (Array.isArray(value)) {
-    return value.every((entry) => isJsonValue(entry, depth + 1));
-  }
-  return value !== null
-    && typeof value === 'object'
-    && Object.values(value).every((entry) => isJsonValue(entry, depth + 1));
 }

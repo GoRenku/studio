@@ -6,10 +6,14 @@ import type {
   ProviderMetadataCacheKey,
 } from '../media/contracts.js';
 import { EngineError } from './errors.js';
+import { isJsonValue } from './json-object.js';
 import { withProviderRetries } from './retry.js';
 import { createRequestTimeoutFetch } from './request-timeout.js';
 
 const inFlight = new Map<string, Promise<CachedProviderMetadata>>();
+
+/** Freshness provider metadata loaders apply when a response carries no expiry headers. */
+export const PROVIDER_CATALOG_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const performanceChannel = channel('renku.performance');
 
@@ -17,6 +21,8 @@ export async function retrieveProviderMetadata(input: {
   key: ProviderMetadataCacheKey;
   context: ProviderContext;
   headers?: ConstructorParameters<typeof Headers>[0];
+  /** A JSON body sends the request as a POST, for provider metadata that is only served that way. */
+  body?: JsonValue;
   /** Freshness to apply when the provider response carries no expiry headers. */
   defaultMaxAgeMs?: number;
 }): Promise<CachedProviderMetadata> {
@@ -45,15 +51,47 @@ async function retrieve(input: {
   key: ProviderMetadataCacheKey;
   context: ProviderContext;
   headers?: ConstructorParameters<typeof Headers>[0];
+  body?: JsonValue;
   defaultMaxAgeMs?: number;
 }): Promise<CachedProviderMetadata> {
   const cached = await input.context.metadataCache.read(input.key);
   const now = (input.context.clock ?? (() => new Date()))();
+  const reuse = input.context.cachedMetadataReuse;
+  const cacheKey = JSON.stringify(input.key);
+  if (cached && reuse && (now.getTime() - Date.parse(cached.fetchedAt) < reuse.maxAgeMs || reuse.failedRefreshes.has(cacheKey))) {
+    return cached;
+  }
   if (cached?.expiresAt && Date.parse(cached.expiresAt) > now.getTime()) {
     return cached;
   }
+  try {
+    return await refresh(input, cached, now, reuse ? 1 : 3);
+  } catch (error) {
+    if (reuse && cached && !(error instanceof EngineError && error.code === 'ENGINE_CANCELLED')) {
+      reuse.failedRefreshes.add(cacheKey);
+      return cached;
+    }
+    throw error;
+  }
+}
+
+async function refresh(
+  input: {
+    key: ProviderMetadataCacheKey;
+    context: ProviderContext;
+    headers?: ConstructorParameters<typeof Headers>[0];
+    body?: JsonValue;
+    defaultMaxAgeMs?: number;
+  },
+  cached: CachedProviderMetadata | null,
+  now: Date,
+  maxAttempts: number,
+): Promise<CachedProviderMetadata> {
 
   const headers = new Headers(input.headers);
+  if (input.body !== undefined) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (cached?.etag) {
     headers.set('If-None-Match', cached.etag);
   }
@@ -65,7 +103,7 @@ async function retrieve(input: {
     provider: input.key.provider,
     model: input.key.model,
     context: input.context,
-    maxAttempts: 3,
+    maxAttempts,
     operation: async () => {
       let result: Response;
       try {
@@ -74,6 +112,7 @@ async function retrieve(input: {
           model: input.key.model,
           context: input.context,
         })(input.key.url, {
+          ...(input.body === undefined ? {} : { method: 'POST', body: JSON.stringify(input.body) }),
           headers,
           signal: input.context.signal,
         });
@@ -121,7 +160,7 @@ async function retrieve(input: {
     return refreshed;
   }
   const contentType = response.headers.get('content-type') ?? undefined;
-  const body = await readBody(response, contentType, input.key);
+  const body = await readBody(response, contentType, input.key, input.context.signal);
   const entry: CachedProviderMetadata = {
     body,
     contentType,
@@ -141,11 +180,21 @@ async function readBody(
   response: Response,
   contentType: string | undefined,
   key: ProviderMetadataCacheKey,
+  signal: AbortSignal,
 ): Promise<JsonValue | string> {
-  if (!contentType?.includes('json')) {
-    return response.text();
+  let value: unknown;
+  try {
+    value = contentType?.includes('json') ? await response.json() : await response.text();
+  } catch (error) {
+    throw new EngineError(
+      signal.aborted ? 'ENGINE_CANCELLED' : 'ENGINE_METADATA_INVALID',
+      `Metadata for ${key.provider}/${key.model} could not be read.`,
+      { provider: key.provider, model: key.model, cause: error },
+    );
   }
-  const value = await response.json() as unknown;
+  if (typeof value === 'string') {
+    return value;
+  }
   if (!isJsonValue(value)) {
     throw new EngineError(
       'ENGINE_METADATA_INVALID',
@@ -184,22 +233,4 @@ function readRetryAfter(response: Response, now: Date): number | undefined {
 
 function hasNoStore(cacheControl: string | undefined): boolean {
   return /(?:^|,)\s*no-store(?:,|$)/i.test(cacheControl ?? '');
-}
-
-function isJsonValue(value: unknown, depth = 0): value is JsonValue {
-  if (depth > 100) {
-    return false;
-  }
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
-    return true;
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value);
-  }
-  if (Array.isArray(value)) {
-    return value.every((entry) => isJsonValue(entry, depth + 1));
-  }
-  return value !== null
-    && typeof value === 'object'
-    && Object.values(value).every((entry) => isJsonValue(entry, depth + 1));
 }

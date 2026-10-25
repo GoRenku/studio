@@ -81,11 +81,12 @@ each Cast Member a `wardrobe` (Look, costume, picked sheet), and the picked
 sheet leads the Cast Member's `cast-continuity` suggestion, workflow-selected.
 
 Casting estimates use the same injected generation estimator as generation
-review. The Skill supplies one prepared candidate request per model/provider,
-including its operation route and explicit output count. A missing request
-means no estimate; the panel does not synthesize provider requests from model
-defaults. Provider options retain the complete `GenerationCostEstimate` envelope
-and separate route billing. `estimateCastingRoundCost` in Core's browser-safe
+review. Each offered model/provider is priced from its Default Model List
+route: one output at the route's schema defaults, even when the route defaults
+to a batch (`estimateRouteDefaultsCost` in Engines); the eventual request's
+size, quality and references are accepted estimate error. Provider options
+retain the complete `GenerationCostEstimate` envelope, including plan usage for
+the Codex built-in provider. `estimateCastingRoundCost` in Core's browser-safe
 casting API owns the shared candidate-count aggregation used by Codex and React.
 The shared Studio estimate view displays the per-candidate estimate, warnings
 and price source. Provider pricing remains in Engines.

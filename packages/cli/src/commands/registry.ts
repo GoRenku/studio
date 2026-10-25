@@ -241,6 +241,7 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
         beat: flags.beat?.length ? flags.beat : undefined,
         provider: flags.provider,
         model: flags.model,
+        detail: flags.detail,
         routeIndex: flags.routeIndex,
         query: flags.query,
         ifRevision: flags.ifRevision,

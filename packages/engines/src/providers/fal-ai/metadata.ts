@@ -1,6 +1,7 @@
 import type { JsonValue, ProviderContext } from '../../media/contracts.js';
 import { retrieveProviderMetadata } from '../../shared/metadata-retrieval.js';
 import { EngineError } from '../../shared/errors.js';
+import { isJsonObject } from '../../shared/json-object.js';
 
 const MODELS_URL = 'https://api.fal.ai/v1/models';
 
@@ -20,13 +21,13 @@ export async function loadFalInputSchema(
     context,
   });
   const body = metadata.body;
-  if (!isRecord(body) || !Array.isArray(body.models)) {
+  if (!isJsonObject(body) || !Array.isArray(body.models)) {
     throw invalidMetadata(model);
   }
   const selected = body.models.find(
-    (entry) => isRecord(entry) && entry.endpoint_id === model,
+    (entry) => isJsonObject(entry) && entry.endpoint_id === model,
   );
-  if (!isRecord(selected)) {
+  if (!isJsonObject(selected)) {
     throw new EngineError(
       'ENGINE_METADATA_UNAVAILABLE',
       `Fal.ai endpoint "${model}" was not found in live provider metadata.`,
@@ -34,21 +35,21 @@ export async function loadFalInputSchema(
     );
   }
   const openApi = selected.openapi;
-  if (isRecord(openApi) && isRecord(openApi.error)) {
+  if (isJsonObject(openApi) && isJsonObject(openApi.error)) {
     throw expansionFailed(model, openApi.error);
   }
-  if (!isRecord(openApi) || !isRecord(openApi.paths) || !isRecord(openApi.components)) {
+  if (!isJsonObject(openApi) || !isJsonObject(openApi.paths) || !isJsonObject(openApi.components)) {
     throw invalidMetadata(model);
   }
   const inputSchemas = Object.values(openApi.paths).flatMap((operation) => {
-    if (!isRecord(operation) || !isRecord(operation.post)) {
+    if (!isJsonObject(operation) || !isJsonObject(operation.post)) {
       return [];
     }
     const schema = readPath(
       operation.post,
       ['requestBody', 'content', 'application/json', 'schema'],
     );
-    return isRecord(schema) ? [schema] : [];
+    return isJsonObject(schema) ? [schema] : [];
   });
   if (inputSchemas.length === 1) {
     return { ...inputSchemas[0], components: openApi.components } as JsonValue;
@@ -88,14 +89,10 @@ function invalidMetadata(model: string): EngineError {
 function readPath(value: Record<string, JsonValue>, path: string[]): JsonValue | undefined {
   let current: JsonValue = value;
   for (const segment of path) {
-    if (!isRecord(current)) {
+    if (!isJsonObject(current)) {
       return undefined;
     }
     current = current[segment];
   }
   return current;
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

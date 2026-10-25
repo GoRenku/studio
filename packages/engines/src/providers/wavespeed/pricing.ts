@@ -1,8 +1,8 @@
 import type { JsonValue, ProviderContext } from '../../media/contracts.js';
 import { replaceLocalMediaFilesWithValidationUrls } from '../../media/local-files.js';
 import type { CostQuote, RoutePrice } from '../../pricing/contracts.js';
-import { API_PRICE_DEFAULT_MAX_AGE_MS } from '../../pricing/price-cache.js';
-import { apiPriceExpiry, readQuotedAmount, requestProviderQuote } from '../../pricing/provider-quote.js';
+import { postProviderQuote, readQuotedAmount } from '../../pricing/provider-quote.js';
+import { isJsonObject } from '../../shared/json-object.js';
 import { loadWaveSpeedModelRecord } from './metadata.js';
 
 const PRICING_URL = 'https://api.wavespeed.ai/api/v3/model/pricing';
@@ -18,13 +18,13 @@ export async function readWaveSpeedPrice(model: string, context: ProviderContext
     currency: 'USD',
     components: [{ unit: 'request', unitPriceUsd: basePrice, quantity: { kind: 'constant', value: 1 } }],
     source: { kind: 'providerApi', url: 'https://api.wavespeed.ai/api/v3/models', observedAt: metadata.fetchedAt },
-    expiresAt: apiPriceExpiry(metadata, API_PRICE_DEFAULT_MAX_AGE_MS),
     notes: ['WaveSpeed base price per run; duration and resolution can change the charge.'],
   };
 }
 
+/** The pricing endpoint quotes one exact native request, so duration and resolution count. */
 export async function quoteWaveSpeedCost(model: string, request: JsonValue, context: ProviderContext): Promise<CostQuote> {
-  const body = await requestProviderQuote({
+  const body = await postProviderQuote({
     provider: 'wavespeed-ai',
     model,
     url: PRICING_URL,
@@ -32,11 +32,6 @@ export async function quoteWaveSpeedCost(model: string, request: JsonValue, cont
     body: { model_id: model, inputs: replaceLocalMediaFilesWithValidationUrls(request) },
     context,
   });
-  const data = isRecord(body) && isRecord(body.data) ? body.data : undefined;
-  const amount = typeof data?.unit_price === 'number' || typeof data?.unit_price === 'string' ? data.unit_price : undefined;
-  return { amountUsd: readQuotedAmount(amount, { provider: 'wavespeed-ai', model }), sourceUrl: PRICING_URL };
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  const data = isJsonObject(body) && isJsonObject(body.data) ? body.data : undefined;
+  return { amountUsd: readQuotedAmount(data?.unit_price, { provider: 'wavespeed-ai', model }), sourceUrl: PRICING_URL };
 }

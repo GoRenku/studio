@@ -65,17 +65,24 @@ and sometimes one Cast Member with the ages only described in text (Sintel).
   Studio never inspects briefs or candidate images. The candidate layout (a
   face close-up beside a full-length figure in one 4:3 image) is a
   Studio-owned output shape described in the media-producer skill.
-- **Casting reuses the generation estimator and display envelope.** The Skill
-  supplies a prepared one-candidate native request for every offered paid
-  model/provider, with its intended operation route, count and output settings. Codex never
-  synthesizes an empty request from the Default Model List. Missing prepared
-  requests fail before the panel opens, with structured issues listing every
-  model/provider to prepare. A provider estimate that has no known price remains
-  selectable and displays its explanation. Each option carries
-  `GenerationCostEstimate` unchanged, including warnings, source,
-  observation time and request hash. Core's `estimateCastingRoundCost` aggregates
-  those estimates by candidate count for both Codex and React. Host plan usage
-  bypasses provider estimation. Studio uses the shared estimate view for each
+- **Candidates and character sheets have a detail level** (plan 0244):
+  `lowest`, `mid` or `highest`. Project casting settings hold
+  `candidateDetail` (default `lowest`, since all but one candidate are
+  discarded) and `characterSheetDetail` (default `highest`, since sheets are
+  identity references). The Default Model List gives each image-lane provider
+  route the native fields of every level, as opaque Skill data. The round
+  panel opens on the candidate detail, prices every level, and the director
+  may change it for one round; consume returns the `detail` the agent
+  generates with.
+- **Casting reuses the generation estimator and display envelope**
+  ([ADR 0128](0128-estimate-generation-cost-from-saved-prices.md)). Codex
+  prices every offered model/provider from its Default Model List route at the
+  route's defaults; the agent prepares nothing. A provider estimate that has no
+  known price remains selectable and displays its explanation. Each option
+  carries `GenerationCostEstimate` unchanged, including warnings, source and
+  observation time; host plan routes carry the plan usage estimate. Core's
+  `estimateCastingRoundCost` aggregates those estimates by candidate count for
+  both Codex and React. Studio uses the shared estimate view for each
   candidate's cost; the saved round keeps the confirmed total.
 
 ## Consequences

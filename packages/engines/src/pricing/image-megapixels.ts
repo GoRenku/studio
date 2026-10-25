@@ -1,4 +1,5 @@
 import type { JsonValue } from '../media/contracts.js';
+import { isJsonObject } from '../shared/json-object.js';
 
 export interface ImageMegapixelGuess {
   megapixels: number;
@@ -19,8 +20,8 @@ const ASSUMED_MEGAPIXELS = 1;
  * tall, and "512sq" or "768" as a square. Anything else assumes 1 megapixel.
  */
 export function guessImageMegapixels(request: JsonValue): ImageMegapixelGuess {
-  const fields = isRecord(request) ? request : {};
-  const fromWidthHeight = readWidthHeight(fields) ?? (isRecord(fields.image_size) ? readWidthHeight(fields.image_size) : undefined);
+  const fields = isJsonObject(request) ? request : {};
+  const fromWidthHeight = readWidthHeight(fields) ?? (isJsonObject(fields.image_size) ? readWidthHeight(fields.image_size) : undefined);
   if (fromWidthHeight) {return fromWidthHeight;}
   for (const field of SIZE_LABEL_FIELDS) {
     const label = fields[field];
@@ -59,8 +60,4 @@ function round(megapixels: number): number {
 
 function isPositive(value: JsonValue | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
-}
-
-function isRecord(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

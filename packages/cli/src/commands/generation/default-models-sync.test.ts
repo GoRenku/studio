@@ -20,7 +20,7 @@ it('syncs the Skill Default Model List without a Project and reports unchanged c
     formatVersion: 1,
     lanes: {
       image: [],
-      imageEdit: [{ model: 'fictional-edit', name: 'Fictional Edit', providers: ['provider-one'], recommendedFor: ['provider-one'] }],
+      imageEdit: [{ model: 'fictional-edit', name: 'Fictional Edit', providers: [{ provider: 'provider-one', route: 'provider-one/fictional-edit', detail: { lowest: {}, mid: {}, highest: {} } }], recommendedFor: ['provider-one'] }],
       video: [],
       audio: [],
     },

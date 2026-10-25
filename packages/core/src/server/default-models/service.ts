@@ -1,10 +1,13 @@
 import fs from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { StructuredError } from '@gorenku/studio-diagnostics';
-import type {
-  DefaultModelListResource,
-  DefaultModelListSyncReport,
+import {
+  findImageDetailFields,
+  type DefaultModelListResource,
+  type DefaultModelListSyncReport,
+  type ImageDetailLevel,
 } from '../../client/default-models.js';
+import type { JsonValue } from '../../client/json.js';
 import type { RenkuConfigPathOptions } from '../config/paths.js';
 import {
   DEFAULT_MODEL_LIST_FORMAT_VERSION,
@@ -12,6 +15,7 @@ import {
 } from './document.js';
 import {
   readStoredDefaultModelList,
+  readStoredDefaultModelListSha256,
   resolveDefaultModelListPath,
   writeStoredDefaultModelList,
 } from './store.js';
@@ -27,8 +31,7 @@ export async function syncDefaultModelList(
   const contents = await readSourceFile(input.file);
   const lanes = parseDefaultModelList(contents, input.file);
   const sha256 = createHash('sha256').update(contents).digest('hex');
-  const stored = await readStoredDefaultModelList(input);
-  if (stored?.sha256 === sha256) {
+  if (await readStoredDefaultModelListSha256(input) === sha256) {
     return { changed: false, sha256, path: resolveDefaultModelListPath(input) };
   }
   const storePath = await writeStoredDefaultModelList({
@@ -47,6 +50,29 @@ export async function readDefaultModelList(
   return stored
     ? { state: 'synced', syncedAt: stored.syncedAt, lanes: stored.lanes }
     : { state: 'notSynced' };
+}
+
+/** The native fields of one detail level for a provider route, from the synced Default Model List. */
+export async function readImageDetailFields(
+  input: RenkuConfigPathOptions & { provider: string; route: string; level: ImageDetailLevel }
+): Promise<Record<string, JsonValue>> {
+  const list = await readDefaultModelList(input);
+  if (list.state === 'notSynced') {
+    throw new StructuredError({
+      code: 'DEFAULT_MODELS004',
+      message: 'The Default Model List has not been synced yet.',
+      suggestion: 'Run renku generation default-models sync --file <media-producer>/references/default-models.json, then try again.',
+    });
+  }
+  const fields = findImageDetailFields(list.lanes, input, input.level);
+  if (!fields) {
+    throw new StructuredError({
+      code: 'DEFAULT_MODELS005',
+      message: `${input.route} on ${input.provider} is not an image route of the Default Model List, so it has no detail levels.`,
+      suggestion: 'Use the provider and route of an image or image edit entry in the Default Model List.',
+    });
+  }
+  return fields;
 }
 
 async function readSourceFile(file: string): Promise<string> {

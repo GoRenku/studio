@@ -6,23 +6,19 @@ import { createRenkuMediaEngine } from './provider-registry.js';
 import { requiredFlag } from '../structured-command.js';
 import { readJsonInput } from '../command-io.js';
 
-/** Prints the cached prices of one route and how old they are. */
+/** Prints the saved price estimates use for one route, its source and how old it is. */
 export async function showGenerationPrice(input: GenerationCommandInput) {
   const route = readRoute(input);
   try {
-    const prices = await (input.runtime.mediaEngine ?? createRenkuMediaEngine())
-      .readRoutePrices(route.provider, route.model, await routeContext(input, route.provider));
-    return {
-      ...route,
-      recorded: describe(prices.recorded),
-      providerApi: describe(prices.providerApi),
-    };
+    const price = await (input.runtime.mediaEngine ?? createRenkuMediaEngine())
+      .readRoutePrice(route.provider, route.model, await routeContext(input, route.provider));
+    return { ...route, price: describe(price) };
   } catch (error) {
     throwEngineError(error);
   }
 }
 
-/** Stores an agent-researched price entry in the provider metadata cache. */
+/** Stores an agent-researched price entry in the provider metadata cache; it does not expire. */
 export async function recordGenerationPrice(input: GenerationCommandInput) {
   const route = readRoute(input);
   const file = Array.isArray(input.flags.file) ? input.flags.file.at(-1) : input.flags.file;
@@ -59,6 +55,5 @@ function describe(price: RoutePrice | null) {
   return {
     price,
     ageHours: Math.round(ageHours * 10) / 10,
-    expired: Date.parse(price.expiresAt) <= Date.now(),
   };
 }
