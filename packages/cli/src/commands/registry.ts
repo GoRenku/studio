@@ -414,6 +414,10 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
       homeDir,
     });
   },
+  'codex': async ({ input, flags, io, homeDir }) => {
+    const { runCodexPermissionsCommand } = await loadCommand('codex', () => import('./codex-permissions-command.js'));
+    return runCodexPermissionsCommand({ input, json: flags.json, yes: flags.yes, io, homeDir });
+  },
   'telemetry': async ({ input, flags, io, homeDir }) => {
     const { runTelemetryCommand } = await loadCommand('telemetry', () => import('./telemetry-command.js'));
     return runTelemetryCommand({ input, json: flags.json, io, homeDir });

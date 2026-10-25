@@ -279,6 +279,36 @@ Behavior:
 - Does not change the current authoring project.
 - A missing or unknown subcommand fails with `CLI168`.
 
+## `renku codex permissions`
+
+Give Codex the permissions Renku needs, only in the Project Library. Renku
+writes a Renku-owned `.codex/config.toml` into the Project Library; Codex
+applies it only when it works in that trusted folder, so other Codex projects
+and `~/.codex/config.toml` are unchanged. The file is also written
+automatically when Renku creates the Project Library (Studio setup or
+`renku init`) if the Codex plugin was installed, and `renku update` refreshes
+it.
+
+```bash
+renku codex permissions status [--json]
+renku codex permissions set [--yes] [--json]
+renku codex permissions remove [--yes] [--json]
+```
+
+Behavior:
+
+- The file grants read access to Renku's settings folder, write access to its
+  state folder and network access, on top of Codex's `:workspace` rules.
+- `set` shows the file and asks before writing; `remove` asks before
+  deleting. Without a terminal, or with `--json`, both need `--yes`
+  (`CLI170`); declining changes nothing (`CLI172`).
+- A `.codex/config.toml` without Renku's header line is never replaced or
+  deleted (`CODEX_PERMISSIONS001`).
+- `status` and `set` run a Codex sandbox check from the Project Library when
+  the `codex` command is found: `writable`, `refused` (usually the folder is
+  not trusted in Codex yet) or `unavailable`.
+- Agents may run `status`; only the user runs `set` or `remove`.
+
 ## `renku telemetry`
 
 Show or change whether Renku sends usage statistics. They are off until the

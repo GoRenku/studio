@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } fro
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { installCodexPlugin } from '../../distribution/install-codex-plugin.mjs';
+import { installCodexPlugin, refreshCodexPermissions } from '../../distribution/install-codex-plugin.mjs';
 
 function fixture({ existing, enabled = true, failure, unavailable = false, verified = true } = {}) {
   const calls = [];
@@ -99,4 +99,23 @@ export async function recordCodexPluginInstallation(installed) {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(readFileSync(state, 'utf8')), { codexPluginInstalled: false });
   assert.match(result.stdout, /Network unavailable/);
+});
+
+test('refreshes Renku Codex permissions, hints when missing and never fails installation', async () => {
+  const messages = [];
+  const report = (message) => messages.push(message);
+  const configured = async () => ({ status: 'configured', storageRoot: '/Users/ana/Movies/Renku' });
+  const refreshed = [];
+  await refreshCodexPermissions({ readSetup: configured, refresh: async (input) => { refreshed.push(input); return { state: 'current' }; }, report });
+  assert.deepEqual(refreshed, [{ projectLibrary: '/Users/ana/Movies/Renku' }]);
+  assert.deepEqual(messages, []);
+  await refreshCodexPermissions({ readSetup: configured, refresh: async () => ({ state: 'missing' }), report });
+  assert.equal(messages.at(-1), 'To let Codex run Renku in /Users/ana/Movies/Renku without approval prompts, run: renku codex permissions set');
+  await refreshCodexPermissions({ readSetup: configured, refresh: async () => ({ state: 'foreign', path: '/Users/ana/Movies/Renku/.codex/config.toml' }), report });
+  assert.equal(messages.at(-1), 'Left your own Codex settings in /Users/ana/Movies/Renku/.codex/config.toml unchanged.');
+  await refreshCodexPermissions({ readSetup: configured, refresh: async () => { throw new Error('disk full'); }, report });
+  assert.equal(messages.at(-1), 'Renku Codex permissions were not refreshed: disk full');
+  const before = messages.length;
+  await refreshCodexPermissions({ readSetup: async () => ({ status: 'setupRequired' }), refresh: async () => { throw new Error('not called'); }, report });
+  assert.equal(messages.length, before);
 });

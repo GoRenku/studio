@@ -51,6 +51,9 @@ Commands
   media import --clip      Atomically attach and register a raw take; optional --take-title/--source-take
   media import --casting-model  Model key of the round route that made a cast.casting-candidate
   sample-film install  Download the Basilica sample film into the Project Library
+  codex permissions status  Show whether Codex may run Renku in the Project Library
+  codex permissions set     Add Renku's Codex permissions to the Project Library (asks first; --yes)
+  codex permissions remove  Remove Renku's Codex permissions from the Project Library
   telemetry status     Show whether usage statistics are on and being sent
   telemetry enable     Turn on usage statistics for this computer
   telemetry disable    Turn off usage statistics and delete the install ID
@@ -184,6 +187,10 @@ Examples
 function createCliFlags() {
   return {
     json: {
+      type: 'boolean',
+      default: false,
+    },
+    yes: {
       type: 'boolean',
       default: false,
     },

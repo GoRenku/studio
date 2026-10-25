@@ -58,6 +58,7 @@ export async function runInitCommand(
           status: result.status,
           configPath: result.configPath,
           storageRoot: result.storageRoot,
+          codexPermissions: result.codexPermissions && { path: result.codexPermissions.path, state: result.codexPermissions.state },
         },
         null,
         2
@@ -73,6 +74,11 @@ export async function runInitCommand(
   }
   options.io.stdout.log(`Config: ${result.configPath}`);
   options.io.stdout.log(`Storage root: ${result.storageRoot}`);
+  if (result.codexPermissions?.state === 'current') {
+    options.io.stdout.log(`Codex permissions: set up for ${result.storageRoot}. Open Codex there and trust the folder when it asks.`);
+  } else if (result.codexPermissions?.state === 'foreign') {
+    options.io.stdout.log(`Codex permissions: left your own Codex settings in ${result.codexPermissions.path} unchanged.`);
+  }
 
   return 0;
 }

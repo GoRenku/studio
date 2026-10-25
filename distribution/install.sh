@@ -212,3 +212,4 @@ RENKU_UPDATE_SCOPE=skills RENKU_INSTALLED_PRODUCT="$destination" \
 printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
 printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
 printf '%s\n' 'Restart your agent and start a new conversation to load the Renku plugins.'
+printf '%s\n' 'Using Codex? Open it in your Project Library and trust the folder when asked: https://gorenku.com/codex-permissions/'

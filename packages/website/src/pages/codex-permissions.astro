@@ -1,0 +1,96 @@
+---
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/learn.css';
+
+const renkuCodexFile = `# Managed by Renku (\`renku codex permissions\`).
+# Codex applies these permissions only when it works in this folder.
+# Renku refreshes this file on updates; delete the first line to keep your own edits.
+default_permissions = "renku-studio"
+
+[permissions.renku-studio]
+description = "Renku: films, settings, state and Studio."
+extends = ":workspace"
+
+[permissions.renku-studio.filesystem]
+"/Users/you/.config/renku" = "read"
+"/Users/you/.local/state/renku" = "write"
+
+[permissions.renku-studio.network]
+enabled = true
+allow_local_binding = true`;
+---
+
+<BaseLayout title="Codex permissions for Renku" description="What Renku sets up so Codex can run it without approval prompts, only in your Project Library.">
+  <SiteHeader />
+  <main class="learn-page" id="top">
+    <header class="container learn-hero">
+      <div>
+        <p class="eyebrow">Agent setup</p>
+        <h1>Codex permissions</h1>
+        <p class="lede">Codex runs every command in a sandbox. Renku gives Codex the permissions it needs in your Project Library, so Renku can work without approval prompts. Your other Codex projects and your personal Codex settings are not changed.</p>
+        <a class="text-link" href="/download/">Back to installation</a>
+      </div>
+    </header>
+    <div class="container reading-layout">
+      <aside class="reading-nav"><p class="eyebrow">Codex setup</p><a href="#what">What Renku sets up</a><a href="#allows">What it allows</a><a href="#trust">Trust the folder</a><a href="#manage">Check, refresh or remove</a><a href="#own-settings">If you have your own settings</a><a href="#troubleshooting">Troubleshooting</a></aside>
+      <div class="reading-content">
+        <section class="lesson-section" id="what">
+          <h2>What Renku sets up</h2>
+          <p>When you choose your Project Library, in Studio’s first-launch setup or with <code>renku init</code>, Renku writes one file into it: <code>.codex/config.toml</code>. This only happens if Renku’s Codex plugin was installed, so it does nothing for people who don’t use Codex.</p>
+          <p>Codex reads that file only when it works in your Project Library. Everywhere else, Codex keeps using your own settings. Renku never edits <code>~/.codex/config.toml</code>.</p>
+          <p>Installed Renku before this was added? Run this once in Terminal. It shows the file, asks before writing it, and checks that Codex accepts it:</p>
+          <pre data-analytics-copy="codex-permissions"><code>renku codex permissions set</code></pre>
+        </section>
+        <section class="lesson-section" id="allows">
+          <h2>What it allows</h2>
+          <p>The file starts from Codex’s standard workspace rules and adds only what Renku needs:</p>
+          <ul>
+            <li><strong>Your Project Library:</strong> read and write, so Renku can save films, media and generated files. This is the folder Codex is working in.</li>
+            <li><strong>Renku’s settings folder</strong> (<code>~/.config/renku</code>): read only. Your provider API keys are kept here; Codex never changes them.</li>
+            <li><strong>Renku’s state folder</strong> (<code>~/.local/state/renku</code>): read and write. Renku keeps saved provider prices and model information, the current project and the model list here.</li>
+            <li><strong>Network access:</strong> so Renku can reach the generation providers and tell Studio, on this computer, to refresh.</li>
+          </ul>
+          <p>Everything else stays protected: Codex still can’t write to your Documents, other projects or system folders. This is the file Renku writes, with your own folder paths:</p>
+          <pre class="tutorial-command"><code>{renkuCodexFile}</code></pre>
+          <p>On Windows, Renku’s settings folder is <code>%LOCALAPPDATA%\Renku\Studio</code> and its state folder is <code>%LOCALAPPDATA%\Renku\Studio\State</code>.</p>
+        </section>
+        <section class="lesson-section" id="trust">
+          <h2>Trust the folder in Codex</h2>
+          <p>This is the one step Renku can’t do for you. Codex only reads a folder’s settings once you trust that folder.</p>
+          <ul>
+            <li>Open Codex in your Project Library, the folder that holds all your films. Studio shows its path at the top of the Projects page.</li>
+            <li>When Codex asks whether to trust the folder, choose to trust it.</li>
+            <li>Start a new Codex thread there for Renku work. Threads that were already open keep their old permissions.</li>
+          </ul>
+          <p>Open Codex at the Project Library rather than inside one film’s folder. A film folder doesn’t use the Project Library’s settings, so commands there would ask for approval again.</p>
+        </section>
+        <section class="lesson-section" id="manage">
+          <h2>Check, refresh or remove</h2>
+          <p>See whether the permissions are in place, and whether Codex accepts them:</p>
+          <pre data-analytics-copy="codex-permissions"><code>renku codex permissions status</code></pre>
+          <p>“Renku can save its data” means everything works. “Refused” usually means the folder isn’t trusted in Codex yet.</p>
+          <p><code>renku update</code> keeps the file current. To take the permissions away again, run the command below. It deletes only the file Renku wrote.</p>
+          <pre data-analytics-copy="codex-permissions"><code>renku codex permissions remove</code></pre>
+          <p>Agents may check the status, but only you run <code>set</code> or <code>remove</code>.</p>
+        </section>
+        <section class="lesson-section" id="own-settings">
+          <h2>If you have your own Codex settings there</h2>
+          <p>If your Project Library already has a <code>.codex/config.toml</code> that you wrote, Renku leaves it unchanged and says so. To keep your file and still let Codex run Renku, copy the <code>[permissions.renku-studio]</code> sections and the <code>default_permissions</code> line shown above into it.</p>
+          <p>Earlier versions of these instructions asked you to add the profile to your personal <code>~/.codex/config.toml</code> and make it your default. You no longer need that: you can put your personal <code>default_permissions</code> back to what you had before.</p>
+        </section>
+        <section class="lesson-section" id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <ul>
+            <li><strong>An approval prompt, or “Automatic approval review blocked”, for a renku command:</strong> the command left the sandbox. Check that you opened Codex in the Project Library, trusted it, and started a new thread. Then run <code>renku codex permissions status</code>.</li>
+            <li><strong>ENGINE_METADATA_CACHE_UNWRITABLE:</strong> Renku couldn’t save provider information in its state folder. The same checks apply; the message names the folder.</li>
+            <li><strong>CLI026:</strong> the change was made, but Studio wasn’t told to refresh. Check that Studio is running, then refresh it. Don’t run the command again.</li>
+          </ul>
+          <p>For a tighter setup that allows only the providers you use, see the <a href="https://github.com/GoRenku/studio-skills/blob/main/docs/codex-renku-permissions.md">detailed Codex permissions guide</a>.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>

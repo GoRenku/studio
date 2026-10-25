@@ -1,5 +1,13 @@
 export { readCodexPluginInstallation, recordCodexPluginInstallation } from './installation/codex-plugin.js';
 export {
+  readCodexPermissionsFile,
+  refreshCodexPermissionsFile,
+  removeCodexPermissionsFile,
+  writeCodexPermissionsFile,
+  type CodexPermissionsFile,
+  type CodexPermissionsFileState,
+} from './installation/codex-permissions/codex-permissions.js';
+export {
   RENKU_CONFIG_DIR_NAME,
   RENKU_CONFIG_FILE_NAME,
   RENKU_CONFIG_VERSION,

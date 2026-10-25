@@ -239,6 +239,7 @@ try {
   Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'
   Write-Host 'For a custom location, run renku init <storage-root> before completing setup.'
   Write-Host 'Restart your agent and start a new conversation to load the Renku plugins.'
+  Write-Host 'Using Codex? Open it in your Project Library and trust the folder when asked: https://gorenku.com/codex-permissions/'
 } finally {
   Remove-Item -LiteralPath $Temporary -Recurse -Force -ErrorAction SilentlyContinue
 }

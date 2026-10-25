@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import type { CodexGenerationReviewDisplayMode } from '../../client/project-settings.js';
+import { setUpCodexPermissions, type CodexPermissionsFile } from '../installation/codex-permissions/codex-permissions.js';
 import { RenkuConfigError } from './errors.js';
 import {
   resolveRenkuConfigPath,
@@ -31,6 +32,8 @@ export interface InitRenkuConfigResult {
   configDir: string;
   configPath: string;
   storageRoot: string;
+  /** Codex permissions set up for a new Project Library; null when it already existed or Codex is not in use. */
+  codexPermissions: CodexPermissionsFile | null;
 }
 
 export async function readRenkuConfig(
@@ -74,6 +77,7 @@ export async function initRenkuConfig(
       configDir,
       configPath,
       storageRoot: config.storageRoot,
+      codexPermissions: null,
     };
   }
 
@@ -96,6 +100,7 @@ export async function initRenkuConfig(
     configDir,
     configPath,
     storageRoot,
+    codexPermissions: await setUpCodexPermissions({ ...options, projectLibrary: storageRoot }),
   };
 }
 

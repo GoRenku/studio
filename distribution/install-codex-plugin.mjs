@@ -48,9 +48,31 @@ export async function installCodexPlugin({ run, record, report = console.log }) 
   }
 }
 
+/**
+ * Keeps Renku's Codex permissions file in the Project Library current. A
+ * missing file (an install from before Renku wrote it) gets a hint, and a file
+ * the user wrote is left alone. Never fails installation.
+ */
+export async function refreshCodexPermissions({ readSetup, refresh, report = console.log }) {
+  try {
+    const setup = await readSetup();
+    if (setup.status !== 'configured') return;
+    const file = await refresh({ projectLibrary: setup.storageRoot });
+    if (file.state === 'missing') {
+      report(`To let Codex run Renku in ${setup.storageRoot} without approval prompts, run: renku codex permissions set`);
+    } else if (file.state === 'foreign') {
+      report(`Left your own Codex settings in ${file.path} unchanged.`);
+    }
+  } catch (error) {
+    report(`Renku Codex permissions were not refreshed: ${error.message}`);
+  }
+}
+
 async function main() {
   const core = await import('../app/node_modules/@gorenku/studio-core/dist/server/index.js');
-  await installCodexPlugin({ record: core.recordCodexPluginInstallation });
+  if (await installCodexPlugin({ record: core.recordCodexPluginInstallation })) {
+    await refreshCodexPermissions({ readSetup: () => core.readRenkuSetup(), refresh: core.refreshCodexPermissionsFile });
+  }
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
