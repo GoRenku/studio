@@ -5,7 +5,7 @@ import type {
   CastingBoardRequestAction,
   CastingBoardRequestInput,
 } from './contracts.js';
-import { castBoardCandidate, requestMoreLikeShortlist, setBoardCandidateStatus } from './candidate-actions.js';
+import { castBoardCandidate, requestMoreLikeKept, setBoardCandidateStatus } from './candidate-actions.js';
 import { readCastingBoard } from './session-projection.js';
 import type { CastingBoardActionContext, CastingBoardState } from './session-state.js';
 import { pickBoardSheet, requestSheetPicksDone } from './sheet-actions.js';
@@ -16,7 +16,6 @@ type BoardHandlers<TAction extends { kind: string }> = {
 };
 
 const ACT_HANDLERS: BoardHandlers<CastingBoardActAction> = {
-  shortlist: setBoardCandidateStatus,
   hide: setBoardCandidateStatus,
   restore: setBoardCandidateStatus,
   cast: castBoardCandidate,
@@ -24,7 +23,7 @@ const ACT_HANDLERS: BoardHandlers<CastingBoardActAction> = {
 };
 
 const REQUEST_HANDLERS: BoardHandlers<CastingBoardRequestAction> = {
-  moreLikeShortlist: requestMoreLikeShortlist,
+  moreLikeKept: requestMoreLikeKept,
   sheetPicksDone: requestSheetPicksDone,
 };
 

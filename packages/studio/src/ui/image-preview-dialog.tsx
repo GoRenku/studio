@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useEffect, type ReactNode, type SyntheticEvent } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import {
   Dialog,
@@ -26,7 +27,7 @@ interface ImagePreviewDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Wheel, pinch and button zoom with drag to pan. On unless the screen has no use for it. */
   zoomable?: boolean;
-  /** Controls for the shown image, placed beside the close button. */
+  /** Controls for the shown image, placed in the floating zoom pill. */
   actions?: ReactNode;
 }
 
@@ -71,8 +72,7 @@ export function ImagePreviewDialog({
         <DialogDescription className='sr-only'>
           {image?.alt ?? 'Expanded image preview.'}
         </DialogDescription>
-        <div className='absolute right-2 top-2 z-10 flex items-center gap-1.5'>
-          {actions}
+        <div className='absolute right-2 top-2 z-10'>
           <DialogClose asChild>
             <Button
               type='button'
@@ -115,22 +115,25 @@ export function ImagePreviewDialog({
         ) : null}
         {image ? (
           <div
-            className='overflow-hidden bg-panel-bg'
+            className='relative overflow-hidden bg-panel-bg'
             style={{
               ...aspectRatioStyle,
               width: `min(calc(100vw - 3rem), calc((100vh - 3rem) * ${aspectRatio}))`,
             }}
           >
             {zoomable ? (
-              <ZoomablePreviewImage key={image.src} image={image} onImageLoad={onImageLoad} />
+              <ZoomablePreviewImage key={image.src} image={image} actions={actions} onImageLoad={onImageLoad} />
             ) : (
-              <img
-                key={image.src}
-                src={image.src}
-                alt={image.alt}
-                className='block h-full w-full object-contain'
-                onLoad={onImageLoad}
-              />
+              <>
+                <img
+                  key={image.src}
+                  src={image.src}
+                  alt={image.alt}
+                  className='block h-full w-full object-contain'
+                  onLoad={onImageLoad}
+                />
+                {actions ? <div className={cn(FLOATING_PILL, 'flex items-center gap-0.5 rounded-lg border border-panel-border bg-panel-bg/90 p-1 shadow-md backdrop-blur-sm')}>{actions}</div> : null}
+              </>
             )}
           </div>
         ) : null}
@@ -142,9 +145,11 @@ export function ImagePreviewDialog({
 /** Keyed by image so every image opens fitted. */
 function ZoomablePreviewImage({
   image,
+  actions,
   onImageLoad,
 }: {
   image: PreviewImage;
+  actions: ReactNode;
   onImageLoad: (event: SyntheticEvent<HTMLImageElement>) => void;
 }) {
   const zoom = useImageZoom();
@@ -168,10 +173,12 @@ function ZoomablePreviewImage({
         onLoad={onImageLoad}
         className='h-full w-full'
       />
-      <ImageZoomControls zoom={zoom} className='absolute bottom-3 left-1/2 z-10 -translate-x-1/2' />
+      <ImageZoomControls zoom={zoom} className={FLOATING_PILL}>{actions}</ImageZoomControls>
     </>
   );
 }
+
+const FLOATING_PILL = 'absolute bottom-3 left-1/2 z-10 -translate-x-1/2';
 
 function previousIndex(currentIndex: number, imageCount: number): number {
   return (currentIndex - 1 + imageCount) % imageCount;

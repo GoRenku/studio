@@ -14,7 +14,7 @@ export type CastingBoardMode = 'candidates' | 'sheets';
 
 /** A request the user sends to the agent from the board; the agent consumes the latest one once. */
 export type CastingBoardRequest =
-  | { kind: 'moreLikeShortlist'; lookId: string; shortlistedAssetFileIds: string[]; notes: string }
+  | { kind: 'moreLikeKept'; lookId: string; referenceAssetFileIds: string[]; notes: string }
   | { kind: 'cast'; lookId: string; assetFileId: string }
   | { kind: 'sheetPicksDone'; picks: Array<{ costumeId: string; assetFileId: string }> };
 
@@ -79,7 +79,6 @@ export type CastingBoardOpenInput =
 
 /** Durable board actions, written through Core; only cast also waits for the agent. */
 export type CastingBoardActAction =
-  | { kind: 'shortlist'; assetFileId: string }
   | { kind: 'hide'; assetFileId: string }
   | { kind: 'restore'; assetFileId: string }
   | { kind: 'cast'; assetFileId: string }
@@ -92,7 +91,7 @@ export interface CastingBoardActInput {
   action: CastingBoardActAction;
 }
 
-export type CastingBoardRequestAction = { kind: 'moreLikeShortlist'; notes: string } | { kind: 'sheetPicksDone' };
+export type CastingBoardRequestAction = { kind: 'moreLikeKept'; notes: string } | { kind: 'sheetPicksDone' };
 
 export interface CastingBoardRequestInput {
   sessionId: string;

@@ -1,7 +1,7 @@
 import type { CastingCandidateStatus } from '@gorenku/studio-core/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
-import { CandidateCastAction, CandidateStatusToggles } from './candidate-actions';
+import { CandidateCastAction, CandidateHideToggle } from './candidate-actions';
 
 interface CandidateTileProps {
   /** Omitted while the candidate is still being generated. */
@@ -12,13 +12,15 @@ interface CandidateTileProps {
   /** Shown in place of the image while the candidate is still being generated. */
   pending?: { label: string };
   disabled?: boolean;
-  onShortlist?: () => void;
   onHide?: () => void;
   onCast?: () => void;
   onOpen?: () => void;
 }
 
-/** One casting candidate: the image, its model, and the shortlist, hide and cast actions the caller allows. */
+/**
+ * One casting candidate. At rest only the picture and its cast mark show; the model and the hide and
+ * cast actions the caller allows appear on hover or keyboard focus.
+ */
 export function CandidateTile({
   imageUrl,
   modelLabel,
@@ -26,7 +28,6 @@ export function CandidateTile({
   isCast,
   pending,
   disabled = false,
-  onShortlist,
   onHide,
   onCast,
   onOpen,
@@ -40,14 +41,12 @@ export function CandidateTile({
       </div>
     );
   }
-  const shortlisted = status === 'shortlisted';
   const hidden = status === 'hidden';
   const imageAlt = modelLabel ? `Casting candidate from ${modelLabel}` : 'Casting candidate';
   return (
     <figure
       className={cn(
-        'relative aspect-[4/3] overflow-hidden rounded-[9px] border border-border/40 bg-muted/30',
-        shortlisted ? 'outline-2 -outline-offset-2 outline-primary' : null,
+        'group/tile relative aspect-[4/3] overflow-hidden rounded-[9px] border border-border/40 bg-muted/30',
         isCast ? 'outline-2 -outline-offset-2 outline-take-shot-selected-border' : null,
         hidden && !isCast ? 'opacity-35' : null
       )}
@@ -66,21 +65,11 @@ export function CandidateTile({
         <img src={imageUrl} alt={imageAlt} className='h-full w-full object-contain' />
       )}
       {isCast ? <CandidateCastAction isCast className='absolute left-1.5 top-1.5' /> : null}
-      <CandidateStatusToggles
-        status={status}
-        disabled={disabled}
-        onShortlist={onShortlist}
-        onHide={onHide}
-        className='absolute right-1.5 top-1.5'
-      />
-      {modelLabel ? (
-        <figcaption className='absolute bottom-1.5 left-1.5 max-w-[calc(100%-4.5rem)] truncate rounded-full bg-black/60 px-[7px] py-px text-[10.5px] font-semibold text-white'>
-          {modelLabel}
-        </figcaption>
-      ) : null}
-      {isCast ? null : (
-        <CandidateCastAction isCast={false} disabled={disabled} onCast={onCast} className='absolute bottom-1.5 right-1.5' />
-      )}
+      <figcaption className='absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/75 to-transparent px-1.5 pb-1.5 pt-5 opacity-0 pointer-events-none transition-opacity group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100'>
+        <span className='min-w-0 flex-1 truncate text-[10.5px] font-semibold text-white'>{modelLabel}</span>
+        {onHide ? <CandidateHideToggle status={status} disabled={disabled} onHide={onHide} /> : null}
+        {isCast ? null : <CandidateCastAction isCast={false} disabled={disabled} onCast={onCast} />}
+      </figcaption>
     </figure>
   );
 }

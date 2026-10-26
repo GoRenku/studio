@@ -54,7 +54,7 @@ function candidateBoard(overrides: Partial<CastingCandidateBoard> = {}): Casting
       routes: [{ provider: 'acme-cloud', model: portrait, count: 3 }, { provider: 'acme-cloud', model: faces, count: 1 }],
       pending: [{ model: portrait, count: 2 }],
       candidates: [
-        { assetFileId: 'af_1', status: 'shortlisted', model: portrait, imageUri: 'renku-casting-board://board/media/1' },
+        { assetFileId: 'af_1', status: 'candidate', model: portrait, imageUri: 'renku-casting-board://board/media/1' },
         { assetFileId: 'af_2', status: 'candidate', model: faces, imageUri: 'renku-casting-board://board/media/2' },
       ],
     }],
@@ -77,49 +77,52 @@ describe('Casting board panel', () => {
     expect(screen.getByText('Acme Portrait ×3 · Acme Faces ×1 · $0.14')).toBeTruthy();
     expect(screen.getByRole('progressbar', { name: 'Round 1 progress' })).toBeTruthy();
     expect(screen.getAllByText('Generating · Acme Portrait')).toHaveLength(2);
-    expect(screen.getByRole('tab', { name: 'All 4' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Shortlist 1' })).toBeTruthy();
-    expect(await screen.findByText('Acme Faces', { selector: 'figcaption' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Candidates 4' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Hidden 0' })).toBeTruthy();
+    expect(await screen.findByText('Acme Faces', { selector: 'figcaption span' })).toBeTruthy();
   });
 
-  it('enables Cast this Look only with exactly one shortlisted candidate and posts the cast', async () => {
+  it('casts a candidate from its tile and posts the cast', async () => {
     await openBoard(candidateBoard());
     integration.cast.mockImplementation(async () => {
       const session = candidateBoard({ look: { id: 'look_1', name: 'Young', castAssetFileId: 'af_1' }, action: { actionId: 'action_1', kind: 'cast', status: 'pending' } });
       return { sessionId: 'board', actionId: 'action_1', session };
     });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cast this Look' })); });
+    await act(async () => { fireEvent.click((await screen.findAllByRole('button', { name: 'Cast' }))[0]!); });
     expect(integration.cast).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', assetFileId: 'af_1' });
     expect(integration.notify.mock.calls[0]![2]).toBe('Look cast · Ana · Young · candidate from round 1 (Acme Portrait)');
   });
 
-  it('keeps Cast this Look disabled with none or several shortlisted', async () => {
-    const none = candidateBoard();
-    none.rounds[0]!.candidates[0]!.status = 'candidate';
-    await openBoard(none);
-    expect(screen.getByRole('button', { name: 'Cast this Look' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('button', { name: 'More like the shortlist' })).toHaveProperty('disabled', true);
-    cleanup();
-    const several = candidateBoard();
-    several.rounds[0]!.candidates[1]!.status = 'shortlisted';
-    await openBoard(several);
-    expect(screen.getByRole('button', { name: 'Cast this Look' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('button', { name: 'Compare 2' })).toHaveProperty('disabled', false);
+  it('hides a candidate and shows it again from the Hidden tab', async () => {
+    const board = candidateBoard();
+    board.rounds[0]!.candidates[1]!.status = 'hidden';
+    await openBoard(board);
+    expect(screen.getByRole('tab', { name: 'Candidates 3' })).toBeTruthy();
+    expect(screen.queryByRole('img', { name: 'Casting candidate from Acme Faces' })).toBeNull();
+    integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: board }));
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Hide' })); });
+    expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'hide', assetFileId: 'af_1' } });
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Hidden 1' }));
+    const showAgain = await screen.findByRole('button', { name: 'Show again' });
+    await act(async () => { fireEvent.click(showAgain); });
+    expect(integration.act).toHaveBeenLastCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'restore', assetFileId: 'af_2' } });
   });
 
-  it('saves shortlist and hide through the act tool and sends "more like the shortlist" with notes', async () => {
+  it('sends "more like these" with the notes, and needs a kept candidate', async () => {
     await openBoard(candidateBoard());
-    integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: candidateBoard({ revision: 2 }) }));
-    await act(async () => { fireEvent.click((await screen.findAllByRole('button', { name: 'Hide' }))[1]!); });
-    expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'hide', assetFileId: 'af_2' } });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Remove from shortlist' })); });
-    expect(integration.act).toHaveBeenLastCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'restore', assetFileId: 'af_1' } });
-
-    integration.request.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_2', session: candidateBoard({ revision: 3, action: { actionId: 'action_2', kind: 'moreLikeShortlist', status: 'pending' } }) }));
+    integration.request.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_2', session: candidateBoard({ revision: 3, action: { actionId: 'action_2', kind: 'moreLikeKept', status: 'pending' } }) }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Notes for the next round' }), { target: { value: 'Leaner face' } });
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'More like the shortlist' })); });
-    expect(integration.request).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', request: { kind: 'moreLikeShortlist', notes: 'Leaner face' } });
-    expect(integration.notify.mock.calls[0]![2]).toBe('More candidates requested · Ana · Young · 1 shortlisted');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'More like these' })); });
+    expect(integration.request).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', request: { kind: 'moreLikeKept', notes: 'Leaner face' } });
+    expect(integration.notify.mock.calls[0]![2]).toBe('More candidates requested · Ana · Young · like 2 kept');
+    cleanup();
+
+    const allHidden = candidateBoard();
+    allHidden.rounds[0]!.candidates.forEach((candidate) => { candidate.status = 'hidden'; });
+    await openBoard(allHidden);
+    expect(screen.getByRole('button', { name: 'More like these' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Compare 0' })).toHaveProperty('disabled', true);
   });
 
   it('picks a sheet per costume and sends the picks', async () => {
@@ -145,81 +148,67 @@ describe('Casting board panel', () => {
     beforeEach(() => { restoreLayout = stubImageZoomLayout({ width: 800, height: 600 }, { width: 1600, height: 1200 }); });
     afterEach(() => { restoreLayout(); });
 
-    const shortlistOfThree = () => {
+    const threeKept = () => {
       const board = candidateBoard();
       board.rounds[0]!.pending = [];
       board.rounds[0]!.candidates = [
-        { assetFileId: 'af_1', status: 'shortlisted', model: portrait, imageUri: 'renku-casting-board://board/media/1' },
-        { assetFileId: 'af_2', status: 'shortlisted', model: faces, imageUri: 'renku-casting-board://board/media/2' },
-        { assetFileId: 'af_3', status: 'shortlisted', model: studio, imageUri: 'renku-casting-board://board/media/3' },
+        { assetFileId: 'af_1', status: 'candidate', model: portrait, imageUri: 'renku-casting-board://board/media/1' },
+        { assetFileId: 'af_2', status: 'candidate', model: faces, imageUri: 'renku-casting-board://board/media/2' },
+        { assetFileId: 'af_3', status: 'candidate', model: studio, imageUri: 'renku-casting-board://board/media/3' },
       ];
       return board;
     };
 
-    it('opens a candidate large to zoom and keeps shortlist, hide and cast in the viewer', async () => {
+    it('opens a candidate large to zoom and keeps hide and cast in the zoom pill', async () => {
       await openBoard(candidateBoard());
       await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Open casting candidate from acme faces' })); });
       const viewer = await screen.findByRole('dialog');
       loadRenderedImages();
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Zoom in' }));
-      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Fit to view' }));
-      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
+      const pill = within(viewer).getByRole('toolbar', { name: 'Zoom' });
+      fireEvent.click(within(pill).getByRole('button', { name: 'Zoom in' }));
+      expect(within(pill).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+      fireEvent.click(within(pill).getByRole('button', { name: 'Fit to view' }));
+      expect(within(pill).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
 
       integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: candidateBoard({ revision: 2 }) }));
-      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Shortlist' })); });
-      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'shortlist', assetFileId: 'af_2' } });
-      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Hide' })); });
+      await act(async () => { fireEvent.click(within(pill).getByRole('button', { name: 'Hide' })); });
       expect(integration.act).toHaveBeenLastCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'hide', assetFileId: 'af_2' } });
 
       integration.cast.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_1', session: candidateBoard({ revision: 3, look: { id: 'look_1', name: 'Young', castAssetFileId: 'af_2' } }) }));
-      await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Cast' })); });
+      await act(async () => { fireEvent.click(within(pill).getByRole('button', { name: 'Cast' })); });
       expect(integration.cast).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', assetFileId: 'af_2' });
     });
 
-    it('compares the favorite with one challenger at a time and keeps the zoom while switching', async () => {
-      await openBoard(shortlistOfThree());
+    it('compares two kept candidates, steps each side past the other, and casts or hides per side', async () => {
+      await openBoard(threeKept());
       fireEvent.click(screen.getByRole('button', { name: 'Compare 3' }));
-      const favorite = screen.getByRole('region', { name: 'Favorite' });
-      const challenger = screen.getByRole('region', { name: 'Challenger' });
-      await within(challenger).findByAltText('Round 1 · Acme Faces');
+      const first = screen.getByRole('region', { name: 'First candidate' });
+      const second = screen.getByRole('region', { name: 'Second candidate' });
+      await within(second).findByAltText('Round 1 · Acme Faces');
       loadRenderedImages();
-      expect(within(favorite).getByRole('img', { name: 'Round 1 · Acme Portrait' })).toBeTruthy();
-      expect(within(challenger).getByRole('img', { name: 'Round 1 · Acme Faces' })).toBeTruthy();
-      expect(within(challenger).getByText('1 / 2')).toBeTruthy();
+      expect(within(first).getByRole('img', { name: 'Round 1 · Acme Portrait' })).toBeTruthy();
+      expect(within(first).getByText('1 of 3')).toBeTruthy();
+      expect(within(second).getByText('2 of 3')).toBeTruthy();
 
       fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-      expect(within(favorite).getByRole('img').style.transform).toContain('scale(0.75)');
-      expect(within(challenger).getByRole('img').style.transform).toContain('scale(0.75)');
+      expect(within(first).getByRole('img').style.transform).toContain('scale(0.75)');
+      expect(within(second).getByRole('img').style.transform).toContain('scale(0.75)');
 
-      fireEvent.click(within(challenger).getByRole('button', { name: 'Next challenger' }));
-      expect(within(challenger).getByText('2 / 2')).toBeTruthy();
+      fireEvent.click(within(second).getByRole('button', { name: 'Next candidate' }));
       loadRenderedImages();
-      expect(within(challenger).getByRole('img', { name: 'Round 1 · Acme Studio' }).style.transform).toContain('scale(0.75)');
-      expect(screen.getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+      expect(within(second).getByRole('img', { name: 'Round 1 · Acme Studio' }).style.transform).toContain('scale(0.75)');
+      fireEvent.click(within(second).getByRole('button', { name: 'Next candidate' }));
+      expect(within(second).getByText('2 of 3')).toBeTruthy();
+      fireEvent.click(within(first).getByRole('button', { name: 'Next candidate' }));
+      expect(within(first).getByRole('img', { name: 'Round 1 · Acme Studio' })).toBeTruthy();
 
-      fireEvent.click(within(challenger).getByRole('button', { name: 'Make favorite' }));
-      expect(within(favorite).getByRole('img', { name: 'Round 1 · Acme Studio' })).toBeTruthy();
-      expect(within(challenger).getByRole('img', { name: 'Round 1 · Acme Portrait' })).toBeTruthy();
+      integration.cast.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_1', session: threeKept() }));
+      await act(async () => { fireEvent.click(within(second).getByRole('button', { name: 'Cast' })); });
+      expect(integration.cast).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', assetFileId: 'af_2' });
 
-      integration.cast.mockImplementation(async () => ({ sessionId: 'board', actionId: 'action_1', session: shortlistOfThree() }));
-      await act(async () => { fireEvent.click(within(challenger).getByRole('button', { name: 'Cast' })); });
-      expect(integration.cast).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', assetFileId: 'af_1' });
-
-      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: shortlistOfThree() }));
-      await act(async () => { fireEvent.click(within(challenger).getByRole('button', { name: 'Remove from shortlist' })); });
-      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'restore', assetFileId: 'af_1' } });
-    });
-
-    it('folds the shortlist strip away and brings a thumbnail in as the challenger', async () => {
-      await openBoard(shortlistOfThree());
-      fireEvent.click(screen.getByRole('button', { name: 'Compare 3' }));
-      const strip = screen.getByRole('navigation', { name: 'Shortlist' });
-      fireEvent.click(within(strip).getByRole('button', { name: 'Compare round 1 · Acme Studio' }));
-      expect(within(screen.getByRole('region', { name: 'Challenger' })).getByText('2 / 2')).toBeTruthy();
-
-      fireEvent.click(screen.getByRole('button', { name: /^Shortlist 3/ }));
-      expect(screen.queryByRole('navigation', { name: 'Shortlist' })).toBeNull();
+      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: threeKept() }));
+      await act(async () => { fireEvent.click(within(first).getByRole('button', { name: 'Hide' })); });
+      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'hide', assetFileId: 'af_3' } });
     });
 
     it('opens a character sheet large from its corner button and picks it from the viewer', async () => {

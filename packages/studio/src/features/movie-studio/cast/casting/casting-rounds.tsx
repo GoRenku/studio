@@ -2,80 +2,66 @@ import { useState } from 'react';
 import type { CastingCandidateStatus } from '@gorenku/studio-core/client';
 import { CandidatePreviewActions } from '@/features/casting-views/candidate-actions';
 import { CandidateTile } from '@/features/casting-views/candidate-tile';
-import { AgentRequestHint } from '@/ui/agent-request';
 import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
 import type {
   CastCastingLookResponse,
   CastingRoundViewResponse,
 } from '@/services/studio-project-contracts';
-import { castLookRequest, moreLikeShortlistRequest } from '../../agent-request-copy';
-import { roundSummary } from './casting-summaries';
-import { CastingSectionHeading } from './casting-section-heading';
+import { isKeptCandidate, roundSummary } from './casting-summaries';
 
 interface CastingRoundsProps {
-  castMemberName: string;
   look: CastCastingLookResponse;
+  /** Hidden candidates show (dimmed) only when the director asks to see them. */
+  showHidden: boolean;
   pendingAssetFileId: string | null;
   onStatusChange: (assetFileId: string, status: CastingCandidateStatus) => void;
   onCast: (lookId: string, assetFileId: string) => void;
 }
 
-/** Every casting round for one Look, with shortlist, hide and cast on each candidate. */
-export function CastingRounds({
-  castMemberName,
-  look,
-  pendingAssetFileId,
-  onStatusChange,
-  onCast,
-}: CastingRoundsProps) {
-  const hasShortlist = look.rounds.some((round) =>
-    round.candidates.some((candidate) => candidate.status === 'shortlisted')
-  );
+/** Every casting round of one Look, with hide and cast on each candidate. */
+export function CastingRounds({ look, showHidden, pendingAssetFileId, onStatusChange, onCast }: CastingRoundsProps) {
   return (
-    <section className='mt-8'>
-      <CastingSectionHeading>Casting rounds · {look.name}</CastingSectionHeading>
-      {look.rounds.length === 0 ? (
-        <AgentRequestHint request={castLookRequest(castMemberName, look.name)} className='mt-3' />
-      ) : (
-        <div className='mt-3 flex flex-col gap-5'>
-          {look.rounds.map((round) => (
-            <CastingRound
-              key={round.id}
-              look={look}
-              round={round}
-              pendingAssetFileId={pendingAssetFileId}
-              onStatusChange={onStatusChange}
-              onCast={onCast}
-            />
-          ))}
-          {hasShortlist ? (
-            <AgentRequestHint request={moreLikeShortlistRequest(castMemberName, look.name)} />
-          ) : null}
-        </div>
-      )}
-    </section>
+    <div className='flex flex-col gap-5'>
+      {look.rounds.map((round) => (
+        <CastingRound
+          key={round.id}
+          look={look}
+          round={round}
+          showHidden={showHidden}
+          pendingAssetFileId={pendingAssetFileId}
+          onStatusChange={onStatusChange}
+          onCast={onCast}
+        />
+      ))}
+    </div>
   );
 }
 
 function CastingRound({
   look,
   round,
+  showHidden,
   pendingAssetFileId,
   onStatusChange,
   onCast,
-}: Omit<CastingRoundsProps, 'castMemberName'> & { round: CastingRoundViewResponse }) {
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const previewCandidate = previewIndex === null ? null : round.candidates[previewIndex] ?? null;
-  const toggleStatus = (
-    candidate: CastingRoundViewResponse['candidates'][number],
-    status: 'shortlisted' | 'hidden'
-  ) => onStatusChange(candidate.assetFileId, candidate.status === status ? 'candidate' : status);
+}: CastingRoundsProps & { round: CastingRoundViewResponse }) {
+  // The viewer keeps the candidates it opened with, so hiding one never moves the shown one away.
+  const [preview, setPreview] = useState<{ assetFileIds: string[]; index: number } | null>(null);
+  const shown = showHidden
+    ? round.candidates
+    : round.candidates.filter((candidate) => isKeptCandidate(candidate, look.castCandidateAssetFileId));
+  const previewCandidates = preview
+    ? preview.assetFileIds.flatMap((assetFileId) => round.candidates.find((candidate) => candidate.assetFileId === assetFileId) ?? [])
+    : [];
+  const previewCandidate = preview ? previewCandidates[preview.index] ?? null : null;
+  const toggleHidden = (candidate: CastingRoundViewResponse['candidates'][number]) =>
+    onStatusChange(candidate.assetFileId, candidate.status === 'hidden' ? 'candidate' : 'hidden');
   return (
     <div className='flex flex-col gap-2'>
       <p className='text-xs text-muted-foreground'>{roundSummary(round)}</p>
-      {round.candidates.length > 0 ? (
+      {shown.length > 0 ? (
         <div className='grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5'>
-          {round.candidates.map((candidate, index) => (
+          {shown.map((candidate, index) => (
             <CandidateTile
               key={candidate.assetFileId}
               imageUrl={candidate.assetFile.url}
@@ -83,36 +69,34 @@ function CastingRound({
               status={candidate.status}
               isCast={candidate.assetFileId === look.castCandidateAssetFileId}
               disabled={pendingAssetFileId === candidate.assetFileId}
-              onShortlist={() => toggleStatus(candidate, 'shortlisted')}
-              onHide={() => toggleStatus(candidate, 'hidden')}
+              onHide={() => toggleHidden(candidate)}
               onCast={() => onCast(look.id, candidate.assetFileId)}
-              onOpen={() => setPreviewIndex(index)}
+              onOpen={() => setPreview({ assetFileIds: shown.map((entry) => entry.assetFileId), index })}
             />
           ))}
         </div>
       ) : null}
-      {previewCandidate !== null && previewIndex !== null ? (
+      {preview && previewCandidate ? (
         <ImagePreviewDialog
-          images={round.candidates.map((candidate) => ({
+          images={previewCandidates.map((candidate) => ({
             src: candidate.assetFile.url,
             alt: `Casting candidate from ${candidate.model.name}`,
             title: `${look.name} · Round ${round.number}`,
           }))}
-          currentIndex={previewIndex}
-          onCurrentIndexChange={setPreviewIndex}
+          currentIndex={preview.index}
+          onCurrentIndexChange={(index) => setPreview({ ...preview, index })}
           actions={
             <CandidatePreviewActions
               status={previewCandidate.status}
               isCast={previewCandidate.assetFileId === look.castCandidateAssetFileId}
               disabled={pendingAssetFileId === previewCandidate.assetFileId}
-              onShortlist={() => toggleStatus(previewCandidate, 'shortlisted')}
-              onHide={() => toggleStatus(previewCandidate, 'hidden')}
+              onHide={() => toggleHidden(previewCandidate)}
               onCast={() => onCast(look.id, previewCandidate.assetFileId)}
             />
           }
           onOpenChange={(open) => {
             if (!open) {
-              setPreviewIndex(null);
+              setPreview(null);
             }
           }}
         />

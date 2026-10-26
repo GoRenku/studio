@@ -33,13 +33,13 @@ describe('studio-cast-casting-api', () => {
   });
 
   it('sends a candidate status with the Studio token', async () => {
-    await setCastingCandidateStatus('grid', 'cast_ada', 'asset_a', 'shortlisted');
+    await setCastingCandidateStatus('grid', 'cast_ada', 'asset_a', 'hidden');
 
     const [url, init] = lastCall();
     expect(url).toBe('/studio-api/projects/grid/cast/cast_ada/casting/candidates/asset_a/status');
     expect(init?.method).toBe('PUT');
     expect(new Headers(init?.headers).get('X-Renku-Studio-Token')).toBe('token-123');
-    expect(JSON.parse(String(init?.body))).toEqual({ status: 'shortlisted' });
+    expect(JSON.parse(String(init?.body))).toEqual({ status: 'hidden' });
   });
 
   it('casts a Look candidate and picks a costume sheet', async () => {

@@ -22,7 +22,7 @@ export const castingBoardOpenSchema = z.object({
 export const castingBoardActSchema = z.object({
   sessionId: boardIdentity,
   action: z.discriminatedUnion('kind', [
-    z.object({ kind: z.enum(['shortlist', 'hide', 'restore', 'cast']), assetFileId: boardIdentity }).strict(),
+    z.object({ kind: z.enum(['hide', 'restore', 'cast']), assetFileId: boardIdentity }).strict(),
     z.object({ kind: z.literal('pickSheet'), costumeId: boardIdentity, assetFileId: boardIdentity }).strict(),
   ]),
 }).strict();
@@ -30,7 +30,7 @@ export const castingBoardActSchema = z.object({
 export const castingBoardRequestSchema = z.object({
   sessionId: boardIdentity,
   request: z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('moreLikeShortlist'), notes: z.string().max(CASTING_BOARD_MAX_NOTES) }).strict(),
+    z.object({ kind: z.literal('moreLikeKept'), notes: z.string().max(CASTING_BOARD_MAX_NOTES) }).strict(),
     z.object({ kind: z.literal('sheetPicksDone') }).strict(),
   ]),
 }).strict();

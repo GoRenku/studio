@@ -7,38 +7,42 @@ import type {
 } from '@gorenku/studio-codex/casting-board';
 import type { CastingBoardRequestReceipt } from '@/services/codex-casting-board';
 
-export type CandidateTab = 'all' | 'shortlist' | 'hidden';
+export type CandidateTab = 'candidates' | 'hidden';
 
 /** A candidate with the round it came from. */
 export interface BoardCandidate extends CastingBoardCandidate {
   roundNumber: number;
 }
 
-const TAB_FILTERS: Record<CandidateTab, (candidate: CastingBoardCandidate) => boolean> = {
-  all: () => true,
-  shortlist: (candidate) => candidate.status === 'shortlisted',
-  hidden: (candidate) => candidate.status === 'hidden',
+/** A kept candidate is one that isn't hidden; the cast candidate always counts as kept. */
+export function isKeptCandidate(candidate: CastingBoardCandidate, castAssetFileId: string | null): boolean {
+  return candidate.status !== 'hidden' || candidate.assetFileId === castAssetFileId;
+}
+
+const TAB_FILTERS: Record<CandidateTab, (candidate: CastingBoardCandidate, castAssetFileId: string | null) => boolean> = {
+  candidates: isKeptCandidate,
+  hidden: (candidate, castAssetFileId) => !isKeptCandidate(candidate, castAssetFileId),
 };
 
 export function boardCandidates(board: CastingCandidateBoard): BoardCandidate[] {
   return board.rounds.flatMap((round) => round.candidates.map((candidate) => ({ ...candidate, roundNumber: round.number })));
 }
 
-export function tabCandidates(candidates: CastingBoardCandidate[], tab: CandidateTab): CastingBoardCandidate[] {
-  return candidates.filter(TAB_FILTERS[tab]);
+export function tabCandidates<T extends CastingBoardCandidate>(candidates: T[], tab: CandidateTab, castAssetFileId: string | null): T[] {
+  return candidates.filter((candidate) => TAB_FILTERS[tab](candidate, castAssetFileId));
 }
 
 export function pendingTotal(round: CastingBoardRound): number {
   return round.pending.reduce((total, entry) => total + entry.count, 0);
 }
 
-/** Every candidate plus the ones still being generated. */
+/** Kept candidates plus the ones still being generated, and the hidden ones. */
 export function tabCounts(board: CastingCandidateBoard): Record<CandidateTab, number> {
   const candidates = boardCandidates(board);
+  const castAssetFileId = board.look.castAssetFileId;
   return {
-    all: candidates.length + board.rounds.reduce((total, round) => total + pendingTotal(round), 0),
-    shortlist: tabCandidates(candidates, 'shortlist').length,
-    hidden: tabCandidates(candidates, 'hidden').length,
+    candidates: tabCandidates(candidates, 'candidates', castAssetFileId).length + board.rounds.reduce((total, round) => total + pendingTotal(round), 0),
+    hidden: tabCandidates(candidates, 'hidden', castAssetFileId).length,
   };
 }
 
@@ -72,7 +76,7 @@ function candidateRequestSummary(board: CastingCandidateBoard, kind: string): st
     const cast = boardCandidates(board).find((candidate) => candidate.assetFileId === board.look.castAssetFileId);
     return cast ? `Look cast · ${subject} · candidate from round ${cast.roundNumber} (${cast.model.name})` : `Look cast · ${subject}`;
   }
-  return `More candidates requested · ${subject} · ${tabCandidates(boardCandidates(board), 'shortlist').length} shortlisted`;
+  return `More candidates requested · ${subject} · like ${tabCandidates(boardCandidates(board), 'candidates', board.look.castAssetFileId).length} kept`;
 }
 
 function sheetRequestSummary(board: CastingSheetBoard): string {

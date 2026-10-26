@@ -14,7 +14,7 @@ import { readMediaGenerationLookbooks } from '../visual-language-context.js';
 
 /**
  * A casting candidate shows one Look of a Cast Member. The round's references
- * (an earlier Look's cast candidate, or a shortlist) are the identity
+ * (an earlier Look's cast candidate, or the candidates the director kept) are the identity
  * reference; other cast Looks are offered as candidates.
  */
 export const buildCastingRoundPurposeContext: MediaGenerationPurposeBuilder = (input) => {

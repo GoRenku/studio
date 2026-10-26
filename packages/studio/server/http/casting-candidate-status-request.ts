@@ -41,7 +41,7 @@ export function readCastingCandidateStatusRequest(
         'STUDIO_SERVER363',
         `status must be one of ${CASTING_CANDIDATE_STATUSES.join(', ')}.`,
         { path: ['status'], context: CONTEXT },
-        'Send candidate, shortlisted or hidden.'
+        'Send candidate or hidden.'
       )
     );
   }
@@ -61,6 +61,6 @@ function throwRequestError(issues: DiagnosticIssue[]): never {
     code: 'STUDIO_SERVER364',
     message: 'Casting candidate status request failed validation.',
     issues,
-    suggestion: 'Send a status of candidate, shortlisted or hidden.',
+    suggestion: 'Send a status of candidate or hidden.',
   });
 }

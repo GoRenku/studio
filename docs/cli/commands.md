@@ -726,7 +726,7 @@ renku cast wardrobe show --cast <cast-member-id> --json
 renku cast wardrobe validate|write --file <cast-wardrobe-plan-json> --json
 renku cast casting round create --file <casting-round-json> --json
 renku cast casting show --look <look-id> --json
-renku cast casting candidate status --asset-file <asset-file-id> --status candidate|shortlisted|hidden --json
+renku cast casting candidate status --asset-file <asset-file-id> --status candidate|hidden --json
 renku asset select --project <project> --target look:<look-id> --asset-file <casting-candidate-asset-file-id> --json
 renku asset select --project <project> --target costume:<costume-id> --asset-file <character-sheet-asset-file-id> --json
 ```

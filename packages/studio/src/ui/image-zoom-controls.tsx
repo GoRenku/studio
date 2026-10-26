@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
@@ -6,12 +7,14 @@ import type { ImageZoom } from '@/ui/image-zoom';
 interface ImageZoomControlsProps {
   zoom: Pick<ImageZoom, 'layout' | 'label' | 'zoomedIn' | 'canZoomIn' | 'zoomIn' | 'zoomOut' | 'reset' | 'actualPixels'>;
   className?: string;
+  /** Controls for the shown image, drawn after a divider in the same pill. */
+  children?: ReactNode;
 }
 
 const ZOOM_BUTTON = 'h-7 rounded-md px-2 text-xs text-foreground hover:bg-item-hover-bg';
 
 /** Zoom out, the current zoom (which fits the image again when clicked), zoom in, and actual pixels. */
-export function ImageZoomControls({ zoom, className }: ImageZoomControlsProps) {
+export function ImageZoomControls({ zoom, className, children }: ImageZoomControlsProps) {
   const ready = zoom.layout !== null;
   return (
     <div
@@ -32,6 +35,12 @@ export function ImageZoomControls({ zoom, className }: ImageZoomControlsProps) {
       <Button type='button' variant='ghost' aria-label='Actual pixels' title='Actual pixels' disabled={!ready} className={cn(ZOOM_BUTTON, 'font-mono tabular-nums')} onClick={zoom.actualPixels}>
         100%
       </Button>
+      {children ? (
+        <>
+          <span aria-hidden='true' className='mx-1 h-4 w-px bg-panel-border' />
+          {children}
+        </>
+      ) : null}
     </div>
   );
 }

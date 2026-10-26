@@ -167,11 +167,11 @@ describe('casting', () => {
     expect(first.assetFile.type).toBe('casting_candidate');
     expect(first.assetFile.projectRelativePath).toMatch(/^cast\/mehmed-ii\/casting\//);
 
-    await projectData.setCastingCandidateStatus({ homeDir, assetFileId: first.assetFile.id, status: 'shortlisted' });
+    await projectData.setCastingCandidateStatus({ homeDir, assetFileId: first.assetFile.id, status: 'hidden' });
     const look = await projectData.showCastingLook({ homeDir, lookId: young.id });
     expect(look.rounds[0]).toMatchObject({ number: 1, expectedCount: 3 });
     expect(look.rounds[0]!.candidates.map((candidate) => [candidate.status, candidate.model.name])).toEqual([
-      ['shortlisted', 'Model A'],
+      ['hidden', 'Model A'],
       ['candidate', 'Model B'],
     ]);
     await expect(projectData.setCastingCandidateStatus({ homeDir, assetFileId: first.assetFile.id, status: 'kept' as 'hidden' }))

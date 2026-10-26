@@ -9,7 +9,7 @@ export interface CandidatePreviewSelection {
   index: number;
 }
 
-/** The casting board's image viewer, with shortlist, hide and cast for the shown candidate. */
+/** The casting board's image viewer, with hide and cast for the shown candidate. */
 export function CandidatePreview(input: {
   selection: CandidatePreviewSelection;
   candidates: BoardCandidate[];
@@ -18,7 +18,7 @@ export function CandidatePreview(input: {
   disabled: boolean;
   castDisabled: boolean;
   onSelectionChange: (selection: CandidatePreviewSelection | null) => void;
-  onToggleStatus: (candidate: BoardCandidate, status: 'shortlisted' | 'hidden') => void;
+  onToggleHidden: (candidate: BoardCandidate) => void;
   onCast: (assetFileId: string) => void;
 }) {
   const { selection } = input;
@@ -50,8 +50,7 @@ export function CandidatePreview(input: {
           status={current.status}
           isCast={current.assetFileId === input.castAssetFileId}
           disabled={input.disabled}
-          onShortlist={() => input.onToggleStatus(current, 'shortlisted')}
-          onHide={() => input.onToggleStatus(current, 'hidden')}
+          onHide={() => input.onToggleHidden(current)}
           castDisabled={input.disabled || input.castDisabled}
           onCast={() => input.onCast(current.assetFileId)}
         />

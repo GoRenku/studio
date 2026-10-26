@@ -40,86 +40,99 @@ describe('CastMemberCastingTab', () => {
     expect(screen.getByText('Cast Ada.')).toBeTruthy();
   });
 
-  it('shows each Look with its cast candidate, scenes, casting round and costume counts', async () => {
-    vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
+  it('shows each Look with its picture, name and one status, and opens on the first Look with a round', async () => {
+    const resource = castCastingResource();
+    resource.looks.unshift({ ...resource.looks[1]!, id: 'look_child', name: 'Child', sceneIds: [], rounds: [] });
+    vi.mocked(readCastCasting).mockResolvedValue(resource);
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
 
-    const young = (await screen.findByRole('heading', { name: 'Young', level: 3 })).closest('article')!;
+    const young = await screen.findByRole('tab', { name: /Young/ });
+    expect(young.getAttribute('aria-selected')).toBe('true');
     expect(within(young).getByRole('img', { name: 'Young, cast' }).getAttribute('src')).toBe('/assets/asset_young_b');
-    expect(within(young).getByText('Scenes 2–4')).toBeTruthy();
-    expect(within(young).getByText('Cast from round 1 of 1 · Lumen Image')).toBeTruthy();
-    expect(within(young).getByText('2 costumes · 1 sheet picked')).toBeTruthy();
-
-    const older = screen.getByRole('heading', { name: 'Years later', level: 3 }).closest('article')!;
-    expect(within(older).queryByRole('img')).toBeNull();
-    expect(within(older).getByText('Scenes 1, 5–6')).toBeTruthy();
-    expect(within(older).getByText('Not cast yet · 1 round')).toBeTruthy();
+    expect(within(young).getByText('Cast')).toBeTruthy();
+    expect(within(screen.getByRole('tab', { name: /Years later/ })).getByText('1 candidate')).toBeTruthy();
+    expect(within(screen.getByRole('tab', { name: /Child/ })).getByText('Not cast')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Young', level: 3 })).toBeTruthy();
+    expect(screen.getByText('3 scenes')).toBeTruthy();
   });
 
-  it('shows the wardrobe strip with a Look band and a Costume band', async () => {
+  it('lights up the picked Look in the scene bar and switches Looks', async () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
 
-    await screen.findByText('Wardrobe by scene');
-    expect(screen.getByText('Look')).toBeTruthy();
-    expect(screen.getByText('Costume')).toBeTruthy();
-    expect(screen.getAllByTitle('Years later')).toHaveLength(2);
-    expect(screen.getAllByTitle('Suit')).toHaveLength(2);
-    expect(screen.getAllByTitle('Overalls')[0]!.style.gridColumn).toBe('span 2');
+    expect(await screen.findByRole('img', { name: 'Young: Scenes 2–4' })).toBeTruthy();
+    expect(screen.getByTitle('Scene 1 · Years later').className).toContain('opacity-30');
+    expect(screen.getByTitle('Scene 2 · Young').className).not.toContain('opacity-30');
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Years later/ }));
+
+    expect(screen.getByRole('img', { name: 'Years later: Scenes 1, 5–6' })).toBeTruthy();
+    expect(screen.getByTitle('Scene 2 · Young').className).toContain('opacity-30');
+    expect(screen.getByRole('heading', { name: 'Years later', level: 3 })).toBeTruthy();
   });
 
-  it('summarizes each round with its models, counts and estimate', async () => {
+  it('summarizes each round with its count and estimate', async () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
 
-    expect(await screen.findByText('Round 1 · 3 candidates · Lumen Image × 3 · estimated $0.30')).toBeTruthy();
-    expect(screen.getByText('Round 1 · 1 of 4 candidates · Lumen Image × 2, Prism × 2')).toBeTruthy();
-    expect(screen.getAllByText('Lumen Image', { selector: 'figcaption' })).toHaveLength(3);
+    expect(await screen.findByText('Round 1 · 3 candidates · $0.30')).toBeTruthy();
+    expect(screen.getAllByText('Lumen Image', { selector: 'figcaption span' })).toHaveLength(2);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Years later/ }));
+    expect(screen.getByText('Round 1 · 1 of 4')).toBeTruthy();
   });
 
-  it('shortlists, hides and casts candidates through the Studio routes, then reloads', async () => {
+  it('hides, shows again and casts candidates through the Studio routes, then reloads', async () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
     vi.mocked(setCastingCandidateStatus).mockResolvedValue({} as never);
     vi.mocked(castLookCandidate).mockResolvedValue({} as never);
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-    await screen.findByText('Casting rounds · Young');
+    await screen.findByText('Round 1 · 3 candidates · $0.30');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove from shortlist' }));
-    await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_a', 'candidate'));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Show again' }));
-    await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_c', 'candidate'));
+    expect(screen.getAllByRole('button', { name: /^Open casting candidate/ })).toHaveLength(2);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Hide' })[0]!);
     await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_a', 'hidden'));
 
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 hidden' }));
+    expect(screen.getAllByRole('button', { name: /^Open casting candidate/ })).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Show again' }));
+    await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_c', 'candidate'));
+    fireEvent.click(screen.getByRole('button', { name: 'Fold away 1 hidden' }));
+    expect(screen.getAllByRole('button', { name: /^Open casting candidate/ })).toHaveLength(2);
+
     fireEvent.click(screen.getAllByRole('button', { name: 'Cast' })[0]!);
     await waitFor(() => expect(castLookCandidate).toHaveBeenCalledWith('grid', 'cast_ada', 'look_young', 'asset_young_a'));
-    await waitFor(() => expect(readCastCasting).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(readCastCasting).toHaveBeenCalledTimes(4));
   });
 
-  it('marks the cast candidate and offers more like the shortlist', async () => {
+  it('offers more like the kept candidates only while the Look is not cast', async () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-    await screen.findByText('Casting rounds · Young');
+    await screen.findByText('Round 1 · 3 candidates · $0.30');
+    expect(screen.queryByText(/like the candidates I kept/)).toBeNull();
 
-    expect(screen.getAllByText('Cast', { selector: 'span' })).toHaveLength(1);
-    expect(screen.getByText('Run another casting round for Ada · Young like the shortlisted candidates.')).toBeTruthy();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Years later/ }));
+    expect(screen.getByText('Run another casting round for Ada · Years later like the candidates I kept.')).toBeTruthy();
+    expect(screen.queryByText('Ask your agent')).toBeNull();
   });
 
-  it('shows a request for a Look with no rounds', async () => {
+  it('shows one request card for a Look with no rounds', async () => {
     const resource = castCastingResource();
     resource.looks[1] = { ...resource.looks[1]!, rounds: [] };
     vi.mocked(readCastCasting).mockResolvedValue(resource);
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    fireEvent.mouseDown(await screen.findByRole('tab', { name: /Years later/ }));
 
-    expect(await screen.findByText('Run a casting round for Ada · Years later.')).toBeTruthy();
+    expect(screen.getByText('No casting rounds yet')).toBeTruthy();
+    expect(screen.getByText('Run a casting round for Ada · Years later.')).toBeTruthy();
+    expect(screen.getAllByText('Ask your agent')).toHaveLength(1);
+    expect(screen.queryByRole('heading', { name: 'Costumes' })).toBeNull();
   });
 
   it('reports a failed pick without leaving the tab', async () => {
@@ -127,23 +140,23 @@ describe('CastMemberCastingTab', () => {
     vi.mocked(castLookCandidate).mockRejectedValue(new Error('That candidate belongs to another Look.'));
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-    await screen.findByText('Casting rounds · Young');
+    await screen.findByText('Round 1 · 3 candidates · $0.30');
     fireEvent.click(screen.getAllByRole('button', { name: 'Cast' })[0]!);
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('That candidate belongs to another Look.'));
-    expect(screen.getByText('Casting rounds · Young')).toBeTruthy();
+    expect(screen.getByText('Round 1 · 3 candidates · $0.30')).toBeTruthy();
   });
 
-  it('lists each costume with every character sheet and picks one through the Studio route', async () => {
+  it("lists the cast Look's costumes with every character sheet and picks one through the Studio route", async () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
     vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-    await screen.findByText('Character sheets');
+    await screen.findByRole('heading', { name: 'Costumes' });
+    expect(screen.queryByRole('heading', { name: 'Suit' })).toBeNull();
 
     const overalls = screen.getByRole('heading', { name: 'Overalls' }).parentElement!.parentElement!;
     expect(within(overalls).getByText('Scenes 2–3')).toBeTruthy();
-    expect(within(overalls).getByText('Young look')).toBeTruthy();
     expect(within(overalls).getByText('Picked')).toBeTruthy();
     expect(within(overalls).getAllByRole('button', { name: /for Overalls/ })).toHaveLength(2);
     expect(within(overalls).getAllByRole('button', { name: 'View sheet large' })).toHaveLength(2);
@@ -155,23 +168,27 @@ describe('CastMemberCastingTab', () => {
     await waitFor(() =>
       expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_raincoat', 'asset_sheet_raincoat')
     );
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Years later/ }));
+    expect(screen.queryByRole('heading', { name: 'Costumes' })).toBeNull();
   });
 
   it.each([
     [{ costumes: [], characterSheets: [] }, "Plan Ada's wardrobe."],
     [{ characterSheets: [] }, "Make Ada's character sheets."],
-  ])('asks for the next wardrobe step when it is missing', async (overrides, request) => {
+  ])('asks for the next wardrobe step of the cast Look in one card', async (overrides, request) => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource(overrides));
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
 
     expect(await screen.findByText(request)).toBeTruthy();
+    expect(screen.getAllByText('Ask your agent')).toHaveLength(1);
   });
 
   it.each(['surface:castMember:cast_ada', 'screenplay'])('reloads after %s changes', async (resourceKey) => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-    await screen.findByText('Casting rounds · Young');
+    await screen.findByRole('tab', { name: /Young/ });
 
     act(() => {
       window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
@@ -187,27 +204,26 @@ describe('CastMemberCastingTab', () => {
     beforeEach(() => { restoreLayout = stubImageZoomLayout({ width: 800, height: 600 }, { width: 1600, height: 1200 }); });
     afterEach(() => { restoreLayout(); });
 
-    it('opens a candidate large to zoom, with shortlist, hide and cast in the viewer', async () => {
+    it('opens a candidate large to zoom, with hide and cast in the zoom pill', async () => {
       vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
       vi.mocked(setCastingCandidateStatus).mockResolvedValue({} as never);
       vi.mocked(castLookCandidate).mockResolvedValue({} as never);
 
       render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-      await screen.findByText('Casting rounds · Young');
+      await screen.findByText('Round 1 · 3 candidates · $0.30');
       fireEvent.click(screen.getAllByRole('button', { name: 'Open casting candidate from lumen image' })[0]!);
       const viewer = await screen.findByRole('dialog');
       loadRenderedImages();
 
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Zoom in' }));
-      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Fit to view' }));
-      expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
+      const pill = within(viewer).getByRole('toolbar', { name: 'Zoom' });
+      fireEvent.click(within(pill).getByRole('button', { name: 'Zoom in' }));
+      expect(within(pill).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
+      fireEvent.click(within(pill).getByRole('button', { name: 'Fit to view' }));
+      expect(within(pill).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
 
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Remove from shortlist' }));
-      await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_a', 'candidate'));
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Hide' }));
+      fireEvent.click(within(pill).getByRole('button', { name: 'Hide' }));
       await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenLastCalledWith('grid', 'cast_ada', 'asset_young_a', 'hidden'));
-      fireEvent.click(within(viewer).getByRole('button', { name: 'Cast' }));
+      fireEvent.click(within(pill).getByRole('button', { name: 'Cast' }));
       await waitFor(() => expect(castLookCandidate).toHaveBeenCalledWith('grid', 'cast_ada', 'look_young', 'asset_young_a'));
 
       fireEvent.click(within(viewer).getByRole('button', { name: 'Show next image' }));
@@ -221,7 +237,7 @@ describe('CastMemberCastingTab', () => {
       vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
 
       render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-      await screen.findByText('Character sheets');
+      await screen.findByRole('heading', { name: 'Costumes' });
       const raincoat = screen.getByRole('heading', { name: 'Raincoat' }).parentElement!.parentElement!;
       fireEvent.click(within(raincoat).getAllByRole('button', { name: 'View sheet large' })[1]!);
       const viewer = await screen.findByRole('dialog');
@@ -234,6 +250,29 @@ describe('CastMemberCastingTab', () => {
       await waitFor(() =>
         expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_raincoat', 'asset_sheet_raincoat')
       );
+    });
+
+    it('compares the kept candidates in a large window, casting and hiding from either side', async () => {
+      const resource = castCastingResource();
+      resource.looks[0]!.rounds[0]!.candidates[2]!.status = 'candidate';
+      vi.mocked(readCastCasting).mockResolvedValue(resource);
+      vi.mocked(setCastingCandidateStatus).mockResolvedValue({} as never);
+      vi.mocked(castLookCandidate).mockResolvedValue({} as never);
+
+      render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Compare 3' }));
+      const compare = await screen.findByRole('dialog', { name: 'Compare · Young' });
+      loadRenderedImages();
+      const first = within(compare).getByRole('region', { name: 'First candidate' });
+      const second = within(compare).getByRole('region', { name: 'Second candidate' });
+      expect(within(second).getByText('Cast', { selector: 'span' })).toBeTruthy();
+
+      fireEvent.click(within(first).getByRole('button', { name: 'Cast' }));
+      await waitFor(() => expect(castLookCandidate).toHaveBeenCalledWith('grid', 'cast_ada', 'look_young', 'asset_young_a'));
+      await waitFor(() => expect(within(second).getByRole('button', { name: 'Hide' }).hasAttribute('disabled')).toBe(false));
+
+      fireEvent.click(within(second).getByRole('button', { name: 'Hide' }));
+      await waitFor(() => expect(setCastingCandidateStatus).toHaveBeenCalledWith('grid', 'cast_ada', 'asset_young_b', 'hidden'));
     });
   });
 });

@@ -90,8 +90,8 @@ export function castLookRequest(castMemberName: string, lookName: string): strin
   return `Run a casting round for ${castMemberName} · ${lookName}.`;
 }
 
-export function moreLikeShortlistRequest(castMemberName: string, lookName: string): string {
-  return `Run another casting round for ${castMemberName} · ${lookName} like the shortlisted candidates.`;
+export function moreLikeKeptRequest(castMemberName: string, lookName: string): string {
+  return `Run another casting round for ${castMemberName} · ${lookName} like the candidates I kept.`;
 }
 
 export function planWardrobeRequest(castMemberName: string): string {

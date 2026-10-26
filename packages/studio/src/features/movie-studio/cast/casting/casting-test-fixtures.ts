@@ -48,7 +48,7 @@ export function castCastingResource(
           createdAt: '2026-10-23T00:00:00.000Z',
           expectedCount: 3,
           candidates: [
-            { assetFileId: 'asset_young_a', roundId: 'round_young_1', status: 'shortlisted', modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: castingImage('asset_young_a') },
+            { assetFileId: 'asset_young_a', roundId: 'round_young_1', status: 'candidate', modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: castingImage('asset_young_a') },
             { assetFileId: 'asset_young_b', roundId: 'round_young_1', status: 'candidate', modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: castingImage('asset_young_b') },
             { assetFileId: 'asset_young_c', roundId: 'round_young_1', status: 'hidden', modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: castingImage('asset_young_c') },
           ],

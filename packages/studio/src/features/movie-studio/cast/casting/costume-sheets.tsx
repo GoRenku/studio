@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ExpandSheetButton, PickSheetAction } from '@/features/casting-views/sheet-actions';
 import type { SceneStripScene } from '@/features/casting-views/scene-strip';
 import { cn } from '@/lib/utils';
-import { AgentRequestHint } from '@/ui/agent-request';
+import { AgentRequest } from '@/ui/agent-request';
 import { Button } from '@/ui/button';
 import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
 import type { CastCastingResourceResponse, StudioAssetFileResponse } from '@/services/studio-project-contracts';
@@ -11,31 +11,32 @@ import { sceneSummary } from '@/features/casting-views/scene-labels';
 import { CastingSectionHeading } from './casting-section-heading';
 
 interface CostumeSheetsProps {
-  resource: CastCastingResourceResponse;
+  castMemberName: string;
+  /** The picked Look's costumes. */
+  costumes: CastCastingResourceResponse['costumes'];
+  characterSheets: StudioAssetFileResponse[];
   scenes: SceneStripScene[];
   pendingAssetFileId: string | null;
   onPick: (costumeId: string, assetFileId: string) => void;
 }
 
-/** One row per costume with every Character Sheet of the Cast Member; clicking a sheet picks it for that costume. */
-export function CostumeSheets({ resource, scenes, pendingAssetFileId, onPick }: CostumeSheetsProps) {
-  const castMemberName = resource.castMember.name;
-  const lookNames = new Map(resource.looks.map((look) => [look.id, look.name]));
+/** One row per costume of the picked Look with every Character Sheet of the Cast Member; clicking a sheet picks it for that costume. */
+export function CostumeSheets({ castMemberName, costumes, characterSheets, scenes, pendingAssetFileId, onPick }: CostumeSheetsProps) {
   const [preview, setPreview] = useState<{ costumeId: string; index: number } | null>(null);
-  const previewCostume = preview ? resource.costumes.find((costume) => costume.id === preview.costumeId) ?? null : null;
-  const previewSheet = preview ? resource.characterSheets[preview.index] ?? null : null;
+  const previewCostume = preview ? costumes.find((costume) => costume.id === preview.costumeId) ?? null : null;
+  const previewSheet = preview ? characterSheets[preview.index] ?? null : null;
   return (
-    <section className='mt-8'>
-      <CastingSectionHeading>Character sheets</CastingSectionHeading>
-      {resource.costumes.length === 0 ? (
-        <AgentRequestHint request={planWardrobeRequest(castMemberName)} className='mt-3' />
+    <section>
+      <CastingSectionHeading>Costumes</CastingSectionHeading>
+      {costumes.length === 0 ? (
+        <AgentRequest request={planWardrobeRequest(castMemberName)} className='mt-3' />
       ) : (
         <>
-          {resource.characterSheets.length === 0 ? (
-            <AgentRequestHint request={costumeCharacterSheetsRequest(castMemberName)} className='mt-3' />
+          {characterSheets.length === 0 ? (
+            <AgentRequest request={costumeCharacterSheetsRequest(castMemberName)} className='mt-3' />
           ) : null}
           <div className='mt-2'>
-            {resource.costumes.map((costume) => (
+            {costumes.map((costume) => (
               <div
                 key={costume.id}
                 className='grid grid-cols-[180px_minmax(0,1fr)] items-start gap-3.5 border-t border-border/40 py-3 first:border-t-0'
@@ -43,11 +44,10 @@ export function CostumeSheets({ resource, scenes, pendingAssetFileId, onPick }: 
                 <div className='flex flex-col gap-1 text-[11.5px] text-muted-foreground'>
                   <h3 className='text-[12.5px] font-bold text-foreground'>{costume.name}</h3>
                   <span>{sceneSummary(costume.sceneIds, scenes)}</span>
-                  {lookNames.has(costume.lookId) ? <span>{lookNames.get(costume.lookId)} look</span> : null}
                 </div>
-                {resource.characterSheets.length > 0 ? (
+                {characterSheets.length > 0 ? (
                   <div className='grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2.5'>
-                    {resource.characterSheets.map((sheet, index) => (
+                    {characterSheets.map((sheet, index) => (
                       <CostumeSheetTile
                         key={sheet.id}
                         sheet={sheet}
@@ -69,7 +69,7 @@ export function CostumeSheets({ resource, scenes, pendingAssetFileId, onPick }: 
       )}
       {preview && previewCostume && previewSheet ? (
         <ImagePreviewDialog
-          images={resource.characterSheets.map((sheet) => ({
+          images={characterSheets.map((sheet) => ({
             src: sheet.url,
             alt: sheet.title ?? 'Character sheet',
             title: `${previewCostume.name} · ${sheet.title ?? 'Character sheet'}`,

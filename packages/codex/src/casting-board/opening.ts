@@ -27,7 +27,7 @@ const SUBJECT_RESOLVERS: Record<CastingBoardMode, (input: CastingBoardOpening, p
 export function registerCastingBoardOpening(server: McpServer, state: CastingBoardState, homeDir?: string): void {
   registerAppTool(server, 'casting.board.open', {
     title: 'Open the casting board',
-    description: 'Show the casting board inline. candidates mode shows every casting round of one Look, filling in as candidates are imported, with shortlist, hide, compare and cast. sheets mode shows one row per costume with its Character Sheets to pick from. Shortlist, hide and picks are saved directly; Cast, "More like the shortlist" and "Send picks" post a message. Return immediately and end the turn, or keep generating and importing candidates.',
+    description: 'Show the casting board inline. candidates mode shows every casting round of one Look, filling in as candidates are imported, with hide, compare and cast. sheets mode shows one row per costume with its Character Sheets to pick from. Hide and picks are saved directly; Cast, "More like these" and "Send picks" post a message. Return immediately and end the turn, or keep generating and importing candidates.',
     inputSchema: castingBoardOpenSchema,
     annotations: { readOnlyHint: true, openWorldHint: false },
     _meta: { ui: { resourceUri: CASTING_BOARD_URI, visibility: ['model'] } },

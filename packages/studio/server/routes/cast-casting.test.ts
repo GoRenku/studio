@@ -83,17 +83,17 @@ describe('cast casting Hono route', () => {
 
     const response = await app.request(
       '/constantinople/cast/cast_narrator/casting/candidates/asset_candidate/status',
-      putJson({ status: 'shortlisted' })
+      putJson({ status: 'hidden' })
     );
 
     expect(response.status).toBe(200);
     expect(setCastingCandidateStatus).toHaveBeenCalledWith({
       projectName: 'constantinople',
       assetFileId: 'asset_candidate',
-      status: 'shortlisted',
+      status: 'hidden',
     });
     await expect(response.json()).resolves.toMatchObject({
-      candidate: { assetFileId: 'asset_candidate', status: 'shortlisted' },
+      candidate: { assetFileId: 'asset_candidate', status: 'hidden' },
       resourceKeys: ['surface:castMember:cast_narrator'],
     });
   });

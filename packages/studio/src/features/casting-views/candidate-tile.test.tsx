@@ -13,31 +13,23 @@ describe('CandidateTile', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('calls shortlist, hide, cast and open', () => {
-    const onShortlist = vi.fn();
+  it('calls hide, cast and open', () => {
     const onHide = vi.fn();
     const onCast = vi.fn();
     const onOpen = vi.fn();
-    render(
-      <CandidateTile
-        imageUrl='/a.png'
-        status='shortlisted'
-        isCast={false}
-        onShortlist={onShortlist}
-        onHide={onHide}
-        onCast={onCast}
-        onOpen={onOpen}
-      />
-    );
+    render(<CandidateTile imageUrl='/a.png' status='candidate' isCast={false} onHide={onHide} onCast={onCast} onOpen={onOpen} />);
 
-    const shortlist = screen.getByRole('button', { name: 'Remove from shortlist' });
-    expect(shortlist.getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(shortlist);
     fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cast' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open casting candidate' }));
 
-    expect([onShortlist, onHide, onCast, onOpen].map((callback) => callback.mock.calls.length)).toEqual([1, 1, 1, 1]);
+    expect([onHide, onCast, onOpen].map((callback) => callback.mock.calls.length)).toEqual([1, 1, 1]);
+  });
+
+  it('offers to show a hidden candidate again', () => {
+    render(<CandidateTile imageUrl='/a.png' status='hidden' isCast={false} onHide={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Show again' }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('marks the cast candidate instead of offering Cast', () => {

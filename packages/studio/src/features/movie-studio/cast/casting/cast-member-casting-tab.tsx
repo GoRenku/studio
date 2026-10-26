@@ -1,16 +1,15 @@
-import { castingLookTone } from '@/features/casting-views/casting-tones';
-import { LookCard } from '@/features/casting-views/look-card';
-import { SceneStrip } from '@/features/casting-views/scene-strip';
+import { useState } from 'react';
+import { castingSceneLabels } from '@/features/casting-views/scene-labels';
 import { PanelEmptyState } from '@/ui/panel-empty-state';
+import { Tabs, TabsContent } from '@/ui/tabs';
 import { castLooksRequest } from '../../agent-request-copy';
-import { CastingRounds } from './casting-rounds';
-import { CastingSectionHeading } from './casting-section-heading';
-import { lookDetails, wardrobeBands } from './casting-summaries';
-import { castingSceneLabels, sceneSummary } from '@/features/casting-views/scene-labels';
-import { CostumeSheets } from './costume-sheets';
+import { defaultPickedLook } from './casting-summaries';
+import { LookCasting } from './look-casting';
+import { LookPicker } from './look-picker';
+import { LookSceneBar } from './look-scene-bar';
 import { useCastCasting } from './use-cast-casting';
 
-/** The Casting record of one Cast Member: Looks, wardrobe by scene, casting rounds and costume sheets. */
+/** The Casting record of one Cast Member, one Look at a time: its scenes, casting rounds and costumes. */
 export function CastMemberCastingTab({
   projectName,
   castMemberId,
@@ -19,6 +18,7 @@ export function CastMemberCastingTab({
   castMemberId: string;
 }) {
   const casting = useCastCasting({ projectName, castMemberId });
+  const [pickedLookId, setPickedLookId] = useState<string | null>(null);
   const { resource } = casting;
 
   if (casting.error) {
@@ -27,7 +27,8 @@ export function CastMemberCastingTab({
   if (!resource) {
     return <p className='px-8 pt-7 text-sm text-muted-foreground'>Loading casting...</p>;
   }
-  if (resource.looks.length === 0) {
+  const picked = resource.looks.find((look) => look.id === pickedLookId) ?? defaultPickedLook(resource.looks);
+  if (!picked) {
     return (
       <PanelEmptyState
         title={`${resource.castMember.name} isn't cast yet`}
@@ -39,43 +40,24 @@ export function CastMemberCastingTab({
   const scenes = castingSceneLabels(resource.scenes);
   return (
     <article className='min-h-full bg-panel-bg px-8 pb-12 pt-7 text-foreground'>
-      <section>
-        <CastingSectionHeading>Looks</CastingSectionHeading>
-        <div className='mt-3 flex flex-wrap gap-3'>
-          {resource.looks.map((look, index) => (
-            <LookCard
-              key={look.id}
-              name={look.name}
-              sceneSummary={sceneSummary(look.sceneIds, scenes)}
-              imageUrl={look.castCandidate?.url ?? null}
-              tone={castingLookTone(index)}
-              details={lookDetails(look, resource.costumes)}
-            />
-          ))}
-        </div>
-      </section>
-      {scenes.length > 0 ? (
-        <section className='mt-8'>
-          <CastingSectionHeading>Wardrobe by scene</CastingSectionHeading>
-          <SceneStrip className='mt-3' scenes={scenes} bands={wardrobeBands(resource)} />
-        </section>
-      ) : null}
-      {resource.looks.map((look) => (
-        <CastingRounds
-          key={look.id}
-          castMemberName={resource.castMember.name}
-          look={look}
-          pendingAssetFileId={casting.pendingAssetFileId}
-          onStatusChange={(assetFileId, status) => void casting.setCandidateStatus(assetFileId, status)}
-          onCast={(lookId, assetFileId) => void casting.castCandidate(lookId, assetFileId)}
-        />
-      ))}
-      <CostumeSheets
-        resource={resource}
-        scenes={scenes}
-        pendingAssetFileId={casting.pendingAssetFileId}
-        onPick={(costumeId, assetFileId) => void casting.pickCharacterSheet(costumeId, assetFileId)}
-      />
+      <Tabs value={picked.id} onValueChange={setPickedLookId} className='gap-5'>
+        <LookPicker looks={resource.looks} />
+        {scenes.length > 0 ? <LookSceneBar scenes={scenes} looks={resource.looks} pickedLookId={picked.id} /> : null}
+        <TabsContent value={picked.id}>
+          <LookCasting
+            key={picked.id}
+            castMemberName={resource.castMember.name}
+            look={picked}
+            costumes={resource.costumes}
+            characterSheets={resource.characterSheets}
+            scenes={scenes}
+            pendingAssetFileId={casting.pendingAssetFileId}
+            onStatusChange={(assetFileId, status) => void casting.setCandidateStatus(assetFileId, status)}
+            onCast={(lookId, assetFileId) => void casting.castCandidate(lookId, assetFileId)}
+            onPickSheet={(costumeId, assetFileId) => void casting.pickCharacterSheet(costumeId, assetFileId)}
+          />
+        </TabsContent>
+      </Tabs>
     </article>
   );
 }

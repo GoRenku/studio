@@ -27,7 +27,7 @@ export const castingRoundOpenSchema = z.object({
   notes: z.record(castingIdentity, z.string().trim().min(1).max(200)).optional()
     .describe('One-line strength notes from the Skill, keyed by Default Model List image-lane model key.'),
   references: z.array(castingIdentity).max(20).optional()
-    .describe('Identity reference Asset File ids of this Cast Member, such as an earlier Look\'s cast candidate or shortlisted candidates.'),
+    .describe('Identity reference Asset File ids of this Cast Member, such as an earlier Look\'s cast candidate or the candidates the director kept.'),
   suggested: z.array(castingRouteInputSchema).optional()
     .describe('Preselect these models and counts instead of the casting defaults.'),
 }).strict();

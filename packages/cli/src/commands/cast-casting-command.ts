@@ -104,7 +104,7 @@ function candidateStatus(value: string | undefined): CastingCandidateStatus {
   throw new StructuredError({
     code: 'CLI041',
     message: `Unknown casting candidate status: ${status}.`,
-    issues: [createDiagnosticError('CLI041', 'Unknown casting candidate status.', { path: ['--status'], context: 'renku CLI arguments' }, 'Use candidate, shortlisted or hidden.')],
+    issues: [createDiagnosticError('CLI041', 'Unknown casting candidate status.', { path: ['--status'], context: 'renku CLI arguments' }, 'Use candidate or hidden.')],
   });
 }
 

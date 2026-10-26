@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Button } from './button';
 import { ImagePreviewDialog } from './image-preview-dialog';
@@ -81,6 +81,14 @@ describe('ImagePreviewDialog zoom', () => {
     loadRenderedImages();
     expect(screen.getByRole('img', { name: 'Second' })).toBeTruthy();
     expect(fitButton().textContent).toBe('Fit');
+  });
+
+  it('puts the caller actions in the zoom pill and keeps Close alone in the corner', () => {
+    renderPreview({ actions: <Button type='button'>Pick</Button> });
+    const pill = screen.getByRole('toolbar', { name: 'Zoom' });
+    expect(within(pill).getByRole('button', { name: 'Pick' })).toBeTruthy();
+    const close = screen.getByRole('button', { name: 'Close image preview' });
+    expect(within(close.parentElement!).getAllByRole('button')).toEqual([close]);
   });
 
   it('leaves zoom out when the screen switches it off and shows the caller actions', () => {

@@ -20,7 +20,7 @@ export function registerCastingBoardTools(server: McpServer, state: CastingBoard
   }, (input) => castingBoardToolResult(async () => ({ content: [], structuredContent: { ...(await requestFromCastingBoard(state, input, homeDir)) } })));
   registerAppTool(server, 'casting.board.consume', {
     title: 'Consume the casting board request',
-    description: 'Consume the latest casting board request once. moreLikeShortlist carries the shortlisted candidate ids and the user\'s notes: open a new Casting round panel with them as references. cast names the candidate already selected for the Look. sheetPicksDone lists the picked sheet per costume. alreadyConsumed authorizes nothing.',
+    description: 'Consume the latest casting board request once. moreLikeKept carries the ids of every candidate the user kept (not hidden) and the user\'s notes: open a new Casting round panel with them as references. cast names the candidate already selected for the Look. sheetPicksDone lists the picked sheet per costume. alreadyConsumed authorizes nothing.',
     inputSchema: castingBoardConsumeSchema,
     _meta: { ui: { visibility: ['model'] } },
     annotations: { openWorldHint: false, destructiveHint: false },

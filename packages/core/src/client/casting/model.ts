@@ -57,7 +57,7 @@ export interface CastingRound {
   createdAt: string;
 }
 
-export const CASTING_CANDIDATE_STATUSES = ['candidate', 'shortlisted', 'hidden'] as const;
+export const CASTING_CANDIDATE_STATUSES = ['candidate', 'hidden'] as const;
 
 export type CastingCandidateStatus = (typeof CASTING_CANDIDATE_STATUSES)[number];
 

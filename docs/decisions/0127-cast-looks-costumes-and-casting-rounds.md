@@ -35,7 +35,9 @@ and sometimes one Cast Member with the ages only described in text (Sintel).
   and estimated cost the director confirmed. Each candidate is an Asset of
   type `casting_candidate` owned by the Cast Member and linked to its round,
   generated with purpose `cast.casting-candidate` targeting the round.
-  Candidates carry a durable status: candidate, shortlisted or hidden.
+  Candidates carry a durable status: candidate (kept) or hidden. Hide is the
+  only mark the director makes (plan 0247); hidden candidates leave the
+  default views and can be shown again or cast at any time.
 - **Casting is a scoped selection.** The new selection target `castLook`
   selects the Look's cast candidate; only a candidate of that Look's own
   rounds may be selected.
@@ -65,6 +67,22 @@ and sometimes one Cast Member with the ages only described in text (Sintel).
   Studio never inspects briefs or candidate images. The candidate layout (a
   face close-up beside a full-length figure in one 4:3 image) is a
   Studio-owned output shape described in the media-producer skill.
+- **The Studio Casting tab shows one Look at a time** (plan 0246). A row of
+  Look cards (picture, name, one status) picks the Look; a text-free scene
+  bar lights up its scenes; the picked Look shows its rounds, then its
+  costumes once it is cast. At most one "Ask your agent" card is on screen,
+  for the picked Look's next step; optional follow-ups are a quiet copy line.
+  Candidate tiles show their controls on hover or keyboard focus, and the
+  image viewer keeps Close alone and puts Hide and Cast (or Pick) in its
+  floating zoom pill. Hidden candidates fold away behind "Show N hidden".
+- **Compare is one shared view.** The Codex casting board and the Studio
+  Casting tab both open the same Compare over a Look's kept candidates: two
+  equal sides, each stepping on its own past the other side's candidate, so
+  one side can stay as the anchor. Each side has its own Hide and Cast; one
+  zoom floats over both, side by side or stacked to show both larger.
+- **"More like these" uses the kept candidates.** The Codex board's request
+  carries every kept candidate of the Look as references for the next round;
+  Studio offers the same request as a copy line.
 - **Candidates and character sheets have a detail level** (plan 0244):
   `lowest`, `mid` or `highest`. Project casting settings hold
   `candidateDetail` (default `lowest`, since all but one candidate are

@@ -111,7 +111,7 @@ export const castingCandidates = sqliteTable(
     castingRoundId: text('casting_round_id')
       .notNull()
       .references(() => castingRounds.id),
-    status: text('status', { enum: ['candidate', 'shortlisted', 'hidden'] }).notNull(),
+    status: text('status', { enum: ['candidate', 'hidden'] }).notNull(),
     /** The Skill model key of the round route that generated the candidate. */
     modelKey: text('model_key').notNull(),
   },

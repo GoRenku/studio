@@ -83,7 +83,7 @@ export async function setCastingCandidateStatus(
 ): Promise<CastingCandidateStatusReport> {
   return withProject(input, ({ session }) => {
     if (!(CASTING_CANDIDATE_STATUSES as readonly string[]).includes(input.status)) {
-      throwCastingIssues([castingIssue('CASTING_CANDIDATE_STATUS_INVALID', `Unknown casting candidate status: ${String(input.status)}.`, ['status'], 'Use candidate, shortlisted or hidden.')]);
+      throwCastingIssues([castingIssue('CASTING_CANDIDATE_STATUS_INVALID', `Unknown casting candidate status: ${String(input.status)}.`, ['status'], 'Use candidate or hidden.')]);
     }
     const castMemberId = requireCandidateCastMember(session, input.assetFileId);
     updateCastingCandidateStatusRecord(session, { assetFileId: input.assetFileId, status: input.status });

@@ -7,10 +7,9 @@ import { castingBoardError } from './diagnostics.js';
 import { boardSubject } from './session-projection.js';
 import type { CastingBoardActionContext, CastingBoardSessionRecord, CastingBoardSubject } from './session-state.js';
 
-type CandidateStatusAction = { kind: 'shortlist' | 'hide' | 'restore'; assetFileId: string };
+type CandidateStatusAction = { kind: 'hide' | 'restore'; assetFileId: string };
 
 const CANDIDATE_STATUSES: Record<CandidateStatusAction['kind'], CastingCandidateStatus> = {
-  shortlist: 'shortlisted',
   hide: 'hidden',
   restore: 'candidate',
 };
@@ -47,18 +46,18 @@ export async function castBoardCandidate(context: CastingBoardActionContext, act
   return startBoardRequest(context.state, record.sessionId, { kind: 'cast', lookId: look.id, assetFileId: action.assetFileId });
 }
 
-/** Sends the Look's shortlisted candidates and the notes so the agent can open a new round with them as references. */
-export async function requestMoreLikeShortlist(context: CastingBoardActionContext, request: { kind: 'moreLikeShortlist'; notes: string }): Promise<string> {
+/** Sends the Look's kept (not hidden) candidates and the notes so the agent can open a new round with them as references. */
+export async function requestMoreLikeKept(context: CastingBoardActionContext, request: { kind: 'moreLikeKept'; notes: string }): Promise<string> {
   const { record, homeDir } = context;
   const { look } = await readCandidateBoardLook(record, candidateSubject(record), homeDir);
-  const shortlistedAssetFileIds = look.rounds.flatMap((round) => round.candidates)
-    .filter((candidate) => candidate.status === 'shortlisted')
+  const referenceAssetFileIds = look.rounds.flatMap((round) => round.candidates)
+    .filter((candidate) => candidate.status !== 'hidden')
     .map((candidate) => candidate.assetFileId);
-  if (shortlistedAssetFileIds.length === 0) {
-    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', 'Shortlist at least one candidate first.');
+  if (referenceAssetFileIds.length === 0) {
+    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', 'Every candidate is hidden. Show one again first.');
   }
   assertBoardIdle(record);
-  return startBoardRequest(context.state, record.sessionId, { kind: 'moreLikeShortlist', lookId: look.id, shortlistedAssetFileIds, notes: request.notes.trim() });
+  return startBoardRequest(context.state, record.sessionId, { kind: 'moreLikeKept', lookId: look.id, referenceAssetFileIds, notes: request.notes.trim() });
 }
 
 function candidateSubject(record: CastingBoardSessionRecord): Extract<CastingBoardSubject, { mode: 'candidates' }> {

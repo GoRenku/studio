@@ -1,77 +1,66 @@
 import type { CastingEstimatedCost } from '@gorenku/studio-core/client';
-import type { SceneStripBand } from '@/features/casting-views/scene-strip';
-import { castingLookTone } from '@/features/casting-views/casting-tones';
 import type {
   CastCastingLookResponse,
-  CastCastingResourceResponse,
   CastingRoundViewResponse,
 } from '@/services/studio-project-contracts';
 
-export function wardrobeBands(resource: CastCastingResourceResponse): SceneStripBand[] {
-  const bands: SceneStripBand[] = [{
-    label: 'Look',
-    rows: resource.looks.map((look, index) => ({
-      sceneIds: look.sceneIds,
-      name: look.name,
-      tone: castingLookTone(index),
-    })),
-  }];
-  if (resource.costumes.length > 0) {
-    bands.push({
-      label: 'Costume',
-      rows: resource.costumes.map((costume) => ({
-        sceneIds: costume.sceneIds,
-        name: costume.name,
-        tone: 'costume' as const,
-      })),
-    });
-  }
-  return bands;
+type CastingCandidateView = CastingRoundViewResponse['candidates'][number];
+
+/** The one status a Look card shows. */
+export interface LookStatus {
+  label: string;
+  cast: boolean;
 }
 
+/** "Round 1 · 5 of 6 · $0.16" while candidates are still coming in, else "Round 1 · 6 candidates · $0.16". */
 export function roundSummary(round: CastingRoundViewResponse): string {
   const parts = [
     `Round ${round.number}`,
     round.candidates.length < round.expectedCount
-      ? `${round.candidates.length} of ${round.expectedCount} candidates`
+      ? `${round.candidates.length} of ${round.expectedCount}`
       : countLabel(round.candidates.length, 'candidate'),
-    round.routes.map((route) => `${route.model.name} × ${route.count}`).join(', '),
   ];
   if (round.estimatedCost) {
-    parts.push(`estimated ${formatEstimatedCost(round.estimatedCost)}`);
+    parts.push(formatEstimatedCost(round.estimatedCost));
   }
   return parts.join(' · ');
 }
 
-export function formatEstimatedCost(cost: CastingEstimatedCost): string {
+function formatEstimatedCost(cost: CastingEstimatedCost): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: cost.currency }).format(cost.amount);
 }
 
-export function lookDetails(
-  look: CastCastingLookResponse,
-  costumes: CastCastingResourceResponse['costumes']
-): string[] {
-  const lookCostumes = costumes.filter((costume) => costume.lookId === look.id);
-  const pickedSheets = lookCostumes.filter((costume) => costume.characterSheetAssetFileId !== null).length;
-  return [
-    castingLine(look),
-    lookCostumes.length === 0
-      ? 'No costumes yet'
-      : `${countLabel(lookCostumes.length, 'costume')} · ${countLabel(pickedSheets, 'sheet')} picked`,
-  ];
+/** A kept candidate is one that isn't hidden; the cast candidate always counts as kept. */
+export function isKeptCandidate(candidate: CastingCandidateView, castAssetFileId: string | null): boolean {
+  return candidate.status !== 'hidden' || candidate.assetFileId === castAssetFileId;
 }
 
-function castingLine(look: CastCastingLookResponse): string {
-  const castRound = look.rounds.find((round) =>
-    round.candidates.some((candidate) => candidate.assetFileId === look.castCandidateAssetFileId)
-  );
-  const castCandidate = castRound?.candidates.find((candidate) => candidate.assetFileId === look.castCandidateAssetFileId);
-  if (!castRound || !castCandidate) {
-    return look.rounds.length === 0 ? 'Not cast yet' : `Not cast yet · ${countLabel(look.rounds.length, 'round')}`;
+/** Every kept candidate of a Look, in round order. */
+export function lookKept(look: CastCastingLookResponse): CastingCandidateView[] {
+  return look.rounds.flatMap((round) => round.candidates.filter((candidate) => isKeptCandidate(candidate, look.castCandidateAssetFileId)));
+}
+
+/** How many of a Look's candidates are hidden from view. */
+export function lookHiddenCount(look: CastCastingLookResponse): number {
+  return look.rounds.reduce((total, round) => total + round.candidates.length, 0) - lookKept(look).length;
+}
+
+export function lookStatus(look: CastCastingLookResponse): LookStatus {
+  if (look.castCandidateAssetFileId) {
+    return { label: 'Cast', cast: true };
   }
-  return `Cast from round ${castRound.number} of ${look.rounds.length} · ${castCandidate.model.name}`;
+  const kept = lookKept(look).length;
+  if (kept > 0) {
+    return { label: countLabel(kept, 'candidate'), cast: false };
+  }
+  return { label: 'Not cast', cast: false };
 }
 
-function countLabel(count: number, noun: string): string {
+/** The Look the tab opens on: the first with a casting round, else the first. */
+export function defaultPickedLook(looks: CastCastingLookResponse[]): CastCastingLookResponse | undefined {
+  return looks.find((look) => look.rounds.length > 0) ?? looks[0];
+}
+
+export function countLabel(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }

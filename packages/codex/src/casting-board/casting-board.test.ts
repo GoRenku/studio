@@ -69,11 +69,10 @@ describe('Casting board', () => {
     expect(refreshed.rounds[0]!.pending).toEqual([]);
   });
 
-  it('saves shortlist, hide and restore through Core without a request', async () => {
+  it('saves hide and restore through Core without a request', async () => {
     const board = await openCandidates();
-    await act(board.sessionId, { kind: 'shortlist', assetFileId: first.id });
     await act(board.sessionId, { kind: 'hide', assetFileId: second.id });
-    expect(await candidateStatuses()).toMatchObject({ [first.id]: 'shortlisted', [second.id]: 'hidden' });
+    expect(await candidateStatuses()).toMatchObject({ [first.id]: 'candidate', [second.id]: 'hidden' });
     const restored = await act(board.sessionId, { kind: 'restore', assetFileId: second.id });
     expect(restored.actionId).toBeNull();
     expect(restored.session.action).toBeNull();
@@ -84,25 +83,35 @@ describe('Casting board', () => {
     const board = await openCandidates();
     const otherRound = await fixture.createRound(fixture.looks.older.id);
     const other = await fixture.importCandidate(otherRound, 'acme-faces');
-    expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'shortlist', assetFileId: other.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
+    expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'hide', assetFileId: other.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
     expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'pickSheet', costumeId: 'costume_x', assetFileId: first.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
   });
 
-  it('sends "more like the shortlist" once with the shortlisted ids and notes', async () => {
+  it('sends "more like these" once with the kept candidate ids and notes', async () => {
     const board = await openCandidates();
-    await act(board.sessionId, { kind: 'shortlist', assetFileId: first.id });
+    for (const candidate of board.rounds.flatMap((round) => round.candidates).filter((entry) => entry.assetFileId !== first.id)) {
+      await act(board.sessionId, { kind: 'hide', assetFileId: candidate.assetFileId });
+    }
     expect((await fixture.callError('casting.board.consume', { sessionId: board.sessionId })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
-    const receipt = await fixture.call<CastingBoardReceipt>('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeShortlist', notes: '  Keep the eyes.  ' } });
+    const receipt = await fixture.call<CastingBoardReceipt>('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeKept', notes: '  Keep the eyes.  ' } });
     expect(receipt.actionId).toEqual(expect.any(String));
-    expect(receipt.session.action).toMatchObject({ actionId: receipt.actionId, kind: 'moreLikeShortlist', status: 'pending' });
-    expect((await fixture.callError('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeShortlist', notes: '' } })).error.code).toBe('CODEX_CASTING_BOARD_BUSY');
+    expect(receipt.session.action).toMatchObject({ actionId: receipt.actionId, kind: 'moreLikeKept', status: 'pending' });
+    expect((await fixture.callError('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeKept', notes: '' } })).error.code).toBe('CODEX_CASTING_BOARD_BUSY');
 
     expect(await fixture.call<CastingBoardConsumeResult>('casting.board.consume', { sessionId: board.sessionId })).toEqual({
       status: 'consumed', sessionId: board.sessionId,
-      request: { kind: 'moreLikeShortlist', lookId: fixture.looks.young.id, shortlistedAssetFileIds: [first.id], notes: 'Keep the eyes.' },
+      request: { kind: 'moreLikeKept', lookId: fixture.looks.young.id, referenceAssetFileIds: [first.id], notes: 'Keep the eyes.' },
     });
     expect(await fixture.call<CastingBoardConsumeResult>('casting.board.consume', { sessionId: board.sessionId })).toEqual({ status: 'alreadyConsumed', sessionId: board.sessionId });
-    expect((await readBoard<CastingCandidateBoard>(board.sessionId)).lastCompletedAction).toEqual({ actionId: receipt.actionId, kind: 'moreLikeShortlist' });
+    expect((await readBoard<CastingCandidateBoard>(board.sessionId)).lastCompletedAction).toEqual({ actionId: receipt.actionId, kind: 'moreLikeKept' });
+  });
+
+  it('refuses "more like these" when every candidate is hidden', async () => {
+    const board = await openCandidates();
+    for (const candidate of board.rounds.flatMap((round) => round.candidates)) {
+      await act(board.sessionId, { kind: 'hide', assetFileId: candidate.assetFileId });
+    }
+    expect((await fixture.callError('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeKept', notes: '' } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
   });
 
   it('casts a candidate for the Look through Core and waits for the agent', async () => {
@@ -136,7 +145,7 @@ describe('Casting board', () => {
 
     const picked = await act(board.sessionId, { kind: 'pickSheet', costumeId: costumes[0]!.id, assetFileId: sheet.id });
     expect((picked.session as CastingSheetBoard).costumes[0]!.pickedAssetFileId).toBe(sheet.id);
-    expect((await fixture.callError('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeShortlist', notes: '' } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
+    expect((await fixture.callError('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeKept', notes: '' } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
     await fixture.call('casting.board.request', { sessionId: board.sessionId, request: { kind: 'sheetPicksDone' } });
     expect(await fixture.call<CastingBoardConsumeResult>('casting.board.consume', { sessionId: board.sessionId })).toEqual({
       status: 'consumed', sessionId: board.sessionId, request: { kind: 'sheetPicksDone', picks: [{ costumeId: costumes[0]!.id, assetFileId: sheet.id }] },
