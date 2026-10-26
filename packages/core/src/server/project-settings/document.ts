@@ -5,8 +5,10 @@ import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { castingRouteSchema, castingSettingsSchema } from '../../client/casting/schemas.js';
 import { ProjectDataError } from '../project-data-error.js';
 
+const PROJECT_SETTINGS_VERSION = 10;
+
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 9,
+  version: PROJECT_SETTINGS_VERSION,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -50,7 +52,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
     },
   },
   casting: {
-    routes: [],
+    candidateRoutes: [],
+    characterSheetRoutes: [],
     candidateDetail: 'lowest',
     characterSheetDetail: 'highest',
   },
@@ -98,7 +101,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation', 'casting'],
   properties: {
-    version: { const: 9 },
+    version: { const: PROJECT_SETTINGS_VERSION },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -215,7 +218,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 9 Project Settings contract.'
+      `Use the complete current version ${PROJECT_SETTINGS_VERSION} Project Settings contract.`
     );
   });
 }
@@ -228,7 +231,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 7.';
+    return `Project Settings version must be ${PROJECT_SETTINGS_VERSION}.`;
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

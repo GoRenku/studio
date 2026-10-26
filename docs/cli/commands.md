@@ -110,9 +110,9 @@ query parameters.
 ## `renku settings casting`
 
 Show or replace the Project's casting defaults: the models and counts that
-pre-fill the Casting Round panel, and the image detail of candidates and
-character sheets. The panel's save box writes the models, counts and the
-round's candidate detail.
+pre-fill the Casting Round panel for a Look's candidates and, separately, for
+a costume's character sheets, and the image detail of each. The panel's save
+box writes the models, counts and detail of the subject it was opened for.
 
 ```bash
 renku settings casting show --json
@@ -120,8 +120,9 @@ renku settings casting set --file <casting-json> --json
 ```
 
 The file is
-`{ "routes": [{ "provider", "model": { "key", "name" }, "count" }], "candidateDetail", "characterSheetDetail" }`
-with Skill provider ids and model guide keys; `routes` may be empty. Each
+`{ "candidateRoutes": [{ "provider", "model": { "key", "name" }, "count" }], "characterSheetRoutes": [...], "candidateDetail", "characterSheetDetail" }`
+with Skill provider ids and model guide keys; either route list may be empty.
+`characterSheetRoutes` counts are per costume. Each
 detail is `lowest`, `mid` or `highest` (defaults `lowest` and `highest`); the
 Default Model List says what each level means for each image route.
 Concurrency comes from the image lane's `maxConcurrentGenerations`.
@@ -726,6 +727,7 @@ renku cast wardrobe show --cast <cast-member-id> --json
 renku cast wardrobe validate|write --file <cast-wardrobe-plan-json> --json
 renku cast casting round create --file <casting-round-json> --json
 renku cast casting show --look <look-id> --json
+renku cast casting show --costume <costume-id> --json
 renku cast casting candidate status --asset-file <asset-file-id> --status candidate|hidden --json
 renku asset select --project <project> --target look:<look-id> --asset-file <casting-candidate-asset-file-id> --json
 renku asset select --project <project> --target costume:<costume-id> --asset-file <character-sheet-asset-file-id> --json
@@ -739,18 +741,26 @@ renku asset select --project <project> --target costume:<costume-id> --asset-fil
 - **`wardrobe write`** replaces the Cast Member's costumes. Each costume
   belongs to one Look, its scenes are within that Look's scenes
   (`CASTING_COSTUME_SCENE_OUTSIDE_LOOK`), and a scene has one costume
-  (`CASTING_COSTUME_SCENE_CONFLICT`). A removed costume's picked sheet is
-  unselected and reported in `clearedSheetSelections`; the sheet stays in
-  Assets.
-- **`casting round create`** records a confirmed round before its
-  candidates are generated. References must be active files of the same Cast
-  Member (`CASTING_ROUND_REFERENCE_NOT_OWNED`). Candidates are then generated
-  with purpose `cast.casting-candidate` and imported with
-  `renku media import --purpose cast.casting-candidate --target casting-round:<round-id> --casting-model <route-model-key>`,
+  (`CASTING_COSTUME_SCENE_CONFLICT`). A costume with character sheet rounds
+  keeps its Look (`CASTING_COSTUME_LOOK_CHANGE_HAS_SHEETS`). A removed
+  costume's pick is cleared (`clearedSheetSelections`) and its sheet rounds
+  are deleted; their sheets stay in Assets (`releasedSheetAssetFileIds`).
+- **`casting round create`** records a confirmed round for a Look
+  (`"subject": { "kind": "castLook", "id" }`) or a costume
+  (`"subject": { "kind": "castCostume", "id" }`) before its images are
+  generated. References must be active files of the same Cast Member
+  (`CASTING_ROUND_REFERENCE_NOT_OWNED`), and a costume's Look must be cast
+  (`CASTING_ROUND_LOOK_NOT_CAST`). Images are then imported into the round with
+  `renku media import --purpose cast.casting-candidate|cast.character-sheet --target casting-round:<round-id> --casting-model <route-model-key>`,
   naming which round route made it (`CASTING_CANDIDATE_MODEL_INVALID` otherwise).
+  Importing never selects.
+- **`casting show`** reads a Look's rounds (`--look`) or a costume's character
+  sheet rounds (`--costume`); pass exactly one.
 - **Casting** a Look selects one candidate of its own rounds with the
-  `look:<id>` target. Character sheets target `costume:<id>`; import with
-  `--select` or pick later with the `costume:<id>` target.
+  `look:<id>` target; picking a costume's sheet selects one sheet of its own
+  rounds with the `costume:<id>` target (`CORE_ASSET_SELECTION_INVALID`
+  otherwise). `casting candidate status` hides or restores candidates and
+  sheets alike.
 - Every issue in a document is reported together with stable `CASTING_`
   codes.
 
@@ -770,7 +780,7 @@ Input JSON shapes:
 ```
 
 ```json
-{ "kind": "castingRoundCreate", "lookId": "cast_look_main",
+{ "kind": "castingRoundCreate", "subject": { "kind": "castLook", "id": "cast_look_main" },
   "routes": [{ "provider": "fal-ai", "model": { "key": "<model-guide-key>", "name": "<name>" }, "count": 4 }],
   "maxConcurrentGenerations": 4, "referenceAssetFileIds": [], "estimatedCost": { "amount": 0.67, "currency": "USD" } }
 ```

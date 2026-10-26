@@ -1,11 +1,13 @@
 import { CASTING_CANDIDATE_STATUSES } from '../../../client/casting/model.js';
 import type {
   CastingCandidateStatusReport,
+  CastingCostumeReport,
   CastingLookReport,
   CastingRoundReport,
 } from '../../../client/casting/model.js';
 import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
 import { readAssetFileRecordIncludingDiscarded } from '../../database/access/asset-files.js';
+import { readCastCostumeRecord } from '../../database/access/casting/costumes.js';
 import { readCastLookRecord } from '../../database/access/casting/looks.js';
 import {
   insertCastingRoundRecord,
@@ -20,26 +22,28 @@ import { createRandomIdGenerator } from '../../entity-ids.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { withProject } from '../../project-operation.js';
 import { assertCastingRoundCreateShape } from '../documents.js';
-import { castingIssue, lookNotFound, throwCastingIssues } from '../diagnostics.js';
+import { castingIssue, costumeNotFound, lookNotFound, throwCastingIssues } from '../diagnostics.js';
 import type {
   CastingCandidateStatusInput,
   CastingDocumentInput,
   CastingProjectInput,
 } from '../../project-data-service-contracts.js';
-import { readSceneOrder, toCastLook } from '../projection.js';
+import { readSceneOrder, toCastCostume, toCastLook } from '../projection.js';
 import { castingReportBase } from '../report.js';
+import { assertCostumeLookCast, resolveCastingRoundSubject } from './subjects.js';
 import { listCastingRoundViews } from './views.js';
 
-/** Records a confirmed round before its candidates are generated; references must be the Cast Member's own files. */
+/**
+ * Records a confirmed round for a Look or a costume before its images are generated; references
+ * must be the Cast Member's own files, and a costume's Look must already be cast.
+ */
 export async function createCastingRound(input: CastingDocumentInput): Promise<CastingRoundReport> {
   return withProject(input, ({ session }) => {
     assertCastingRoundCreateShape(input.document, input.filePath);
     const document = input.document;
-    const look = readCastLookRecord(session, document.lookId);
-    if (!look) {
-      throw lookNotFound(document.lookId);
-    }
-    const ownerKey = assetFileOwnerKey({ kind: 'castMember', id: look.castMemberId });
+    const resolved = resolveCastingRoundSubject(session, document.subject);
+    assertCostumeLookCast(session, resolved);
+    const ownerKey = assetFileOwnerKey({ kind: 'castMember', id: resolved.castMemberId });
     const issues = document.referenceAssetFileIds.flatMap((assetFileId, index) => {
       const record = readAssetFileRecordIncludingDiscarded(session, assetFileId);
       return record && !record.discardedAt && record.ownerKey === ownerKey
@@ -51,8 +55,8 @@ export async function createCastingRound(input: CastingDocumentInput): Promise<C
     }
     const round = {
       id: (input.idGenerator ?? createRandomIdGenerator()).next('casting_round'),
-      lookId: look.id,
-      number: nextCastingRoundNumber(session, look.id),
+      subject: document.subject,
+      number: nextCastingRoundNumber(session, document.subject),
       routes: document.routes,
       maxConcurrentGenerations: document.maxConcurrentGenerations,
       referenceAssetFileIds: document.referenceAssetFileIds,
@@ -60,7 +64,7 @@ export async function createCastingRound(input: CastingDocumentInput): Promise<C
       createdAt: new Date().toISOString(),
     };
     insertCastingRoundRecord(session, round);
-    return { ...castingReportBase(readProjectRecord(session), look.castMemberId), round };
+    return { ...castingReportBase(readProjectRecord(session), resolved.castMemberId), round };
   });
 }
 
@@ -73,7 +77,21 @@ export async function showCastingLook(input: CastingProjectInput & { lookId: str
     return {
       ...castingReportBase(readProjectRecord(session), look.castMemberId),
       look: toCastLook(session, look, readSceneOrder(session)),
-      rounds: listCastingRoundViews(session, look.id),
+      rounds: listCastingRoundViews(session, { kind: 'castLook', id: look.id }),
+    };
+  });
+}
+
+export async function showCastingCostume(input: CastingProjectInput & { costumeId: string }): Promise<CastingCostumeReport> {
+  return withProject(input, ({ session }) => {
+    const costume = readCastCostumeRecord(session, input.costumeId);
+    if (!costume) {
+      throw costumeNotFound(input.costumeId);
+    }
+    return {
+      ...castingReportBase(readProjectRecord(session), costume.castMemberId),
+      costume: toCastCostume(session, costume, readSceneOrder(session)),
+      rounds: listCastingRoundViews(session, { kind: 'castCostume', id: costume.id }),
     };
   });
 }
@@ -97,11 +115,10 @@ export async function setCastingCandidateStatus(
 function requireCandidateCastMember(session: DatabaseSession, assetFileId: string): string {
   const candidate = readCastingCandidateRecord(session, assetFileId);
   const round = candidate ? readCastingRoundRecord(session, candidate.roundId) : null;
-  const look = round ? readCastLookRecord(session, round.lookId) : null;
-  if (!look) {
+  if (!round) {
     throw new ProjectDataError('CASTING_CANDIDATE_NOT_FOUND', `Casting candidate was not found: ${assetFileId}.`, {
-      suggestion: 'List the candidates with `renku cast casting show --look <look-id>`.',
+      suggestion: 'List the round images with `renku cast casting show --look <look-id>` or `--costume <costume-id>`.',
     });
   }
-  return look.castMemberId;
+  return resolveCastingRoundSubject(session, round.subject).castMemberId;
 }

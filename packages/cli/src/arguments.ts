@@ -103,6 +103,7 @@ Options
   --locale             Project locale id
   --cast               Cast member id for cast commands
   --look               Cast Look id for casting commands
+  --costume            Cast Costume id for casting commands
   --status             Casting candidate status: candidate or hidden
   --voice              Cast Voice id or reference name
   --location           Location id for location and production-design commands
@@ -305,6 +306,9 @@ function createCliFlags() {
       type: 'string',
     },
     look: {
+      type: 'string',
+    },
+    costume: {
       type: 'string',
     },
     status: {

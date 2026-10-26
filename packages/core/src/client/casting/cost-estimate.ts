@@ -23,8 +23,17 @@ export interface CastingRoundCostEstimate {
   hostPlanOnly: boolean;
 }
 
-/** Aggregates the estimates of one detail level by candidate count; provider pricing stays in Engines. */
-export function estimateCastingRoundCost(options: CastingModelEstimate[], routes: CastingRoute[], detail: ImageDetailLevel): CastingRoundCostEstimate {
+/**
+ * Aggregates the estimates of one detail level by image count over `roundCount` rounds with the
+ * same routes (one round per costume of a character sheet round); provider pricing stays in Engines.
+ */
+export function estimateCastingRoundCost(input: {
+  options: CastingModelEstimate[];
+  routes: CastingRoute[];
+  detail: ImageDetailLevel;
+  roundCount: number;
+}): CastingRoundCostEstimate {
+  const { options, routes, detail, roundCount } = input;
   const breakdown: CastingRoundCostEstimate['breakdown'] = [];
   const unpriced: string[] = [];
   let hostCount = 0;
@@ -40,7 +49,7 @@ export function estimateCastingRoundCost(options: CastingModelEstimate[], routes
     } else if (estimate.amountUsd === null) {
       unpriced.push(option.model.name);
     } else {
-      breakdown.push({ name: option.model.name, amountUsd: roundUsd(estimate.amountUsd * route.count) });
+      breakdown.push({ name: option.model.name, amountUsd: roundUsd(estimate.amountUsd * route.count * roundCount) });
     }
   }
   return {

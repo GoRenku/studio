@@ -1,5 +1,16 @@
 # Drizzle Migrations
 
+Migration 0097 gives `casting_round` one subject (a Look or a costume) using
+Drizzle Kit's generated table rebuild with two documented custom edits: the
+generated copy selected the new `cast_costume_id` column from the old table,
+so the copy writes `NULL` (every existing round is a Look round), and the
+`casting_candidate` rows are copied aside and restored around the rebuild
+because the transaction ignores the generated `PRAGMA foreign_keys=OFF`.
+Custom migration 0098 moves Project Settings to version 10
+(`casting.candidateRoutes`, new `casting.characterSheetRoutes`), clears every
+`castCostume` selection because no existing sheet belongs to a costume round,
+and sets `user_version` to 78.
+
 Migration 0090 adds the nullable internal image-edit source Asset File id using
 Drizzle Kit schema generation. The only custom addition advances `user_version`
 to 72 because Asset File reads require the new column. Core writes the exact

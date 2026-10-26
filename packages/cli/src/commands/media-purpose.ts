@@ -48,7 +48,6 @@ const targetParsers: Record<
   lookbook: (value) => ({ kind: 'lookbook', id: parseLookbookTarget(value, 'Media attachment') }),
   castMember: (value) => ({ kind: 'castMember', id: parseCastTarget(value, 'Media attachment') }),
   castingRound: (value, purpose) => ({ kind: 'castingRound', id: parsePrefixedTarget(value, 'casting-round', purpose) }),
-  castCostume: (value, purpose) => ({ kind: 'castCostume', id: parsePrefixedTarget(value, 'costume', purpose) }),
   location: (value) => ({ kind: 'location', id: parseLocationTarget(value, 'Media attachment') }),
   prop: (value) => ({ kind: 'prop', id: parsePropTarget(value, 'Media attachment') }),
   scene: (value) => ({ kind: 'scene', id: parseSceneTarget(value, 'Media attachment') }),

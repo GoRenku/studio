@@ -7,42 +7,41 @@ import type {
 } from '@gorenku/studio-codex/casting-board';
 import type { CastingBoardRequestReceipt } from '@/services/codex-casting-board';
 
-export type CandidateTab = 'candidates' | 'hidden';
+export type CandidateTab = 'kept' | 'hidden';
 
-/** A candidate with the round it came from. */
+/** A candidate or sheet with the round it came from. */
 export interface BoardCandidate extends CastingBoardCandidate {
   roundNumber: number;
 }
 
-/** A kept candidate is one that isn't hidden; the cast candidate always counts as kept. */
-export function isKeptCandidate(candidate: CastingBoardCandidate, castAssetFileId: string | null): boolean {
-  return candidate.status !== 'hidden' || candidate.assetFileId === castAssetFileId;
+/** A kept image is one that isn't hidden; the round's choice always counts as kept. */
+export function isKeptCandidate(candidate: CastingBoardCandidate, chosenAssetFileId: string | null): boolean {
+  return candidate.status !== 'hidden' || candidate.assetFileId === chosenAssetFileId;
 }
 
-const TAB_FILTERS: Record<CandidateTab, (candidate: CastingBoardCandidate, castAssetFileId: string | null) => boolean> = {
-  candidates: isKeptCandidate,
-  hidden: (candidate, castAssetFileId) => !isKeptCandidate(candidate, castAssetFileId),
+const TAB_FILTERS: Record<CandidateTab, (candidate: CastingBoardCandidate, chosenAssetFileId: string | null) => boolean> = {
+  kept: isKeptCandidate,
+  hidden: (candidate, chosenAssetFileId) => !isKeptCandidate(candidate, chosenAssetFileId),
 };
 
-export function boardCandidates(board: CastingCandidateBoard): BoardCandidate[] {
-  return board.rounds.flatMap((round) => round.candidates.map((candidate) => ({ ...candidate, roundNumber: round.number })));
+export function boardCandidates(rounds: CastingBoardRound[]): BoardCandidate[] {
+  return rounds.flatMap((round) => round.candidates.map((candidate) => ({ ...candidate, roundNumber: round.number })));
 }
 
-export function tabCandidates<T extends CastingBoardCandidate>(candidates: T[], tab: CandidateTab, castAssetFileId: string | null): T[] {
-  return candidates.filter((candidate) => TAB_FILTERS[tab](candidate, castAssetFileId));
+export function tabCandidates<T extends CastingBoardCandidate>(candidates: T[], tab: CandidateTab, chosenAssetFileId: string | null): T[] {
+  return candidates.filter((candidate) => TAB_FILTERS[tab](candidate, chosenAssetFileId));
 }
 
 export function pendingTotal(round: CastingBoardRound): number {
   return round.pending.reduce((total, entry) => total + entry.count, 0);
 }
 
-/** Kept candidates plus the ones still being generated, and the hidden ones. */
-export function tabCounts(board: CastingCandidateBoard): Record<CandidateTab, number> {
-  const candidates = boardCandidates(board);
-  const castAssetFileId = board.look.castAssetFileId;
+/** Kept images plus the ones still being generated, and the hidden ones. */
+export function tabCounts(rounds: CastingBoardRound[], chosenAssetFileId: string | null): Record<CandidateTab, number> {
+  const candidates = boardCandidates(rounds);
   return {
-    candidates: tabCandidates(candidates, 'candidates', castAssetFileId).length + board.rounds.reduce((total, round) => total + pendingTotal(round), 0),
-    hidden: tabCandidates(candidates, 'hidden', castAssetFileId).length,
+    kept: tabCandidates(candidates, 'kept', chosenAssetFileId).length + rounds.reduce((total, round) => total + pendingTotal(round), 0),
+    hidden: tabCandidates(candidates, 'hidden', chosenAssetFileId).length,
   };
 }
 
@@ -72,14 +71,14 @@ export function boardRequestSummary(receipt: CastingBoardRequestReceipt): string
 
 function candidateRequestSummary(board: CastingCandidateBoard, kind: string): string {
   const subject = `${board.castMember.name} · ${board.look.name}`;
+  const candidates = boardCandidates(board.rounds);
   if (kind === 'cast') {
-    const cast = boardCandidates(board).find((candidate) => candidate.assetFileId === board.look.castAssetFileId);
+    const cast = candidates.find((candidate) => candidate.assetFileId === board.look.castAssetFileId);
     return cast ? `Look cast · ${subject} · candidate from round ${cast.roundNumber} (${cast.model.name})` : `Look cast · ${subject}`;
   }
-  return `More candidates requested · ${subject} · like ${tabCandidates(boardCandidates(board), 'candidates', board.look.castAssetFileId).length} kept`;
+  return `More candidates requested · ${subject} · like ${tabCandidates(candidates, 'kept', board.look.castAssetFileId).length} kept`;
 }
 
 function sheetRequestSummary(board: CastingSheetBoard): string {
-  const picked = board.costumes.filter((costume) => costume.pickedAssetFileId).length;
-  return `Sheet picks sent · ${board.castMember.name} · ${picked} of ${board.costumes.length} costumes picked`;
+  return `More character sheets requested · ${board.castMember.name} · ${board.look.name}`;
 }

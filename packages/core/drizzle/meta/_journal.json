@@ -680,6 +680,20 @@
       "when": 1792919808488,
       "tag": "0096_casting_detail_levels",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "6",
+      "when": 1793020303583,
+      "tag": "0097_character_sheet_rounds",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "6",
+      "when": 1793020342949,
+      "tag": "0098_character_sheet_round_settings",
+      "breakpoints": true
     }
   ]
 }

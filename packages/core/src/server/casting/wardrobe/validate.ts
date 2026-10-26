@@ -5,6 +5,8 @@ import { castingIssue } from '../diagnostics.js';
 export interface CastWardrobePlanContext {
   sceneIds: ReadonlySet<string>;
   existingCostumeIds: ReadonlySet<string>;
+  /** The Look of every existing costume that has character sheet rounds. */
+  sheetRoundCostumeLooks: ReadonlyMap<string, string>;
   /** The Cast Member's Looks by id, with the scenes each covers. */
   lookScenes: ReadonlyMap<string, ReadonlySet<string>>;
 }
@@ -15,6 +17,7 @@ export function castWardrobePlanIssues(document: CastWardrobePlanDocument, conte
     ...duplicateNameIssues(document),
     ...costumeIdIssues(document, context),
     ...lookIssues(document, context),
+    ...sheetRoundLookIssues(document, context),
     ...sceneIssues(document, context),
   ];
 }
@@ -49,6 +52,16 @@ function lookIssues(document: CastWardrobePlanDocument, context: CastWardrobePla
   return document.costumes.flatMap((costume, index) => context.lookScenes.has(costume.lookId)
     ? []
     : [castingIssue('CASTING_LOOK_NOT_FOUND', `Look is not one of this Cast Member's Looks: ${costume.lookId}.`, ['costumes', String(index), 'lookId'], 'Write the Looks first with `renku cast looks write`.')]);
+}
+
+/** A costume's sheets show its Look's face, so a costume with sheet rounds stays in its Look. */
+function sheetRoundLookIssues(document: CastWardrobePlanDocument, context: CastWardrobePlanContext): DiagnosticIssue[] {
+  return document.costumes.flatMap((costume, index) => {
+    const lookId = costume.id ? context.sheetRoundCostumeLooks.get(costume.id) : undefined;
+    return lookId && lookId !== costume.lookId
+      ? [castingIssue('CASTING_COSTUME_LOOK_CHANGE_HAS_SHEETS', `${costume.name} has character sheet rounds and cannot move to another Look.`, ['costumes', String(index), 'lookId'], 'Keep its Look, or leave the costume out and add a new one for the other Look; its sheets stay in Assets.')]
+      : [];
+  });
 }
 
 function sceneIssues(document: CastWardrobePlanDocument, context: CastWardrobePlanContext): DiagnosticIssue[] {

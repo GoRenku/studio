@@ -25,3 +25,9 @@ export function lookNotFound(lookId: string): ProjectDataError {
     suggestion: 'List the Looks with `renku cast looks show --cast <cast-member-id>`.',
   });
 }
+
+export function costumeNotFound(costumeId: string): ProjectDataError {
+  return new ProjectDataError('CASTING_COSTUME_NOT_FOUND', `Cast Costume was not found: ${costumeId}.`, {
+    suggestion: 'List the costumes with `renku cast wardrobe show --cast <cast-member-id>`.',
+  });
+}

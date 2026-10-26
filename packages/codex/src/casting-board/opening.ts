@@ -15,19 +15,23 @@ export const CASTING_BOARD_URI = 'ui://renku/casting-board';
 
 type CastingBoardOpening = z.infer<typeof castingBoardOpenSchema>;
 
-/** The schema guarantees each mode's id is present. */
-const SUBJECT_RESOLVERS: Record<CastingBoardMode, (input: CastingBoardOpening, projectRef: StudioProjectRef, homeDir?: string) => Promise<CastingBoardSubject>> = {
+type OpeningOf<M extends CastingBoardMode> = Extract<CastingBoardOpening, { mode: M }>;
+
+const SUBJECT_RESOLVERS: { [M in CastingBoardMode]: (input: OpeningOf<M>, projectRef: StudioProjectRef, homeDir?: string) => Promise<CastingBoardSubject> } = {
   candidates: async (input, projectRef, homeDir) => {
-    const { look } = await createProjectDataService().showCastingLook({ projectName: projectRef.name, homeDir, lookId: input.lookId! });
+    const { look } = await createProjectDataService().showCastingLook({ projectName: projectRef.name, homeDir, lookId: input.lookId });
     return { mode: 'candidates', castMemberId: look.castMemberId, lookId: look.id };
   },
-  sheets: async (input) => ({ mode: 'sheets', castMemberId: input.castMemberId! }),
+  sheets: async (input, projectRef, homeDir) => {
+    const { look } = await createProjectDataService().showCastingLook({ projectName: projectRef.name, homeDir, lookId: input.lookId });
+    return { mode: 'sheets', castMemberId: look.castMemberId, lookId: look.id, costumeId: input.costumeId ?? null };
+  },
 };
 
 export function registerCastingBoardOpening(server: McpServer, state: CastingBoardState, homeDir?: string): void {
   registerAppTool(server, 'casting.board.open', {
     title: 'Open the casting board',
-    description: 'Show the casting board inline. candidates mode shows every casting round of one Look, filling in as candidates are imported, with hide, compare and cast. sheets mode shows one row per costume with its Character Sheets to pick from. Hide and picks are saved directly; Cast, "More like these" and "Send picks" post a message. Return immediately and end the turn, or keep generating and importing candidates.',
+    description: 'Show the casting board inline. candidates mode shows every casting round of one Look, filling in as candidates are imported, with hide, compare and cast. sheets mode shows the character sheet rounds of one Look\'s costumes, one costume at a time, with hide, compare and pick. Hide and picks are saved directly; Cast and "More like these" post a message. Return immediately and end the turn, or keep generating and importing images.',
     inputSchema: castingBoardOpenSchema,
     annotations: { readOnlyHint: true, openWorldHint: false },
     _meta: { ui: { resourceUri: CASTING_BOARD_URI, visibility: ['model'] } },
@@ -43,7 +47,8 @@ export function registerCastingBoardOpening(server: McpServer, state: CastingBoa
 
 export async function openCastingBoard(state: CastingBoardState, input: CastingBoardOpening, homeDir?: string): Promise<CastingBoard> {
   const projectRef = await createProjectDataService().resolveStudioProjectRef({ projectName: input.project, homeDir });
-  const subject = await SUBJECT_RESOLVERS[input.mode](input, projectRef, homeDir);
+  const resolve = SUBJECT_RESOLVERS[input.mode] as (input: CastingBoardOpening, projectRef: StudioProjectRef, homeDir?: string) => Promise<CastingBoardSubject>;
+  const subject = await resolve(input, projectRef, homeDir);
   const sessionId = randomUUID();
   const record = state.create(sessionId, { projectRef, subject, media: new PanelMediaRegistry(CASTING_BOARD_SCHEME, sessionId) });
   return projectCastingBoard(record, homeDir);

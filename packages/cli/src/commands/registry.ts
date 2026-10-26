@@ -104,6 +104,7 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
         active: flags.active,
         dryRun: flags.dryRun,
         look: flags.look,
+        costume: flags.costume,
         assetFile: flags.assetFile,
         status: flags.status,
       },

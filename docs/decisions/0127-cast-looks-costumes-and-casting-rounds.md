@@ -9,7 +9,7 @@ Updates [ADR 0064](0064-use-exclusive-asset-membership-and-scoped-selection.md),
 and [ADR 0125](0125-store-character-arcs-as-one-json-document-per-cast-member.md).
 Applies [ADR 0041](0041-keep-ai-artifacts-and-prompts-opaque.md) and
 [ADR 0114](0114-describe-models-as-skill-data-in-codex-panels.md).
-Implemented by plan 0242.
+Implemented by plans 0242, 0244, 0246, 0247 and 0248.
 
 ## Context
 
@@ -45,21 +45,32 @@ and sometimes one Cast Member with the ages only described in text (Sintel).
   its scenes, wardrobe and continuity notes; a Cast Member wears one costume
   per scene, and a costume's scenes are within its Look's scenes. Cast Design
   keeps only `costume.baseWardrobeLogic`.
-- **Character sheets are made per costume.** `cast.character-sheet` targets a
-  Cast Costume. The new selection target `castCostume` picks one
-  `character_sheet` of the Cast Member for each costume; this supersedes the
-  ADR 0064 rule that Character Sheets are never selected, for this scope
-  only. Scene generation context reports each Cast Member's Look, costume and
-  picked sheet, and the picked sheet is the first, workflow-selected
-  Cast continuity suggestion.
+- **Character sheets are made in rounds per costume** (plan 0248). A Casting
+  Round has one subject: a Look (casting candidates) or a costume (a
+  character sheet round). `cast.character-sheet` targets a costume's round,
+  and each sheet is linked to it with the same candidate/hidden status as a
+  casting candidate. The selection target `castCostume` picks one
+  `character_sheet` per costume, only from that costume's rounds; this
+  supersedes the ADR 0064 rule that Character Sheets are never selected, for
+  this scope only. A sheet round needs its costume's Look to be cast; a
+  costume with sheet rounds keeps its Look, and removing it deletes its
+  rounds while the sheets stay in Assets. Scene generation context reports
+  each Cast Member's Look, costume and picked sheet, and the picked sheet is
+  the first, workflow-selected Cast continuity suggestion.
 - **One confirmation per round.** The Casting Round panel shows the brief,
   models, counts and estimate; its consumed Generate is the Renku
-  confirmation for every candidate in that round, replacing per-generation
-  review for casting. In harnesses without inline panels the round is set up
+  confirmation for every image in that round, replacing the Route Chooser and
+  per-generation review for casting candidates and character sheets. One
+  panel can cover several costumes of one Look: the count is per costume and
+  each ticked costume gets its own round. In harnesses without inline panels the round is set up
   as chat text and the user's reply confirms it. The Route Chooser is not
   used for casting rounds.
-- **Casting defaults live in Project Settings** (`casting.routes`, version 8),
-  written by the round panel's save box or `renku settings casting set`.
+- **Casting defaults live in Project Settings** (version 10):
+  `casting.candidateRoutes` for Look rounds and `casting.characterSheetRoutes`
+  (per costume) for sheet rounds, written by the round panel's save box for
+  the subject it was opened for, or by `renku settings casting set`. With no
+  saved routes a panel opens on the image lane model with 10 candidates or 2
+  sheets per costume.
 - **Shared arcs are removed.** `characterArcReference` and its delete guard
   are gone; the turning point sheet field is `characterSheetAssetFileId`.
 - **Studio stays model-neutral and opaque.** Panels receive model labels and
@@ -69,14 +80,22 @@ and sometimes one Cast Member with the ages only described in text (Sintel).
   Studio-owned output shape described in the media-producer skill.
 - **The Studio Casting tab shows one Look at a time** (plan 0246). A row of
   Look cards (picture, name, one status) picks the Look; a text-free scene
-  bar lights up its scenes; the picked Look shows its rounds, then its
-  costumes once it is cast. At most one "Ask your agent" card is on screen,
+  bar lights up its scenes. Once the Look is cast and has costumes, a second
+  row shows a Casting card with the cast picture and one card per costume
+  with its picked sheet (plan 0248); one box below shows the picked card's
+  rounds, with the only Compare button in its header, and the scene bar
+  brightens the picked costume's scenes. At most one "Ask your agent" card is on screen,
   for the picked Look's next step; optional follow-ups are a quiet copy line.
   Candidate tiles show their controls on hover or keyboard focus, and the
   image viewer keeps Close alone and puts Hide and Cast (or Pick) in its
   floating zoom pill. Hidden candidates fold away behind "Show N hidden".
+- **The Codex sheet board is the casting board for costumes** (plan 0248):
+  `casting.board.open` in sheets mode takes a Look, shows its costumes as
+  cards and one costume's rounds at a time with Hide, Pick, Compare and "More
+  like these". Picks save directly and post no message.
 - **Compare is one shared view.** The Codex casting board and the Studio
-  Casting tab both open the same Compare over a Look's kept candidates: two
+  Casting tab both open the same Compare over a Look's kept candidates or a
+  costume's kept sheets (Pick in place of Cast): two
   equal sides, each stepping on its own past the other side's candidate, so
   one side can stay as the anchor. Each side has its own Hide and Cast; one
   zoom floats over both, side by side or stacked to show both larger.

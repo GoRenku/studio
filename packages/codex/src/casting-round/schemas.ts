@@ -19,17 +19,25 @@ const castingRouteInputSchema = z.object({
   count: z.number().int().min(1).max(CASTING_ROUND_MAX_COUNT_PER_MODEL),
 }).strict();
 
+/** Purpose-level bound on how many costumes one character sheet round panel covers. */
+const CASTING_ROUND_MAX_COSTUMES = 20;
+
 export const castingRoundOpenSchema = z.object({
   project: castingIdentity,
-  lookId: castingIdentity,
+  subject: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('look'), lookId: castingIdentity }).strict()
+      .describe('A casting round of candidates for one Look.'),
+    z.object({ kind: z.literal('costumes'), costumeIds: z.array(castingIdentity).min(1).max(CASTING_ROUND_MAX_COSTUMES) }).strict()
+      .describe('Character sheet rounds for costumes of one cast Look; each costume gets its own round.'),
+  ]),
   brief: z.array(z.string().trim().min(1).max(CASTING_ROUND_MAX_LINE)).min(1).max(CASTING_ROUND_MAX_BRIEF_LINES)
-    .describe('What each candidate shows, as short display lines. Shown as written; never stored.'),
+    .describe('What each candidate or sheet shows, as short display lines. Shown as written; never stored.'),
   notes: z.record(castingIdentity, z.string().trim().min(1).max(200)).optional()
     .describe('One-line strength notes from the Skill, keyed by Default Model List image-lane model key.'),
   references: z.array(castingIdentity).max(20).optional()
-    .describe('Identity reference Asset File ids of this Cast Member, such as an earlier Look\'s cast candidate or the candidates the director kept.'),
+    .describe('Identity reference Asset File ids of this Cast Member, such as an earlier Look\'s cast candidate, the candidates the director kept, or a costume\'s kept sheets. Costumes default to the Look\'s cast candidate.'),
   suggested: z.array(castingRouteInputSchema).optional()
-    .describe('Preselect these models and counts instead of the casting defaults.'),
+    .describe('Preselect these models and counts (per round) instead of the saved defaults.'),
 }).strict();
 
 export const castingRoundRespondSchema = z.object({
@@ -40,10 +48,11 @@ export const castingRoundRespondSchema = z.object({
       routes: z.array(castingRouteInputSchema).min(1),
       maxConcurrentGenerations: z.number().int().min(1),
       detail: z.enum(IMAGE_DETAIL_LEVELS),
+      costumeIds: z.array(castingIdentity).min(1).optional(),
     }).strict(),
     z.object({ kind: z.literal('canceled') }).strict(),
   ]),
-  saveAsCastingDefaults: z.boolean(),
+  saveAsDefaults: z.boolean(),
 }).strict();
 
 export const castingRoundConsumeSchema = z.object({ panelId: castingIdentity }).strict();

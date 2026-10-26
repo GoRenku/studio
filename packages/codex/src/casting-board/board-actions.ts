@@ -5,10 +5,11 @@ import type {
   CastingBoardRequestAction,
   CastingBoardRequestInput,
 } from './contracts.js';
-import { castBoardCandidate, requestMoreLikeKept, setBoardCandidateStatus } from './candidate-actions.js';
+import { castBoardCandidate, requestMoreCandidatesLikeKept, setBoardCandidateStatus } from './candidate-actions.js';
+import type { CastingBoardMode } from './contracts.js';
 import { readCastingBoard } from './session-projection.js';
 import type { CastingBoardActionContext, CastingBoardState } from './session-state.js';
-import { pickBoardSheet, requestSheetPicksDone } from './sheet-actions.js';
+import { pickBoardSheet, requestMoreSheetsLikeKept } from './sheet-actions.js';
 
 /** Each handler returns the action id when the user's step also waits for the agent. */
 type BoardHandlers<TAction extends { kind: string }> = {
@@ -22,9 +23,13 @@ const ACT_HANDLERS: BoardHandlers<CastingBoardActAction> = {
   pickSheet: pickBoardSheet,
 };
 
+const MORE_LIKE_KEPT: Record<CastingBoardMode, (context: CastingBoardActionContext, request: CastingBoardRequestAction) => Promise<string>> = {
+  candidates: requestMoreCandidatesLikeKept,
+  sheets: requestMoreSheetsLikeKept,
+};
+
 const REQUEST_HANDLERS: BoardHandlers<CastingBoardRequestAction> = {
-  moreLikeKept: requestMoreLikeKept,
-  sheetPicksDone: requestSheetPicksDone,
+  moreLikeKept: (context, request) => MORE_LIKE_KEPT[context.record.subject.mode](context, request),
 };
 
 export function actOnCastingBoard(state: CastingBoardState, input: CastingBoardActInput, homeDir?: string): Promise<CastingBoardReceipt> {

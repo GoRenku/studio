@@ -6,6 +6,7 @@ import { readCastMemberRecord } from '../../database/access/cast-members.js';
 import { readAssetFileRecordIncludingDiscarded } from '../../database/access/asset-files.js';
 import { isAssetFileAvailableInSession, toAssetFile } from '../../asset-files/projection.js';
 import { readSceneOrder, toCastCostume, toCastLook } from '../../casting/projection.js';
+import { listCastingRoundViews } from '../../casting/rounds/views.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { MediaGenerationPurposeBuilder, MediaGenerationPurposeBuildInput } from '../purpose-registry.js';
 import { createReferenceSuggestion, suggestLookbookMedia } from '../reference-suggestions.js';
@@ -22,7 +23,7 @@ export const buildCastingRoundPurposeContext: MediaGenerationPurposeBuilder = (i
     throw invalidTarget('a Casting Round');
   }
   const round = readCastingRoundRecord(input.session, input.target.id);
-  const lookRecord = round ? readCastLookRecord(input.session, round.lookId) : null;
+  const lookRecord = round?.subject.kind === 'castLook' ? readCastLookRecord(input.session, round.subject.id) : null;
   if (!round || !lookRecord) {
     throw targetNotFound('Casting Round', input.target.id);
   }
@@ -61,26 +62,35 @@ export const buildCastingRoundPurposeContext: MediaGenerationPurposeBuilder = (i
   };
 };
 
-/** A Character Sheet shows one costume; the Look's cast candidate is the identity reference. */
-export const buildCastCostumePurposeContext: MediaGenerationPurposeBuilder = (input) => {
-  if (input.target.kind !== 'castCostume') {
-    throw invalidTarget('a Cast Costume');
+/**
+ * A character sheet round shows one costume of a cast Look. The round's references (the Look's
+ * cast candidate, or the sheets the director kept) are the identity reference; the costume's
+ * picked and kept sheets are offered for continuity.
+ */
+export const buildCharacterSheetRoundPurposeContext: MediaGenerationPurposeBuilder = (input) => {
+  if (input.target.kind !== 'castingRound') {
+    throw invalidTarget('a costume\'s character sheet round');
   }
-  const costumeRecord = readCastCostumeRecord(input.session, input.target.id);
+  const round = readCastingRoundRecord(input.session, input.target.id);
+  const costumeRecord = round?.subject.kind === 'castCostume' ? readCastCostumeRecord(input.session, round.subject.id) : null;
   const lookRecord = costumeRecord ? readCastLookRecord(input.session, costumeRecord.lookId) : null;
-  if (!costumeRecord || !lookRecord) {
-    throw targetNotFound('Cast Costume', input.target.id);
+  if (!round || !costumeRecord || !lookRecord) {
+    throw targetNotFound('Character sheet round', input.target.id);
   }
   const sceneOrder = readSceneOrder(input.session);
   const costume = toCastCostume(input.session, costumeRecord, sceneOrder);
   const look = toCastLook(input.session, lookRecord, sceneOrder);
   const castContext = castMemberContext(input, costume.castMemberId);
   const visualLanguage = readMediaGenerationLookbooks({ assetFiles: input.assetFiles, session: input.session, projectFolder: input.projectFolder, kinds: ['production', 'storyboard'] });
-  const identityIds = look.castCandidateAssetFileId ? [look.castCandidateAssetFileId] : [];
+  const castCandidate = look.castCandidateAssetFileId ? [look.castCandidateAssetFileId] : [];
+  const identityIds = [...new Set([...round.referenceAssetFileIds, ...castCandidate])];
+  const keptSheetIds = listCastingRoundViews(input.session, round.subject)
+    .flatMap((entry) => entry.candidates.filter((candidate) => candidate.status !== 'hidden' || candidate.assetFileId === costume.characterSheetAssetFileId).map((candidate) => candidate.assetFileId));
   return {
     targetContext: {
-      kind: 'castCostume',
+      kind: 'characterSheetRound',
       ...castContext,
+      round,
       costume,
       look,
       scenes: scenesById(input, costume.sceneIds.length > 0 ? costume.sceneIds : look.sceneIds),
@@ -94,7 +104,7 @@ export const buildCastCostumePurposeContext: MediaGenerationPurposeBuilder = (in
         subject: { kind: 'castMember', id: costume.castMemberId },
         assetFiles: activeAssetFiles(input, identityIds),
         selectedAssetFileIds: identityIds,
-        workflowSelectedAssetFileIds: identityIds,
+        workflowSelectedAssetFileIds: round.referenceAssetFileIds.length > 0 ? round.referenceAssetFileIds : castCandidate,
         projectFolder: input.projectFolder,
         collection: input.assetFiles,
         warnings: input.warnings,
@@ -103,7 +113,7 @@ export const buildCastCostumePurposeContext: MediaGenerationPurposeBuilder = (in
         id: 'cast-continuity',
         role: 'continuity',
         subject: { kind: 'castMember', id: costume.castMemberId },
-        assetFiles: castContext.assetFileIds.map((id) => input.assetFiles.get(id)).filter((assetFile) => assetFile.type === 'character_sheet'),
+        assetFiles: activeAssetFiles(input, keptSheetIds),
         ...(costume.characterSheetAssetFileId ? { selectedAssetFileIds: [costume.characterSheetAssetFileId] } : {}),
         projectFolder: input.projectFolder,
         collection: input.assetFiles,

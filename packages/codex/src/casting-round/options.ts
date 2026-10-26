@@ -9,9 +9,6 @@ import {
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import { castingRoundError, castingRoundIssue } from './diagnostics.js';
 
-/** The total a round opens with when nothing else sets it. */
-export const CASTING_ROUND_DEFAULT_TOTAL = 10;
-
 /** A provider of an offered model before it is priced. */
 export interface CastingRoundProviderRecord {
   provider: string;
@@ -83,10 +80,10 @@ export function findCastingRoundProvider<T extends { model: { key: string }; pro
   return option && provider ? { option, provider } : undefined;
 }
 
-/** The agent's suggestion, then the casting defaults, then the image lane default with the whole default total. */
+/** The agent's suggestion, then the saved defaults, then the image lane default with the fallback count. */
 export function preselectCastingRoutes(
   options: CastingRoundOptionRecord[],
-  input: { suggested?: CastingRoute[]; saved: CastingRoute[]; lane: GenerationLaneSettings },
+  input: { suggested?: CastingRoute[]; saved: CastingRoute[]; lane: GenerationLaneSettings; fallbackCount: number },
 ): CastingRoute[] {
   const suggested = offeredRoutes(options, input.suggested ?? []);
   if (suggested.length > 0) return suggested;
@@ -96,7 +93,7 @@ export function preselectCastingRoutes(
   const laneOption = (input.lane.model && onLane.find((option) => option.model.key === input.lane.model?.key))
     || onLane.find((option) => option.providers[0]?.recommended)
     || onLane[0];
-  return laneOption ? [{ provider: input.lane.provider, model: laneOption.model, count: CASTING_ROUND_DEFAULT_TOTAL }] : [];
+  return laneOption ? [{ provider: input.lane.provider, model: laneOption.model, count: input.fallbackCount }] : [];
 }
 
 /** Keeps the offered routes, with the option's display name, and one route per model. */

@@ -30,7 +30,7 @@ beforeEach(() => {
     revision: 2,
     answer: input.choice.kind === 'canceled'
       ? input.choice
-      : { ...input.choice, estimatedCost: { amount: 0.3, currency: 'USD' }, castingDefaultsSaved: input.saveAsCastingDefaults },
+      : { ...input.choice, estimatedCost: { amount: 0.3, currency: 'USD' }, defaultsSaved: input.saveAsDefaults },
   }));
   integration.notify.mockResolvedValue(undefined);
 });
@@ -53,7 +53,7 @@ function roundFixture(overrides: Partial<CastingRound> = {}): CastingRound {
     panelId: 'panel',
     revision: 1,
     castMember: { id: 'cast_1', name: 'Ana' },
-    look: { id: 'look_1', name: 'Young' },
+    subject: { kind: 'look', look: { id: 'look_1', name: 'Young' } },
     brief: ['A girl of about 16', 'Neutral backdrop'],
     references: [],
     options: [
@@ -158,9 +158,9 @@ describe('Casting round panel', () => {
         { provider: 'acme-cloud', model: portrait, count: 5 },
         { provider: 'acme-cloud', model: faces, count: 5 },
       ] },
-      saveAsCastingDefaults: true,
+      saveAsDefaults: true,
     });
-    expect(integration.notify.mock.calls[0]![2]).toBe('10 candidates on 2 models, lowest detail, 4 at a time · estimated $0.30');
+    expect(integration.notify.mock.calls[0]![2]).toEqual({ title: 'Casting round', subject: 'Ana · Young', summary: '10 candidates on 2 models, lowest detail, 4 at a time · estimated $0.30' });
   });
 
   it('opens on the project candidate detail and prices and sends the level the director picks', async () => {
@@ -191,5 +191,45 @@ describe('Casting round panel', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); });
     expect(integration.respond.mock.calls[0]![1]).toMatchObject({ choice: { kind: 'canceled' } });
     expect(screen.getByText('Casting round canceled.')).toBeTruthy();
+  });
+
+  describe('for costumes', () => {
+    const costumes: CastingRound['subject'] = {
+      kind: 'costumes',
+      look: { id: 'look_2', name: 'Older' },
+      scenes: [{ id: 'scene_1', heading: 'EXT. HARBOR', productionNumber: '47' }, { id: 'scene_2', heading: 'EXT. WALLS', productionNumber: '48' }],
+      costumes: [
+        { id: 'costume_1', name: 'Court dress', sceneIds: ['scene_1'], sheetCount: 2, picked: true },
+        { id: 'costume_2', name: 'Riding coat', sceneIds: ['scene_2'], sheetCount: 0, picked: false },
+      ],
+    };
+
+    it('lists the costumes, prices every ticked one and sends the ticked costumes and sheet defaults', async () => {
+      integration.round = roundFixture({ subject: costumes, preselected: [{ provider: 'acme-cloud', model: portrait, count: 2 }], initialTotal: 2, initialDetail: 'highest' });
+      render(<CastingRoundPanel />);
+      await screen.findByRole('heading', { name: 'Character sheet round' });
+      expect(screen.getByText('What each sheet shows')).toBeTruthy();
+      expect(screen.getByText('2 sheets · picked')).toBeTruthy();
+      expect(screen.getByText('No sheets')).toBeTruthy();
+      expect(screen.getByText('Scene 47')).toBeTruthy();
+      expect(screen.getByText(/2 costumes, 4 sheets/)).toBeTruthy();
+      expect(screen.getByRole('radio', { name: 'Highest' }).getAttribute('aria-checked')).toBe('true');
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Riding coat' }));
+      expect(screen.getByText(/1 costume, 2 sheets/)).toBeTruthy();
+      fireEvent.click(screen.getByRole('checkbox', { name: "Save these models, counts and detail as this project's character sheet defaults" }));
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Ask agent to generate 2' })); });
+      expect(integration.respond.mock.calls[0]![1]).toMatchObject({ choice: { kind: 'generate', costumeIds: ['costume_1'], routes: [{ provider: 'acme-cloud', model: portrait, count: 2 }] }, saveAsDefaults: true });
+      expect(integration.notify.mock.calls[0]![2]).toMatchObject({ title: 'Character sheet round', subject: 'Ana · Older' });
+    });
+
+    it('disables generate when no costume is ticked', async () => {
+      integration.round = roundFixture({ subject: costumes, preselected: [{ provider: 'acme-cloud', model: portrait, count: 2 }], initialTotal: 2 });
+      render(<CastingRoundPanel />);
+      await screen.findByRole('heading', { name: 'Character sheet round' });
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Court dress' }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Riding coat' }));
+      expect(screen.getByRole('button', { name: 'Ask agent to generate 0' })).toHaveProperty('disabled', true);
+    });
   });
 });

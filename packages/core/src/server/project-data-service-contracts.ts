@@ -15,6 +15,7 @@ import type {
   CastCastingResource,
   CastingCandidateStatus,
   CastingCandidateStatusReport,
+  CastingCostumeReport,
   CastingLookReport,
   CastingRoundReport,
   CastingSettingsReport,
@@ -441,6 +442,7 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   writeCastWardrobePlan(input: CastingDocumentInput): Promise<CastWardrobeReport>;
   createCastingRound(input: CastingDocumentInput): Promise<CastingRoundReport>;
   showCastingLook(input: CastingProjectInput & { lookId: string }): Promise<CastingLookReport>;
+  showCastingCostume(input: CastingProjectInput & { costumeId: string }): Promise<CastingCostumeReport>;
   setCastingCandidateStatus(input: CastingCandidateStatusInput): Promise<CastingCandidateStatusReport>;
   showCastingSettings(input: CastingProjectInput): Promise<CastingSettingsReport>;
   setCastingSettings(input: CastingProjectInput & { casting: unknown; filePath?: string }): Promise<CastingSettingsReport>;

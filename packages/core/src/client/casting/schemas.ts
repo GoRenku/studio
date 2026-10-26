@@ -114,10 +114,18 @@ export const castingRoundCreateDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/casting-round-create.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: ['kind', 'lookId', 'routes', 'maxConcurrentGenerations', 'referenceAssetFileIds', 'estimatedCost'],
+  required: ['kind', 'subject', 'routes', 'maxConcurrentGenerations', 'referenceAssetFileIds', 'estimatedCost'],
   properties: {
     kind: { const: 'castingRoundCreate' },
-    lookId: nonEmptyString,
+    subject: {
+      type: 'object',
+      required: ['kind', 'id'],
+      properties: {
+        kind: { enum: ['castLook', 'castCostume'] },
+        id: nonEmptyString,
+      },
+      additionalProperties: false,
+    },
     routes: { ...castingRoutes, minItems: 1 },
     maxConcurrentGenerations: { type: 'integer', minimum: 1, maximum: 5 },
     referenceAssetFileIds: idList,
@@ -130,9 +138,10 @@ export const castingSettingsSchema = {
   $id: 'https://schemas.gorenku.com/studio/casting-settings.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: ['routes', 'candidateDetail', 'characterSheetDetail'],
+  required: ['candidateRoutes', 'characterSheetRoutes', 'candidateDetail', 'characterSheetDetail'],
   properties: {
-    routes: castingRoutes,
+    candidateRoutes: castingRoutes,
+    characterSheetRoutes: castingRoutes,
     candidateDetail: { enum: IMAGE_DETAIL_LEVELS },
     characterSheetDetail: { enum: IMAGE_DETAIL_LEVELS },
   },

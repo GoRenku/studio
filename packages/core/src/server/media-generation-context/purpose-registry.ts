@@ -12,7 +12,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { GenerationAssetFiles } from './reference-assets.js';
 import { buildAssetFilePurposeContext } from './purposes/asset-file.js';
 import { buildCastPurposeContext } from './purposes/cast.js';
-import { buildCastCostumePurposeContext, buildCastingRoundPurposeContext } from './purposes/casting.js';
+import { buildCharacterSheetRoundPurposeContext, buildCastingRoundPurposeContext } from './purposes/casting.js';
 import { buildLocationPurposeContext } from './purposes/location.js';
 import { buildLookbookPurposeContext } from './purposes/lookbook.js';
 import { buildProjectPurposeContext } from './purposes/project.js';
@@ -52,7 +52,7 @@ export const MEDIA_GENERATION_PURPOSE_BUILDERS: Record<MediaPurpose, MediaGenera
   'lookbook.video-sheet': buildLookbookPurposeContext,
   'lookbook.storyboard-sheet': buildLookbookPurposeContext,
   'cast.casting-candidate': buildCastingRoundPurposeContext,
-  'cast.character-sheet': buildCastCostumePurposeContext,
+  'cast.character-sheet': buildCharacterSheetRoundPurposeContext,
   'cast.profile': buildCastPurposeContext,
   'cast.voice-sample': buildCastPurposeContext,
   'location.sheet': buildLocationPurposeContext,

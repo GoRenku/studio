@@ -31,10 +31,10 @@ export async function respondToCastingRound(bridge: CodexApp, input: CastingRoun
 }
 
 /** A neutral notice naming the round; it starts the agent's turn and carries no approval. */
-export function notifyCastingRound(bridge: CodexApp, round: CastingRound, summary: string): Promise<void> {
-  const subject = `${round.castMember.name} · ${round.look.name}`;
+export function notifyCastingRound(bridge: CodexApp, round: CastingRound, notice: { title: string; subject: string; summary: string }): Promise<void> {
+  const { title, subject, summary } = notice;
   const text = round.answer?.kind === 'generate'
-    ? `Casting round ready · ${subject} · ${summary}. Round panel ${round.panelId}. Consume it with casting.round.consume once.`
-    : `Casting round canceled · ${subject}. Round panel ${round.panelId}. Consume it with casting.round.consume once.`;
+    ? `${title} ready · ${subject} · ${summary}. Round panel ${round.panelId}. Consume it with casting.round.consume once.`
+    : `${title} canceled · ${subject}. Round panel ${round.panelId}. Consume it with casting.round.consume once.`;
   return sendCodexPanelMessage(bridge, text, CASTING_ROUND);
 }

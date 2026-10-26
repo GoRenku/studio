@@ -14,7 +14,7 @@ export function castingImage(id: string, type = 'casting_candidate'): StudioAsse
   } as StudioAssetFileResponse;
 }
 
-/** A fictional six-scene film where Ada has two Looks, three costumes and two character sheets. */
+/** A fictional six-scene film where Ada has two Looks and three costumes; Overalls has one round of two sheets. */
 export function castCastingResource(
   overrides: Partial<CastCastingResourceResponse> = {}
 ): CastCastingResourceResponse {
@@ -39,7 +39,7 @@ export function castCastingResource(
         castCandidate: castingImage('asset_young_b'),
         rounds: [{
           id: 'round_young_1',
-          lookId: 'look_young',
+          subject: { kind: 'castLook', id: 'look_young' },
           number: 1,
           routes: [{ provider: 'fictional', model: { key: 'lumen', name: 'Lumen Image' }, count: 3 }],
           maxConcurrentGenerations: 3,
@@ -64,7 +64,7 @@ export function castCastingResource(
         castCandidate: null,
         rounds: [{
           id: 'round_older_1',
-          lookId: 'look_older',
+          subject: { kind: 'castLook', id: 'look_older' },
           number: 1,
           routes: [
             { provider: 'fictional', model: { key: 'lumen', name: 'Lumen Image' }, count: 2 },
@@ -82,13 +82,26 @@ export function castCastingResource(
       },
     ],
     costumes: [
-      { id: 'costume_overalls', castMemberId: 'cast_ada', lookId: 'look_young', name: 'Overalls', wardrobe: [], continuityNotes: [], sceneIds: ['scene_2', 'scene_3'], characterSheetAssetFileId: 'asset_sheet_overalls' },
-      { id: 'costume_raincoat', castMemberId: 'cast_ada', lookId: 'look_young', name: 'Raincoat', wardrobe: [], continuityNotes: [], sceneIds: ['scene_4'], characterSheetAssetFileId: null },
-      { id: 'costume_suit', castMemberId: 'cast_ada', lookId: 'look_older', name: 'Suit', wardrobe: [], continuityNotes: [], sceneIds: ['scene_1', 'scene_5', 'scene_6'], characterSheetAssetFileId: null },
-    ],
-    characterSheets: [
-      castingImage('asset_sheet_overalls', 'character_sheet'),
-      castingImage('asset_sheet_raincoat', 'character_sheet'),
+      {
+        id: 'costume_overalls', castMemberId: 'cast_ada', lookId: 'look_young', name: 'Overalls', wardrobe: [], continuityNotes: [], sceneIds: ['scene_2', 'scene_3'], characterSheetAssetFileId: 'asset_sheet_overalls',
+        rounds: [{
+          id: 'round_overalls_1',
+          subject: { kind: 'castCostume', id: 'costume_overalls' },
+          number: 1,
+          routes: [{ provider: 'fictional', model: { key: 'lumen', name: 'Lumen Image' }, count: 2 }],
+          maxConcurrentGenerations: 2,
+          referenceAssetFileIds: ['asset_young_b'],
+          estimatedCost: { amount: 0.18, currency: 'USD' },
+          createdAt: '2026-10-24T00:00:00.000Z',
+          expectedCount: 2,
+          candidates: [
+            { assetFileId: 'asset_sheet_overalls', roundId: 'round_overalls_1', status: 'candidate', modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: castingImage('asset_sheet_overalls', 'character_sheet') },
+            { assetFileId: 'asset_sheet_overalls_b', roundId: 'round_overalls_1', status: 'candidate', modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: castingImage('asset_sheet_overalls_b', 'character_sheet') },
+          ],
+        }],
+      },
+      { id: 'costume_raincoat', castMemberId: 'cast_ada', lookId: 'look_young', name: 'Raincoat', wardrobe: [], continuityNotes: [], sceneIds: ['scene_4'], characterSheetAssetFileId: null, rounds: [] },
+      { id: 'costume_suit', castMemberId: 'cast_ada', lookId: 'look_older', name: 'Suit', wardrobe: [], continuityNotes: [], sceneIds: ['scene_1', 'scene_5', 'scene_6'], characterSheetAssetFileId: null, rounds: [] },
     ],
     ...overrides,
   };

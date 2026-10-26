@@ -1,76 +1,75 @@
 import { useState } from 'react';
-import type { CastingCandidateStatus } from '@gorenku/studio-core/client';
+import type { CastingCandidateStatus, CastingRoundKind } from '@gorenku/studio-core/client';
 import { CandidatePreviewActions } from '@/features/casting-views/candidate-actions';
 import { CandidateTile } from '@/features/casting-views/candidate-tile';
+import { CASTING_ROUND_KIND_LABELS } from '@/features/casting-views/round-kind-labels';
 import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
-import type {
-  CastCastingLookResponse,
-  CastingRoundViewResponse,
-} from '@/services/studio-project-contracts';
+import type { CastingRoundViewResponse } from '@/services/studio-project-contracts';
 import { isKeptCandidate, roundSummary } from './casting-summaries';
 
 interface CastingRoundsProps {
-  look: CastCastingLookResponse;
-  /** Hidden candidates show (dimmed) only when the director asks to see them. */
+  kind: CastingRoundKind;
+  /** The Look or costume name, for the image viewer's title. */
+  subjectName: string;
+  rounds: CastingRoundViewResponse[];
+  chosenAssetFileId: string | null;
+  /** Hidden images show (dimmed) only when the director asks to see them. */
   showHidden: boolean;
   pendingAssetFileId: string | null;
   onStatusChange: (assetFileId: string, status: CastingCandidateStatus) => void;
-  onCast: (lookId: string, assetFileId: string) => void;
+  onChoose: (assetFileId: string) => void;
 }
 
-/** Every casting round of one Look, with hide and cast on each candidate. */
-export function CastingRounds({ look, showHidden, pendingAssetFileId, onStatusChange, onCast }: CastingRoundsProps) {
+/** Every round of one Look or costume, with hide and Cast (or Pick) on each image. */
+export function CastingRounds(props: CastingRoundsProps) {
   return (
     <div className='flex flex-col gap-5'>
-      {look.rounds.map((round) => (
-        <CastingRound
-          key={round.id}
-          look={look}
-          round={round}
-          showHidden={showHidden}
-          pendingAssetFileId={pendingAssetFileId}
-          onStatusChange={onStatusChange}
-          onCast={onCast}
-        />
+      {props.rounds.map((round) => (
+        <CastingRound key={round.id} {...props} round={round} />
       ))}
     </div>
   );
 }
 
 function CastingRound({
-  look,
+  kind,
+  subjectName,
   round,
+  chosenAssetFileId,
   showHidden,
   pendingAssetFileId,
   onStatusChange,
-  onCast,
+  onChoose,
 }: CastingRoundsProps & { round: CastingRoundViewResponse }) {
-  // The viewer keeps the candidates it opened with, so hiding one never moves the shown one away.
+  // The viewer keeps the images it opened with, so hiding one never moves the shown one away.
   const [preview, setPreview] = useState<{ assetFileIds: string[]; index: number } | null>(null);
+  const labels = CASTING_ROUND_KIND_LABELS[kind];
   const shown = showHidden
     ? round.candidates
-    : round.candidates.filter((candidate) => isKeptCandidate(candidate, look.castCandidateAssetFileId));
+    : round.candidates.filter((candidate) => isKeptCandidate(candidate, chosenAssetFileId));
   const previewCandidates = preview
     ? preview.assetFileIds.flatMap((assetFileId) => round.candidates.find((candidate) => candidate.assetFileId === assetFileId) ?? [])
     : [];
   const previewCandidate = preview ? previewCandidates[preview.index] ?? null : null;
   const toggleHidden = (candidate: CastingRoundViewResponse['candidates'][number]) =>
     onStatusChange(candidate.assetFileId, candidate.status === 'hidden' ? 'candidate' : 'hidden');
+  const grid = kind === 'characterSheets' ? 'grid-cols-[repeat(auto-fill,minmax(230px,1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(150px,1fr))]';
   return (
     <div className='flex flex-col gap-2'>
-      <p className='text-xs text-muted-foreground'>{roundSummary(round)}</p>
+      <p className='text-xs text-muted-foreground'>{roundSummary(round, kind)}</p>
       {shown.length > 0 ? (
-        <div className='grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5'>
+        <div className={`grid gap-2.5 ${grid}`}>
           {shown.map((candidate, index) => (
             <CandidateTile
               key={candidate.assetFileId}
+              kind={kind}
               imageUrl={candidate.assetFile.url}
               modelLabel={candidate.model.name}
               status={candidate.status}
-              isCast={candidate.assetFileId === look.castCandidateAssetFileId}
+              isChosen={candidate.assetFileId === chosenAssetFileId}
               disabled={pendingAssetFileId === candidate.assetFileId}
               onHide={() => toggleHidden(candidate)}
-              onCast={() => onCast(look.id, candidate.assetFileId)}
+              onChoose={() => onChoose(candidate.assetFileId)}
               onOpen={() => setPreview({ assetFileIds: shown.map((entry) => entry.assetFileId), index })}
             />
           ))}
@@ -80,18 +79,19 @@ function CastingRound({
         <ImagePreviewDialog
           images={previewCandidates.map((candidate) => ({
             src: candidate.assetFile.url,
-            alt: `Casting candidate from ${candidate.model.name}`,
-            title: `${look.name} · Round ${round.number}`,
+            alt: `${labels.imageName} from ${candidate.model.name}`,
+            title: `${subjectName} · Round ${round.number}`,
           }))}
           currentIndex={preview.index}
           onCurrentIndexChange={(index) => setPreview({ ...preview, index })}
           actions={
             <CandidatePreviewActions
+              kind={kind}
               status={previewCandidate.status}
-              isCast={previewCandidate.assetFileId === look.castCandidateAssetFileId}
+              isChosen={previewCandidate.assetFileId === chosenAssetFileId}
               disabled={pendingAssetFileId === previewCandidate.assetFileId}
               onHide={() => toggleHidden(previewCandidate)}
-              onCast={() => onCast(look.id, previewCandidate.assetFileId)}
+              onChoose={() => onChoose(previewCandidate.assetFileId)}
             />
           }
           onOpenChange={(open) => {

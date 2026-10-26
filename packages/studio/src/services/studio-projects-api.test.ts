@@ -231,7 +231,7 @@ describe('studio-projects-api', () => {
 
 function projectSettings() {
   return {
-    version: 9 as const,
+    version: 10 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -274,6 +274,6 @@ function projectSettings() {
         maxConcurrentGenerations: 1,
       },
     },
-    casting: { routes: [], candidateDetail: 'lowest' as const, characterSheetDetail: 'highest' as const },
+    casting: { candidateRoutes: [], characterSheetRoutes: [], candidateDetail: 'lowest' as const, characterSheetDetail: 'highest' as const },
   };
 }

@@ -20,7 +20,7 @@ export interface CastLook {
   castCandidateAssetFileId: string | null;
 }
 
-/** A costume a Look wears in a set of scenes; each costume gets its own Character Sheet. */
+/** A costume a Look wears in a set of scenes; its character sheet rounds offer the sheets to pick from. */
 export interface CastCostume {
   id: string;
   castMemberId: CastMemberId;
@@ -29,7 +29,7 @@ export interface CastCostume {
   wardrobe: string[];
   continuityNotes: string[];
   sceneIds: SceneId[];
-  /** The `character_sheet` picked for this costume. */
+  /** The `character_sheet` picked for this costume, always a sheet of its own rounds. */
   characterSheetAssetFileId: string | null;
 }
 
@@ -46,9 +46,18 @@ export interface CastingEstimatedCost {
   currency: string;
 }
 
+/**
+ * What a Casting Round generates for: a Look's casting candidates, or one costume's character
+ * sheets. The kinds match the selection targets the round's images are chosen for.
+ */
+export type CastingRoundSubject = { kind: 'castLook'; id: string } | { kind: 'castCostume'; id: string };
+
+/** What a round's images are: casting candidates of a Look, or character sheets of a costume. */
+export type CastingRoundKind = 'candidates' | 'characterSheets';
+
 export interface CastingRound {
   id: string;
-  lookId: string;
+  subject: CastingRoundSubject;
   number: number;
   routes: CastingRoute[];
   maxConcurrentGenerations: number;
@@ -61,6 +70,7 @@ export const CASTING_CANDIDATE_STATUSES = ['candidate', 'hidden'] as const;
 
 export type CastingCandidateStatus = (typeof CASTING_CANDIDATE_STATUSES)[number];
 
+/** An image a round produced, waiting for a choice: a casting candidate or a character sheet. */
 export interface CastingCandidate {
   assetFileId: string;
   roundId: string;
@@ -97,7 +107,7 @@ export interface CastWardrobePlanDocument {
 
 export interface CastingRoundCreateDocument {
   kind: 'castingRoundCreate';
-  lookId: string;
+  subject: CastingRoundSubject;
   routes: CastingRoute[];
   maxConcurrentGenerations: number;
   referenceAssetFileIds: string[];
@@ -106,7 +116,10 @@ export interface CastingRoundCreateDocument {
 
 /** Project-level casting defaults that pre-fill the Casting Round panel. */
 export interface CastingSettings {
-  routes: CastingRoute[];
+  /** Models and counts a casting round for a Look opens with. */
+  candidateRoutes: CastingRoute[];
+  /** Models and counts per costume a character sheet round opens with. */
+  characterSheetRoutes: CastingRoute[];
   /** Detail of casting candidates; low by default, since all but one are discarded. */
   candidateDetail: ImageDetailLevel;
   /** Detail of character sheets, which are kept as identity references. */
@@ -124,9 +137,7 @@ export interface CastCastingResource {
   castMember: { id: CastMemberId; name: string };
   scenes: Array<{ id: SceneId; productionNumber?: string; heading: string }>;
   looks: Array<CastLook & { rounds: CastingRoundView[]; castCandidate: AssetFile | null }>;
-  costumes: CastCostume[];
-  /** Every active Character Sheet of the Cast Member; any of them can be picked for a costume. */
-  characterSheets: AssetFile[];
+  costumes: Array<CastCostume & { rounds: CastingRoundView[] }>;
 }
 
 interface CastingReportBase {
@@ -146,6 +157,8 @@ export interface CastWardrobeReport extends CastingReportBase {
   costumes: CastCostume[];
   /** Costumes removed by a write whose picked sheet selection was cleared. */
   clearedSheetSelections: string[];
+  /** Sheets of removed costumes' rounds; they stay in the Cast Member's Assets. */
+  releasedSheetAssetFileIds: string[];
 }
 
 export interface CastingRoundReport extends CastingReportBase {
@@ -154,6 +167,11 @@ export interface CastingRoundReport extends CastingReportBase {
 
 export interface CastingLookReport extends CastingReportBase {
   look: CastLook;
+  rounds: CastingRoundView[];
+}
+
+export interface CastingCostumeReport extends CastingReportBase {
+  costume: CastCostume;
   rounds: CastingRoundView[];
 }
 

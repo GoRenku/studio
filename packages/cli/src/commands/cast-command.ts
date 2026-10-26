@@ -37,6 +37,7 @@ export async function runCastCommand(options: {
     active?: boolean;
     dryRun?: boolean;
     look?: string;
+    costume?: string;
     assetFile?: string;
     status?: string;
   };

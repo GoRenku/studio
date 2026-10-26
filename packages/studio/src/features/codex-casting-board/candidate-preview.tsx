@@ -1,25 +1,27 @@
+import type { CastingRoundKind } from '@gorenku/studio-core/client';
 import { CandidatePreviewActions } from '@/features/casting-views/candidate-actions';
 import { usePanelMediaUrls, type PanelMediaLibrary } from '@/features/codex-panels/use-panel-media';
 import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
 import type { BoardCandidate } from './board-summaries';
 
-/** The candidates the viewer steps through, fixed when it opens so a status change never moves the current one away. */
+/** The images the viewer steps through, fixed when it opens so a status change never moves the current one away. */
 export interface CandidatePreviewSelection {
   assetFileIds: string[];
   index: number;
 }
 
-/** The casting board's image viewer, with hide and cast for the shown candidate. */
+/** The casting board's image viewer, with hide and Cast (or Pick) for the shown image. */
 export function CandidatePreview(input: {
+  kind: CastingRoundKind;
   selection: CandidatePreviewSelection;
   candidates: BoardCandidate[];
-  castAssetFileId: string | null;
+  chosenAssetFileId: string | null;
   media: PanelMediaLibrary;
   disabled: boolean;
-  castDisabled: boolean;
+  chooseDisabled: boolean;
   onSelectionChange: (selection: CandidatePreviewSelection | null) => void;
   onToggleHidden: (candidate: BoardCandidate) => void;
-  onCast: (assetFileId: string) => void;
+  onChoose: (assetFileId: string) => void;
 }) {
   const { selection } = input;
   const byId = new Map(input.candidates.map((candidate) => [candidate.assetFileId, candidate]));
@@ -47,12 +49,13 @@ export function CandidatePreview(input: {
       onOpenChange={(open) => { if (!open) input.onSelectionChange(null); }}
       actions={
         <CandidatePreviewActions
+          kind={input.kind}
           status={current.status}
-          isCast={current.assetFileId === input.castAssetFileId}
+          isChosen={current.assetFileId === input.chosenAssetFileId}
           disabled={input.disabled}
           onHide={() => input.onToggleHidden(current)}
-          castDisabled={input.disabled || input.castDisabled}
-          onCast={() => input.onCast(current.assetFileId)}
+          chooseDisabled={input.disabled || input.chooseDisabled}
+          onChoose={() => input.onChoose(current.assetFileId)}
         />
       }
     />

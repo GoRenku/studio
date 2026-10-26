@@ -72,7 +72,15 @@ beforeAll(async () => {
     homeDir, projectName: 'movie',
     document: { kind: 'castWardrobePlan', castMemberId, costumes: [{ name: 'Main', lookId: look!.id, wardrobe: ['Court robe'], continuityNotes: [], sceneIds: [scene!.id] }] },
   })).costumes;
-  sheet = await attach('cast.character-sheet', { kind: 'castCostume', id: costume!.id });
+  const round = (subject: Record<string, unknown>) => service.createCastingRound({
+    homeDir, projectName: 'movie',
+    document: { kind: 'castingRoundCreate', subject, routes: [{ provider: 'acme-images', model: { key: 'image', name: 'Image' }, count: 1 }], maxConcurrentGenerations: 1, referenceAssetFileIds: [], estimatedCost: null },
+  } as never);
+  const castRound = await round({ kind: 'castLook', id: look!.id });
+  const cast = await attach('cast.casting-candidate', { kind: 'castingRound', id: castRound.round.id }, false, { castingModelKey: 'image' });
+  await service.selectAssetFile({ homeDir, projectName: 'movie', target: { kind: 'castLook', id: look!.id }, assetFileId: cast.id });
+  const sheetRound = await round({ kind: 'castCostume', id: costume!.id });
+  sheet = await attach('cast.character-sheet', { kind: 'castingRound', id: sheetRound.round.id }, false, { castingModelKey: 'image' });
   const lookbook = await service.writeProductionLookbook({ homeDir, projectName: 'movie', document: productionLookbookDocument() } as never);
   lookbookImage = await attach('lookbook.image', { kind: 'lookbook', id: lookbook.lookbook.id });
   lookbookSheet = await attach('lookbook.video-sheet', { kind: 'lookbook', id: lookbook.lookbook.id });
@@ -99,9 +107,9 @@ async function writeImage(): Promise<string> {
   return relativePath;
 }
 
-async function attach(purpose: string, target: Record<string, unknown>, select = false): Promise<AssetFile> {
+async function attach(purpose: string, target: Record<string, unknown>, select = false, extra: Record<string, unknown> = {}): Promise<AssetFile> {
   const report = await service.attachGenerationMedia({
-    homeDir, projectName: 'movie', purpose, target, sourceProjectRelativePath: await writeImage(), select, title: `Ana image ${fileCount + 1}`,
+    homeDir, projectName: 'movie', purpose, target, sourceProjectRelativePath: await writeImage(), select, title: `Ana image ${fileCount + 1}`, ...extra,
     generationProvenance: { provider: 'acme-images', model: 'image', mediaKind: 'image', prompt: 'Ana', request: {} },
   } as never);
   return report.assetFile as AssetFile;

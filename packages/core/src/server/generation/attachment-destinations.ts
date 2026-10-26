@@ -17,8 +17,8 @@ import {
 } from '../studio-coordination/resource-keys.js';
 import type { AssetFileSelectionTarget } from '../../client/asset-files.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
-import { readCastCostumeRecord } from '../database/access/casting/costumes.js';
-import { readCastLookRecord } from '../database/access/casting/looks.js';
+import type { CastingRound, CastingRoundSubject } from '../../client/casting/model.js';
+import { resolveCastingRoundSubject, type ResolvedCastingRoundSubject } from '../casting/rounds/subjects.js';
 import { readCastingRoundRecord } from '../database/access/casting/rounds.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -36,9 +36,7 @@ export interface GeneratedMediaAttachmentDetails {
   assetFileType: string;
   mediaKind: 'image' | 'video';
   resourceKeys: string[];
-  /** Where `--select` selects this file when it is not the owner's own selection. */
-  selectionTarget?: AssetFileSelectionTarget;
-  /** The Casting Round a casting candidate belongs to. */
+  /** The Casting Round a casting candidate or character sheet belongs to. */
   castingRoundId?: string;
 }
 
@@ -235,18 +233,14 @@ const attachmentBuilders: Partial<
       'lookbook_sheet'
     ),
   'cast.casting-candidate': (input) => {
-    const round = readCastingRoundRecord(input.session, requireTarget(input, 'castingRound').id);
-    const look = round ? readCastLookRecord(input.session, round.lookId) : null;
-    if (!round || !look) {
-      throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `Casting Round was not found: ${input.target.kind === 'castingRound' ? input.target.id : ''}.`);
-    }
+    const { round, resolved } = requireSubjectRound(input, 'castLook');
     return {
       ...details(
         input,
         {
-          file: { kind: 'cast.castingCandidate', castMemberId: look.castMemberId },
-          owner: { kind: 'castMember', id: look.castMemberId },
-          resourceKeys: [studioCastMemberSurfaceResourceKey(look.castMemberId)],
+          file: { kind: 'cast.castingCandidate', castMemberId: resolved.castMemberId },
+          owner: { kind: 'castMember', id: resolved.castMemberId },
+          resourceKeys: [studioCastMemberSurfaceResourceKey(resolved.castMemberId)],
         },
         'Casting Candidate',
         'casting_candidate'
@@ -255,19 +249,15 @@ const attachmentBuilders: Partial<
     };
   },
   'cast.character-sheet': (input) => {
-    const costumeId = requireTarget(input, 'castCostume').id;
-    const costume = readCastCostumeRecord(input.session, costumeId);
-    if (!costume) {
-      throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `Cast Costume was not found: ${costumeId}.`);
-    }
+    const { round, resolved } = requireSubjectRound(input, 'castCostume');
     return {
       ...details(
         input,
-        castCharacterSheetAttachmentDestination(costume.castMemberId, input.title),
+        castCharacterSheetAttachmentDestination(resolved.castMemberId, input.title),
         'Character Sheet',
         'character_sheet'
       ),
-      selectionTarget: { kind: 'castCostume', id: costume.id },
+      castingRoundId: round.id,
     };
   },
   'cast.profile': (input) =>
@@ -420,6 +410,27 @@ function details(
     mediaKind,
     resourceKeys: destination.resourceKeys,
   };
+}
+
+const ROUND_SUBJECT_LABELS: Record<CastingRoundSubject['kind'], string> = {
+  castLook: 'a Look\'s casting round',
+  castCostume: 'a costume\'s character sheet round',
+};
+
+/** Casting candidates attach to a Look's rounds and character sheets to a costume's rounds. */
+function requireSubjectRound(
+  input: Parameters<typeof resolveGeneratedMediaAttachment>[0],
+  subjectKind: CastingRoundSubject['kind']
+): { round: CastingRound; resolved: ResolvedCastingRoundSubject } {
+  const roundId = requireTarget(input, 'castingRound').id;
+  const round = readCastingRoundRecord(input.session, roundId);
+  if (!round || round.subject.kind !== subjectKind) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_TARGET_INVALID',
+      `${input.purpose} needs ${ROUND_SUBJECT_LABELS[subjectKind]}; ${roundId} is not one.`
+    );
+  }
+  return { round, resolved: resolveCastingRoundSubject(input.session, round.subject) };
 }
 
 function requireTarget<K extends MediaTarget['kind']>(

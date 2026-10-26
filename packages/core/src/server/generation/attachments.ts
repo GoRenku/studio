@@ -151,7 +151,7 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
   }
   validateLookbookKind(input);
   const selectionTarget = input.select
-    ? attachment.selectionTarget ?? assetFileSelectionTargetForOwnerType(
+    ? assetFileSelectionTargetForOwnerType(
         attachment.destination.owner,
         attachment.assetFileType,
       )

@@ -69,7 +69,7 @@ describe('ProjectSettingsPanel', () => {
     expect(replaceProjectSettings).toHaveBeenCalledWith(
       'constantinople',
       expect.objectContaining({
-        version: 9,
+        version: 10,
         screenplayImport: expect.objectContaining({
           createContinuitySubjects: true,
           runScreenplayAnalysis: true,
@@ -235,7 +235,7 @@ function resource(value: ReturnType<typeof settings>) {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 9 as const,
+    version: 10 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -278,6 +278,6 @@ function settings(): ProjectSettingsDocument {
         maxConcurrentGenerations: 1,
       },
     },
-    casting: { routes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' },
+    casting: { candidateRoutes: [], characterSheetRoutes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' },
   };
 }

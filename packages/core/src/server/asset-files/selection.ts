@@ -18,6 +18,7 @@ import { requireProjectCoverFile } from '../project-covers/cover-file.js';
 import { assetFileOwnerKey } from './owner-keys.js';
 import { assertAssetFileOwnerExists } from './ownership.js';
 import { listAssetFilePageInSession } from './projection.js';
+import type { CastingRoundSubject } from '../../client/casting/model.js';
 import { readCastingCandidateRecord, readCastingRoundRecord } from '../database/access/casting/rounds.js';
 import {
   assetFileSelectionTargetForOwner,
@@ -173,8 +174,8 @@ function assertSelectionInSession(
       'Selected Asset must be an active canonical candidate owned by the exact selection target.'
     );
   }
-  if (input.target.kind === 'castLook') {
-    assertCandidateBelongsToLook(session, { lookId: input.target.id, assetFileId: input.assetFileId });
+  if (input.target.kind === 'castLook' || input.target.kind === 'castCostume') {
+    assertRoundImageBelongsToSubject(session, { subject: input.target, assetFileId: input.assetFileId });
   }
   if (input.target.kind === 'project') {
     requireProjectCoverFile(session, {
@@ -184,17 +185,20 @@ function assertSelectionInSession(
   }
 }
 
-function assertCandidateBelongsToLook(
+const ROUND_SELECTION_MESSAGES: Record<CastingRoundSubject['kind'], string> = {
+  castLook: 'A Look can only be cast from a candidate of its own casting rounds.',
+  castCostume: 'A costume can only pick a character sheet of its own rounds.',
+};
+
+/** Looks and costumes choose only among the images of their own rounds. */
+function assertRoundImageBelongsToSubject(
   session: DatabaseSession,
-  input: { lookId: string; assetFileId: string }
+  input: { subject: CastingRoundSubject; assetFileId: string }
 ): void {
   const candidate = readCastingCandidateRecord(session, input.assetFileId);
   const round = candidate ? readCastingRoundRecord(session, candidate.roundId) : null;
-  if (!round || round.lookId !== input.lookId) {
-    throw new ProjectDataError(
-      'CORE_ASSET_SELECTION_INVALID',
-      'A Look can only be cast from a candidate of its own casting rounds.'
-    );
+  if (!round || round.subject.kind !== input.subject.kind || round.subject.id !== input.subject.id) {
+    throw new ProjectDataError('CORE_ASSET_SELECTION_INVALID', ROUND_SELECTION_MESSAGES[input.subject.kind]);
   }
 }
 

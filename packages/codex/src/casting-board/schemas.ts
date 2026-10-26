@@ -5,19 +5,19 @@ const boardIdentity = z.string().min(1).max(512);
 /** Purpose-level envelope bound of the notes field; not a model fact. */
 export const CASTING_BOARD_MAX_NOTES = 2000;
 
-const SUBJECT_BY_MODE = { candidates: 'lookId', sheets: 'castMemberId' } as const;
-
-export const castingBoardOpenSchema = z.object({
-  project: boardIdentity,
-  mode: z.enum(['candidates', 'sheets']).describe('candidates shows a Look\'s casting rounds; sheets shows the Cast Member\'s costumes and Character Sheets.'),
-  lookId: boardIdentity.optional().describe('Required in candidates mode.'),
-  castMemberId: boardIdentity.optional().describe('Required in sheets mode.'),
-}).strict().superRefine((input, context) => {
-  const required = SUBJECT_BY_MODE[input.mode];
-  const other = required === 'lookId' ? 'castMemberId' : 'lookId';
-  if (input[required] === undefined) context.addIssue({ code: 'custom', path: [required], message: `${input.mode} mode needs ${required}.` });
-  if (input[other] !== undefined) context.addIssue({ code: 'custom', path: [other], message: `${input.mode} mode does not take ${other}.` });
-});
+export const castingBoardOpenSchema = z.discriminatedUnion('mode', [
+  z.object({
+    project: boardIdentity,
+    mode: z.literal('candidates').describe('A Look\'s casting rounds.'),
+    lookId: boardIdentity,
+  }).strict(),
+  z.object({
+    project: boardIdentity,
+    mode: z.literal('sheets').describe('The character sheet rounds of a Look\'s costumes, one costume at a time.'),
+    lookId: boardIdentity,
+    costumeId: boardIdentity.optional().describe('The costume to show first.'),
+  }).strict(),
+]);
 
 export const castingBoardActSchema = z.object({
   sessionId: boardIdentity,
@@ -30,8 +30,7 @@ export const castingBoardActSchema = z.object({
 export const castingBoardRequestSchema = z.object({
   sessionId: boardIdentity,
   request: z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('moreLikeKept'), notes: z.string().max(CASTING_BOARD_MAX_NOTES) }).strict(),
-    z.object({ kind: z.literal('sheetPicksDone') }).strict(),
+    z.object({ kind: z.literal('moreLikeKept'), notes: z.string().max(CASTING_BOARD_MAX_NOTES), costumeId: boardIdentity.optional() }).strict(),
   ]),
 }).strict();
 

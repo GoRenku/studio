@@ -157,10 +157,13 @@ Use the focused documents below for current direction.
   list of scenes (`cast_look`, `cast_look_scene`), each costume belongs to one
   Look and covers some of its scenes (`cast_costume`, `cast_costume_scene`),
   and each round records the confirmed models, counts and estimate for one
-  Look (`casting_round`). Casting candidates are `casting_candidate` Asset
-  files linked to their round with a durable status. The Look's cast
-  candidate and each costume's picked Character Sheet are scoped selections
-  (`castLook`, `castCostume`).
+  subject: a Look's casting candidates or one costume's character sheets
+  (`casting_round`, exactly one of `cast_look_id` and `cast_costume_id`).
+  Casting candidates (`casting_candidate` Asset files) and Character Sheets
+  (`character_sheet` Asset files) are linked to their round with a durable
+  status in the `casting_candidate` table. The Look's cast candidate and each
+  costume's picked Character Sheet are scoped selections (`castLook`,
+  `castCostume`), each chosen only from the subject's own rounds.
 - Cast Members, Locations, and Props have one canonical authoring path each:
   `renku cast`, `renku location`, and `renku prop`. Screenplay JSON references
   all three existing Project subject types by durable ids without embedding or

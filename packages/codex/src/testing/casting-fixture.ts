@@ -4,7 +4,7 @@ import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
-import type { AssetFile, CastLook } from '@gorenku/studio-core/client';
+import type { AssetFile, CastingRoundSubject, CastLook } from '@gorenku/studio-core/client';
 import { createProjectDataService, initRenkuConfig, syncDefaultModelList } from '@gorenku/studio-core/server';
 import { openCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import { createCodexServer } from '../server.js';
@@ -38,8 +38,9 @@ export interface CastingFixture {
   looks: { young: CastLook; older: CastLook };
   call: <T>(name: string, input: Record<string, unknown>) => Promise<T>;
   callError: (name: string, input: Record<string, unknown>) => Promise<{ error: { code: string; message: string }; issues?: Array<{ message: string }> }>;
-  createRound: (lookId: string, routes?: Array<{ provider: string; model: { key: string; name: string }; count: number }>) => Promise<string>;
+  createRound: (subject: CastingRoundSubject, routes?: Array<{ provider: string; model: { key: string; name: string }; count: number }>) => Promise<string>;
   importCandidate: (roundId: string, modelKey: string) => Promise<AssetFile>;
+  importSheet: (roundId: string, modelKey: string) => Promise<AssetFile>;
   close: () => Promise<void>;
 }
 
@@ -85,6 +86,16 @@ export async function createCastingFixture(options: { estimator?: GenerationCost
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   let fileCount = 0;
+  const importRoundImage = async (purpose: 'cast.casting-candidate' | 'cast.character-sheet', roundId: string, modelKey: string) => {
+    fileCount += 1;
+    const relativePath = `tmp/round-image-${fileCount}.png`;
+    await fs.writeFile(path.join(projectFolder, relativePath), `round image ${fileCount}`);
+    const report = await service.attachGenerationMedia({
+      homeDir, projectName: 'movie', purpose, target: { kind: 'castingRound', id: roundId },
+      sourceProjectRelativePath: relativePath, castingModelKey: modelKey,
+    } as never);
+    return report.assetFile as AssetFile;
+  };
 
   return {
     root, homeDir, projectFolder, client, server, service, castMemberId, sceneIds,
@@ -99,22 +110,14 @@ export async function createCastingFixture(options: { estimator?: GenerationCost
       if (!result.isError) throw new Error(`${name} unexpectedly succeeded.`);
       return result.structuredContent as never;
     },
-    async createRound(lookId, routes = [{ provider: 'fal-ai', model: { key: 'acme-portrait', name: 'Acme Portrait' }, count: 2 }, { provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 1 }]) {
+    async createRound(subject, routes = [{ provider: 'fal-ai', model: { key: 'acme-portrait', name: 'Acme Portrait' }, count: 2 }, { provider: 'fal-ai', model: { key: 'acme-faces', name: 'Acme Faces' }, count: 1 }]) {
       return (await service.createCastingRound({
         homeDir, projectName: 'movie',
-        document: { kind: 'castingRoundCreate', lookId, routes, maxConcurrentGenerations: 2, referenceAssetFileIds: [], estimatedCost: null },
+        document: { kind: 'castingRoundCreate', subject, routes, maxConcurrentGenerations: 2, referenceAssetFileIds: [], estimatedCost: null },
       })).round.id;
     },
-    async importCandidate(roundId, modelKey) {
-      fileCount += 1;
-      const relativePath = `tmp/candidate-${fileCount}.png`;
-      await fs.writeFile(path.join(projectFolder, relativePath), `candidate ${fileCount}`);
-      const report = await service.attachGenerationMedia({
-        homeDir, projectName: 'movie', purpose: 'cast.casting-candidate', target: { kind: 'castingRound', id: roundId },
-        sourceProjectRelativePath: relativePath, castingModelKey: modelKey,
-      } as never);
-      return report.assetFile as AssetFile;
-    },
+    importCandidate: (roundId, modelKey) => importRoundImage('cast.casting-candidate', roundId, modelKey),
+    importSheet: (roundId, modelKey) => importRoundImage('cast.character-sheet', roundId, modelKey),
     async close() {
       await client.close();
       await server.close();

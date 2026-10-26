@@ -1,6 +1,7 @@
 import { createProjectDataService } from '@gorenku/studio-core/server';
 import type { CastCastingResource } from '@gorenku/studio-core/client';
-import type { CastingBoardRound, CastingCandidateBoard } from './contracts.js';
+import { projectBoardRound } from './board-rounds.js';
+import type { CastingCandidateBoard } from './contracts.js';
 import { castingBoardError } from './diagnostics.js';
 import type { CastingBoardSessionRecord, CastingBoardSubject } from './session-state.js';
 
@@ -16,38 +17,10 @@ export async function projectCandidateBoard(record: CastingBoardSessionRecord, s
     revision: record.revision,
     castMember,
     look: { id: look.id, name: look.name, castAssetFileId: look.castCandidate?.id ?? null },
-    rounds: look.rounds.map((round): CastingBoardRound => ({
-      id: round.id,
-      number: round.number,
-      routes: round.routes,
-      estimatedCost: round.estimatedCost,
-      expectedCount: round.expectedCount,
-      pending: pendingCandidates(round),
-      candidates: round.candidates.map((candidate) => ({
-        assetFileId: candidate.assetFileId,
-        status: candidate.status,
-        model: candidate.model,
-        imageUri: record.media.uri(candidate.assetFile.projectRelativePath),
-      })),
-    })),
+    rounds: look.rounds.map((round) => projectBoardRound(record, round)),
     action: record.action,
     lastCompletedAction: record.lastCompletedAction,
   });
-}
-
-/** Route counts per model key minus the candidates imported for that model. */
-function pendingCandidates(round: CastingResourceLook['rounds'][number]): CastingBoardRound['pending'] {
-  const pending = new Map<string, { model: CastingBoardRound['pending'][number]['model']; count: number }>();
-  for (const route of round.routes) {
-    const entry = pending.get(route.model.key) ?? { model: route.model, count: 0 };
-    entry.count += route.count;
-    pending.set(route.model.key, entry);
-  }
-  for (const candidate of round.candidates) {
-    const entry = pending.get(candidate.modelKey);
-    if (entry) entry.count -= 1;
-  }
-  return [...pending.values()].filter((entry) => entry.count > 0);
 }
 
 export async function readCandidateBoardLook(

@@ -48,7 +48,7 @@ describe('media import command handler', () => {
     await mediaImportCommandHandler.run({
       flags: {
         purpose: 'cast.character-sheet',
-        target: 'costume:cast_costume_hero',
+        target: 'casting-round:casting_round_hero',
         source: 'tmp/sheet.png',
         summary: 'Storyboard continuity rendering.',
         referenceName: 'hero-storyboard',
@@ -57,7 +57,7 @@ describe('media import command handler', () => {
       runtime: { projectName: 'movie', projectDataService: { attachGenerationMedia } },
     } as never);
     expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({
-      target: { kind: 'castCostume', id: 'cast_costume_hero' },
+      target: { kind: 'castingRound', id: 'casting_round_hero' },
       assetFileMetadata: {
         oneLineSummary: 'Storyboard continuity rendering.',
         referenceName: 'hero-storyboard',

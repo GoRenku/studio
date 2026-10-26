@@ -8,17 +8,22 @@ const TICK_EVERY = 50;
 
 /**
  * One thin cell per scene in screenplay order, colored by the Look that covers it. The picked Look's
- * scenes stay bright and the rest dim; hovering a cell names its scene and Look.
+ * scenes stay bright and the rest dim; with a costume picked, its scenes stay bright and the Look's
+ * other scenes fade halfway. Hovering a cell names its scene and Look.
  */
 export function LookSceneBar({
   scenes,
   looks,
   pickedLookId,
+  highlightSceneIds,
 }: {
   scenes: SceneStripScene[];
   looks: CastCastingLookResponse[];
   pickedLookId: string;
+  /** The picked costume's scenes. */
+  highlightSceneIds?: string[];
 }) {
+  const highlighted = highlightSceneIds ? new Set(highlightSceneIds) : null;
   const lookIndexByScene = new Map<string, number>();
   looks.forEach((look, index) => look.sceneIds.forEach((sceneId) => lookIndexByScene.set(sceneId, index)));
   const picked = looks.find((look) => look.id === pickedLookId);
@@ -39,7 +44,8 @@ export function LookSceneBar({
               className={cn(
                 'min-w-0 flex-1',
                 look ? CASTING_TONE_CLASS_NAMES[castingLookTone(lookIndex!)] : 'bg-muted',
-                look && look.id !== pickedLookId ? 'opacity-30' : null
+                look && look.id !== pickedLookId ? 'opacity-30' : null,
+                look?.id === pickedLookId && highlighted && !highlighted.has(scene.id) ? 'opacity-60' : null
               )}
             />
           );

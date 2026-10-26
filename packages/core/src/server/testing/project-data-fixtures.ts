@@ -263,3 +263,51 @@ function seedProjectInformationTables(projectFolder: string): void {
     session.close();
   }
 }
+
+/**
+ * Gives a Cast Member one cast Look with one costume and a character sheet round for it.
+ * `sourceProjectRelativePath` must be an existing project file; it becomes the cast candidate.
+ */
+export async function createCostumeSheetRound(input: {
+  projectData: ProjectDataService;
+  homeDir: string;
+  projectName: string;
+  castMemberId: string;
+  sourceProjectRelativePath: string;
+}): Promise<{ lookId: string; costumeId: string; castingRoundId: string; sheetRoundId: string; modelKey: string }> {
+  const { projectData, homeDir, castMemberId } = input;
+  const modelKey = 'test-model';
+  const roundDocument = (subject: { kind: 'castLook' | 'castCostume'; id: string }) => ({
+    kind: 'castingRoundCreate',
+    subject,
+    routes: [{ provider: 'fal-ai', model: { key: modelKey, name: 'Test Model' }, count: 2 }],
+    maxConcurrentGenerations: 2,
+    referenceAssetFileIds: [],
+    estimatedCost: null,
+  });
+  const looks = await projectData.writeCastLooksPlan({
+    homeDir,
+    document: { kind: 'castLooksPlan', castMemberId, looks: [{ name: 'Main', sceneIds: [] }] },
+  });
+  const lookId = looks.looks[0]!.id;
+  const wardrobe = await projectData.writeCastWardrobePlan({
+    homeDir,
+    document: {
+      kind: 'castWardrobePlan',
+      castMemberId,
+      costumes: [{ name: 'Main', lookId, wardrobe: ['Dark robe'], continuityNotes: [], sceneIds: [] }],
+    },
+  });
+  const costumeId = wardrobe.costumes[0]!.id;
+  const castingRound = await projectData.createCastingRound({ homeDir, document: roundDocument({ kind: 'castLook', id: lookId }) });
+  const candidate = await projectData.attachGenerationMedia({
+    homeDir,
+    purpose: 'cast.casting-candidate',
+    target: { kind: 'castingRound', id: castingRound.round.id },
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    castingModelKey: modelKey,
+  });
+  await projectData.selectAssetFile({ homeDir, projectName: input.projectName, target: { kind: 'castLook', id: lookId }, assetFileId: candidate.assetFile.id });
+  const sheetRound = await projectData.createCastingRound({ homeDir, document: roundDocument({ kind: 'castCostume', id: costumeId }) });
+  return { lookId, costumeId, castingRoundId: castingRound.round.id, sheetRoundId: sheetRound.round.id, modelKey };
+}

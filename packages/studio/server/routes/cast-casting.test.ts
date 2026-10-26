@@ -43,7 +43,7 @@ describe('cast casting Hono route', () => {
             castCandidate: candidate,
             rounds: [{
               id: 'round_1',
-              lookId: 'look_young',
+              subject: { kind: 'castLook' as const, id: 'look_young' },
               number: 1,
               routes: [{ provider: 'fictional', model: { key: 'model-a', name: 'Model A' }, count: 1 }],
               maxConcurrentGenerations: 1,
@@ -54,8 +54,21 @@ describe('cast casting Hono route', () => {
               candidates: [{ assetFileId: candidate.id, roundId: 'round_1', status: 'candidate' as const, modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: candidate }],
             }],
           }],
-          costumes: [],
-          characterSheets: [makeAssetFile('asset_sheet')],
+          costumes: [{
+            id: 'costume_coat', castMemberId: input.castMemberId, lookId: 'look_young', name: 'Coat', wardrobe: ['Coat'], continuityNotes: [], sceneIds: [], characterSheetAssetFileId: 'asset_sheet',
+            rounds: [{
+              id: 'round_2',
+              subject: { kind: 'castCostume' as const, id: 'costume_coat' },
+              number: 1,
+              routes: [{ provider: 'fictional', model: { key: 'lumen', name: 'Lumen Image' }, count: 1 }],
+              maxConcurrentGenerations: 1,
+              referenceAssetFileIds: [],
+              estimatedCost: null,
+              createdAt: '2026-10-23T00:00:00.000Z',
+              expectedCount: 1,
+              candidates: [{ assetFileId: 'asset_sheet', roundId: 'round_2', status: 'candidate' as const, modelKey: 'lumen', model: { key: 'lumen', name: 'Lumen Image' }, assetFile: makeAssetFile('asset_sheet') }],
+            }],
+          }],
         };
       },
     });
@@ -71,7 +84,7 @@ describe('cast casting Hono route', () => {
           castCandidate: { id: 'asset_candidate', url: '/studio-api/projects/constantinople/asset-files/asset_candidate' },
           rounds: [{ candidates: [{ assetFile: { url: '/studio-api/projects/constantinople/asset-files/asset_candidate' } }] }],
         }],
-        characterSheets: [{ url: '/studio-api/projects/constantinople/asset-files/asset_sheet' }],
+        costumes: [{ rounds: [{ candidates: [{ assetFile: { url: '/studio-api/projects/constantinople/asset-files/asset_sheet' } }] }] }],
       },
     });
     expect(JSON.stringify(body)).not.toContain('projectRelativePath');

@@ -4,6 +4,7 @@ import { PanelEmptyState } from '@/ui/panel-empty-state';
 import { Tabs, TabsContent } from '@/ui/tabs';
 import { castLooksRequest } from '../../agent-request-copy';
 import { defaultPickedLook } from './casting-summaries';
+import { castingSubjects, defaultPickedSubject } from './casting-subjects';
 import { LookCasting } from './look-casting';
 import { LookPicker } from './look-picker';
 import { LookSceneBar } from './look-scene-bar';
@@ -19,6 +20,7 @@ export function CastMemberCastingTab({
 }) {
   const casting = useCastCasting({ projectName, castMemberId });
   const [pickedLookId, setPickedLookId] = useState<string | null>(null);
+  const [pickedSubject, setPickedSubject] = useState<{ lookId: string; key: string } | null>(null);
   const { resource } = casting;
 
   if (casting.error) {
@@ -38,20 +40,34 @@ export function CastMemberCastingTab({
     );
   }
   const scenes = castingSceneLabels(resource.scenes);
+  const costumes = resource.costumes.filter((costume) => costume.lookId === picked.id);
+  const subjects = castingSubjects(picked, costumes);
+  const subject = (pickedSubject?.lookId === picked.id ? subjects.find((entry) => entry.key === pickedSubject.key) : undefined)
+    ?? defaultPickedSubject(picked, subjects);
+  if (pickedSubject?.lookId !== picked.id || pickedSubject.key !== subject.key) {
+    setPickedSubject({ lookId: picked.id, key: subject.key });
+  }
+  const pickLook = (lookId: string) => {
+    setPickedLookId(lookId);
+    setPickedSubject(null);
+  };
   return (
     <article className='min-h-full bg-panel-bg px-8 pb-12 pt-7 text-foreground'>
-      <Tabs value={picked.id} onValueChange={setPickedLookId} className='gap-5'>
+      <Tabs value={picked.id} onValueChange={pickLook} className='gap-5'>
         <LookPicker looks={resource.looks} />
-        {scenes.length > 0 ? <LookSceneBar scenes={scenes} looks={resource.looks} pickedLookId={picked.id} /> : null}
+        {scenes.length > 0 ? (
+          <LookSceneBar scenes={scenes} looks={resource.looks} pickedLookId={picked.id} highlightSceneIds={subject.costume ? subject.sceneIds : undefined} />
+        ) : null}
         <TabsContent value={picked.id}>
           <LookCasting
-            key={picked.id}
             castMemberName={resource.castMember.name}
             look={picked}
-            costumes={resource.costumes}
-            characterSheets={resource.characterSheets}
+            costumes={costumes}
+            subjects={subjects}
+            pickedSubject={subject}
             scenes={scenes}
             pendingAssetFileId={casting.pendingAssetFileId}
+            onPickSubject={(key) => setPickedSubject({ lookId: picked.id, key })}
             onStatusChange={(assetFileId, status) => void casting.setCandidateStatus(assetFileId, status)}
             onCast={(lookId, assetFileId) => void casting.castCandidate(lookId, assetFileId)}
             onPickSheet={(costumeId, assetFileId) => void casting.pickCharacterSheet(costumeId, assetFileId)}

@@ -1,8 +1,9 @@
-import { asc, desc, eq, inArray } from 'drizzle-orm';
+import { asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import type {
   CastingCandidate,
   CastingCandidateStatus,
   CastingRound,
+  CastingRoundSubject,
 } from '../../../../client/casting/model.js';
 import { castingCandidates, castingRounds } from '../../../schema/index.js';
 import type { DatabaseSession } from '../../lifecycle/store.js';
@@ -12,11 +13,12 @@ import {
   parseStoredCastingRoutes,
 } from './stored-json.js';
 
-export function listCastingRoundRecords(session: DatabaseSession, lookId: string): CastingRound[] {
+/** The rounds of one Look or one costume, newest first. */
+export function listCastingRoundRecords(session: DatabaseSession, subject: CastingRoundSubject): CastingRound[] {
   return session.db
     .select()
     .from(castingRounds)
-    .where(eq(castingRounds.castLookId, lookId))
+    .where(subjectCondition(subject))
     .orderBy(desc(castingRounds.number))
     .all()
     .map(toRound);
@@ -27,11 +29,11 @@ export function readCastingRoundRecord(session: DatabaseSession, roundId: string
   return row ? toRound(row) : null;
 }
 
-export function nextCastingRoundNumber(session: DatabaseSession, lookId: string): number {
+export function nextCastingRoundNumber(session: DatabaseSession, subject: CastingRoundSubject): number {
   const latest = session.db
     .select({ number: castingRounds.number })
     .from(castingRounds)
-    .where(eq(castingRounds.castLookId, lookId))
+    .where(subjectCondition(subject))
     .orderBy(desc(castingRounds.number))
     .get();
   return (latest?.number ?? 0) + 1;
@@ -40,7 +42,8 @@ export function nextCastingRoundNumber(session: DatabaseSession, lookId: string)
 export function insertCastingRoundRecord(session: DatabaseSession, round: CastingRound): void {
   session.db.insert(castingRounds).values({
     id: round.id,
-    castLookId: round.lookId,
+    castLookId: round.subject.kind === 'castLook' ? round.subject.id : null,
+    castCostumeId: round.subject.kind === 'castCostume' ? round.subject.id : null,
     number: round.number,
     routesJson: JSON.stringify(round.routes),
     maxConcurrentGenerations: round.maxConcurrentGenerations,
@@ -87,11 +90,41 @@ export function listCastingCandidateRecords(session: DatabaseSession, roundIds: 
     .map(toCandidate);
 }
 
+/**
+ * Deletes a removed costume's rounds and their candidate rows; returns the sheets that were in
+ * them, which stay in the Cast Member's Assets.
+ */
+export function deleteCastingRoundRecordsForCostume(session: DatabaseSession, costumeId: string): string[] {
+  const roundIds = listCastingRoundRecords(session, { kind: 'castCostume', id: costumeId }).map((round) => round.id);
+  const released = listCastingCandidateRecords(session, roundIds).map((candidate) => candidate.assetFileId);
+  if (roundIds.length > 0) {
+    session.db.delete(castingCandidates).where(inArray(castingCandidates.castingRoundId, roundIds)).run();
+    session.db.delete(castingRounds).where(inArray(castingRounds.id, roundIds)).run();
+  }
+  return released;
+}
+
+const SUBJECT_COLUMNS = {
+  castLook: castingRounds.castLookId,
+  castCostume: castingRounds.castCostumeId,
+};
+
+function subjectCondition(subject: CastingRoundSubject): SQL {
+  return eq(SUBJECT_COLUMNS[subject.kind], subject.id);
+}
+
+function toSubject(row: typeof castingRounds.$inferSelect): CastingRoundSubject {
+  // The table's check constraint keeps exactly one of the two columns set.
+  return row.castCostumeId !== null
+    ? { kind: 'castCostume', id: row.castCostumeId }
+    : { kind: 'castLook', id: row.castLookId! };
+}
+
 function toRound(row: typeof castingRounds.$inferSelect): CastingRound {
   const location = ['castingRound', row.id];
   return {
     id: row.id,
-    lookId: row.castLookId,
+    subject: toSubject(row),
     number: row.number,
     routes: parseStoredCastingRoutes(row.routesJson, [...location, 'routes']),
     maxConcurrentGenerations: row.maxConcurrentGenerations,

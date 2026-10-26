@@ -127,7 +127,7 @@ export type MediaGenerationTargetContext =
     }
   | ({ kind: 'castMember'; scenes: Scene[]; voices: MediaGenerationCastVoice[] } & MediaGenerationCastContext)
   | ({ kind: 'castingRound'; round: CastingRound; look: CastLook; looks: CastLook[]; scenes: Scene[] } & MediaGenerationCastContext)
-  | ({ kind: 'castCostume'; costume: CastCostume; look: CastLook; scenes: Scene[] } & MediaGenerationCastContext)
+  | ({ kind: 'characterSheetRound'; round: CastingRound; costume: CastCostume; look: CastLook; scenes: Scene[] } & MediaGenerationCastContext)
   | ({ kind: 'location'; scenes: Scene[] } & MediaGenerationLocationContext)
   | ({ kind: 'prop'; scenes: Scene[] } & MediaGenerationPropContext)
   | MediaGenerationSceneContext

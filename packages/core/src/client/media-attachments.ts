@@ -29,7 +29,6 @@ export type MediaTarget =
   | { kind: 'lookbook'; id: string }
   | { kind: 'castMember'; id: string }
   | { kind: 'castingRound'; id: string }
-  | { kind: 'castCostume'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'prop'; id: string }
   | { kind: 'scene'; id: string }
@@ -50,7 +49,7 @@ export const MEDIA_PURPOSE_TARGET_KINDS = {
   'lookbook.video-sheet': 'lookbook',
   'lookbook.storyboard-sheet': 'lookbook',
   'cast.casting-candidate': 'castingRound',
-  'cast.character-sheet': 'castCostume',
+  'cast.character-sheet': 'castingRound',
   'cast.profile': 'castMember',
   'cast.voice-sample': 'castMember',
   'shot-plan.dialogue-audio': 'shotPlan',

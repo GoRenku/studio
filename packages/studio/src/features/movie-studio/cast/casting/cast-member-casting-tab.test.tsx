@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { toast } from 'sonner';
 import {
   castLookCandidate,
@@ -22,6 +22,11 @@ vi.mock('@/services/studio-cast-casting-api', () => ({
   selectCostumeCharacterSheet: vi.fn(),
 }));
 
+/** A cast Look opens on its first costume without a picked sheet; this shows its casting rounds instead. */
+async function openCasting() {
+  fireEvent.mouseDown(await screen.findByRole('tab', { name: /^Casting/ }));
+}
+
 describe('CastMemberCastingTab', () => {
   beforeEach(() => {
     vi.mocked(readCastCasting).mockReset();
@@ -32,7 +37,7 @@ describe('CastMemberCastingTab', () => {
   });
 
   it('asks the agent to cast the character when there are no Looks', async () => {
-    vi.mocked(readCastCasting).mockResolvedValue(castCastingResource({ looks: [], costumes: [], characterSheets: [] }));
+    vi.mocked(readCastCasting).mockResolvedValue(castCastingResource({ looks: [], costumes: [] }));
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
 
@@ -77,6 +82,7 @@ describe('CastMemberCastingTab', () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    await openCasting();
 
     expect(await screen.findByText('Round 1 · 3 candidates · $0.30')).toBeTruthy();
     expect(screen.getAllByText('Lumen Image', { selector: 'figcaption span' })).toHaveLength(2);
@@ -90,6 +96,7 @@ describe('CastMemberCastingTab', () => {
     vi.mocked(castLookCandidate).mockResolvedValue({} as never);
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    await openCasting();
     await screen.findByText('Round 1 · 3 candidates · $0.30');
 
     expect(screen.getAllByRole('button', { name: /^Open casting candidate/ })).toHaveLength(2);
@@ -113,6 +120,7 @@ describe('CastMemberCastingTab', () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    await openCasting();
     await screen.findByText('Round 1 · 3 candidates · $0.30');
     expect(screen.queryByText(/like the candidates I kept/)).toBeNull();
 
@@ -132,7 +140,7 @@ describe('CastMemberCastingTab', () => {
     expect(screen.getByText('No casting rounds yet')).toBeTruthy();
     expect(screen.getByText('Run a casting round for Ada · Years later.')).toBeTruthy();
     expect(screen.getAllByText('Ask your agent')).toHaveLength(1);
-    expect(screen.queryByRole('heading', { name: 'Costumes' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /^Casting/ })).toBeNull();
   });
 
   it('reports a failed pick without leaving the tab', async () => {
@@ -140,6 +148,7 @@ describe('CastMemberCastingTab', () => {
     vi.mocked(castLookCandidate).mockRejectedValue(new Error('That candidate belongs to another Look.'));
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    await openCasting();
     await screen.findByText('Round 1 · 3 candidates · $0.30');
     fireEvent.click(screen.getAllByRole('button', { name: 'Cast' })[0]!);
 
@@ -147,35 +156,115 @@ describe('CastMemberCastingTab', () => {
     expect(screen.getByText('Round 1 · 3 candidates · $0.30')).toBeTruthy();
   });
 
-  it("lists the cast Look's costumes with every character sheet and picks one through the Studio route", async () => {
+  it("shows the cast picture and the Look's costumes as cards, and one costume's sheet rounds at a time", async () => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
     vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
 
     render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-    await screen.findByRole('heading', { name: 'Costumes' });
-    expect(screen.queryByRole('heading', { name: 'Suit' })).toBeNull();
 
-    const overalls = screen.getByRole('heading', { name: 'Overalls' }).parentElement!.parentElement!;
-    expect(within(overalls).getByText('Scenes 2–3')).toBeTruthy();
-    expect(within(overalls).getByText('Picked')).toBeTruthy();
-    expect(within(overalls).getAllByRole('button', { name: /for Overalls/ })).toHaveLength(2);
-    expect(within(overalls).getAllByRole('button', { name: 'View sheet large' })).toHaveLength(2);
+    expect(await screen.findByRole('heading', { name: 'Raincoat', level: 4 })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /^Raincoat/ }).getAttribute('aria-selected')).toBe('true');
+    expect(within(screen.getByRole('tab', { name: /^Casting/ })).getByText('Cast')).toBeTruthy();
+    expect(screen.getByText('No character sheets yet')).toBeTruthy();
+    expect(screen.getByText("Run a character sheet round for Ada's Raincoat.")).toBeTruthy();
+    expect(screen.getAllByText('Ask your agent')).toHaveLength(1);
+    expect(screen.queryByRole('tab', { name: /^Suit/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Compare/ })).toBeNull();
+    expect(within(screen.getByRole('tab', { name: /^Raincoat/ })).getByText('No sheets yet')).toBeTruthy();
 
-    const raincoat = screen.getByRole('heading', { name: 'Raincoat' }).parentElement!.parentElement!;
-    expect(within(raincoat).queryByText('Picked')).toBeNull();
-    fireEvent.click(within(raincoat).getAllByRole('button', { name: /^Pick for Raincoat/ })[1]!);
+    const overallsCard = screen.getByRole('tab', { name: /^Overalls/ });
+    expect(within(overallsCard).getByText('Picked')).toBeTruthy();
+    expect(overallsCard.textContent).toContain('2 sheets');
+    fireEvent.mouseDown(overallsCard);
 
+    expect(screen.getByText('Round 1 · 2 sheets · $0.18')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Open character sheet from lumen image' })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Compare 2' })).toBeTruthy();
+    expect(screen.getByText("Run another sheet round for Ada's Overalls, like the kept sheets.")).toBeTruthy();
+    expect(screen.getByTitle('Scene 2 · Young').className).not.toContain('opacity');
+    expect(screen.getByTitle('Scene 4 · Young').className).toContain('opacity-60');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pick' }));
     await waitFor(() =>
-      expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_raincoat', 'asset_sheet_raincoat')
+      expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_overalls', 'asset_sheet_overalls_b')
     );
 
     fireEvent.mouseDown(screen.getByRole('tab', { name: /Years later/ }));
-    expect(screen.queryByRole('heading', { name: 'Costumes' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /^Suit/ })).toBeNull();
+    expect(screen.getByText('Round 1 · 1 of 4')).toBeTruthy();
+  });
+
+  it('marks a costume whose sheets are not picked yet instead of calling it empty', async () => {
+    const resource = castCastingResource();
+    resource.costumes[0] = { ...resource.costumes[0]!, characterSheetAssetFileId: null };
+    vi.mocked(readCastCasting).mockResolvedValue(resource);
+
+    render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+
+    const overalls = await screen.findByRole('tab', { name: /^Overalls/ });
+    expect(within(overalls).getByText('Not picked yet')).toBeTruthy();
+    expect(within(overalls).queryByText('Picked')).toBeNull();
+  });
+
+  it.each(['page', 'compare', 'viewer'])('keeps the initially displayed costume after picking a sheet from the %s', async (surface) => {
+    onTestFinished(stubImageZoomLayout({ width: 800, height: 600 }, { width: 1600, height: 1200 }));
+    const resource = castCastingResource();
+    resource.costumes[0] = { ...resource.costumes[0]!, characterSheetAssetFileId: null };
+    const refreshed = structuredClone(resource);
+    refreshed.costumes[0]!.characterSheetAssetFileId = 'asset_sheet_overalls_b';
+    vi.mocked(readCastCasting).mockResolvedValueOnce(resource).mockResolvedValue(refreshed);
+    vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
+
+    render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    const overalls = await screen.findByRole('tab', { name: /^Overalls/ });
+    expect(overalls.getAttribute('aria-selected')).toBe('true');
+
+    let dialog: HTMLElement | undefined;
+    if (surface === 'compare') {
+      fireEvent.click(screen.getByRole('button', { name: 'Compare 2' }));
+      dialog = await screen.findByRole('dialog', { name: 'Compare · Overalls' });
+      fireEvent.click(within(within(dialog).getByRole('region', { name: 'Second sheet' })).getByRole('button', { name: 'Pick' }));
+    } else if (surface === 'viewer') {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Open character sheet from lumen image' })[1]!);
+      dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Pick' }));
+    } else {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Pick' })[1]!);
+    }
+
+    await waitFor(() => expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_overalls', 'asset_sheet_overalls_b'));
+    await waitFor(() => expect(within(overalls).getByText('Picked')).toBeTruthy());
+    expect(overalls.getAttribute('aria-selected')).toBe('true');
+    if (dialog) {
+      expect(screen.getByRole('dialog')).toBe(dialog);
+      expect(within(dialog).getByText('Picked', { selector: 'span' })).toBeTruthy();
+    }
+  });
+
+  it('chooses a new default when the displayed costume disappears and when changing Looks', async () => {
+    const resource = castCastingResource();
+    const refreshed = { ...resource, costumes: resource.costumes.filter((costume) => costume.id !== 'costume_raincoat') };
+    vi.mocked(readCastCasting).mockResolvedValueOnce(resource).mockResolvedValue(refreshed);
+
+    render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+    expect((await screen.findByRole('tab', { name: /^Raincoat/ })).getAttribute('aria-selected')).toBe('true');
+    act(() => {
+      window.dispatchEvent(new CustomEvent('renku:studio-resource-changed', {
+        detail: { projectName: 'grid', resourceKeys: ['surface:castMember:cast_ada'] },
+      }));
+    });
+    await waitFor(() => expect(screen.queryByRole('tab', { name: /^Raincoat/ })).toBeNull());
+    expect(screen.getByRole('tab', { name: /^Overalls/ }).getAttribute('aria-selected')).toBe('true');
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /^Casting/ }));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Years later/ }));
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Young/ }));
+    expect(screen.getByRole('tab', { name: /^Overalls/ }).getAttribute('aria-selected')).toBe('true');
   });
 
   it.each([
-    [{ costumes: [], characterSheets: [] }, "Plan Ada's wardrobe."],
-    [{ characterSheets: [] }, "Make Ada's character sheets."],
+    [{ costumes: [] }, "Plan Ada's wardrobe."],
+    [{}, "Run a character sheet round for Ada's Raincoat."],
   ])('asks for the next wardrobe step of the cast Look in one card', async (overrides, request) => {
     vi.mocked(readCastCasting).mockResolvedValue(castCastingResource(overrides));
 
@@ -210,6 +299,7 @@ describe('CastMemberCastingTab', () => {
       vi.mocked(castLookCandidate).mockResolvedValue({} as never);
 
       render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+      await openCasting();
       await screen.findByText('Round 1 · 3 candidates · $0.30');
       fireEvent.click(screen.getAllByRole('button', { name: 'Open casting candidate from lumen image' })[0]!);
       const viewer = await screen.findByRole('dialog');
@@ -232,14 +322,13 @@ describe('CastMemberCastingTab', () => {
       expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('Fit');
     });
 
-    it('opens a character sheet large from its corner button and picks it from the viewer', async () => {
+    it('opens a character sheet large and picks it from the viewer', async () => {
       vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
       vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
 
       render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
-      await screen.findByRole('heading', { name: 'Costumes' });
-      const raincoat = screen.getByRole('heading', { name: 'Raincoat' }).parentElement!.parentElement!;
-      fireEvent.click(within(raincoat).getAllByRole('button', { name: 'View sheet large' })[1]!);
+      fireEvent.mouseDown(await screen.findByRole('tab', { name: /^Overalls/ }));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Open character sheet from lumen image' })[1]!);
       const viewer = await screen.findByRole('dialog');
       loadRenderedImages();
 
@@ -248,7 +337,23 @@ describe('CastMemberCastingTab', () => {
 
       fireEvent.click(within(viewer).getByRole('button', { name: 'Pick' }));
       await waitFor(() =>
-        expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_raincoat', 'asset_sheet_raincoat')
+        expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_overalls', 'asset_sheet_overalls_b')
+      );
+    });
+
+    it("compares a costume's kept sheets and picks one from either side", async () => {
+      vi.mocked(readCastCasting).mockResolvedValue(castCastingResource());
+      vi.mocked(selectCostumeCharacterSheet).mockResolvedValue({} as never);
+
+      render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+      fireEvent.mouseDown(await screen.findByRole('tab', { name: /^Overalls/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Compare 2' }));
+      const compare = await screen.findByRole('dialog', { name: 'Compare · Overalls' });
+      loadRenderedImages();
+      expect(within(within(compare).getByRole('region', { name: 'First sheet' })).getByText('Picked', { selector: 'span' })).toBeTruthy();
+      fireEvent.click(within(within(compare).getByRole('region', { name: 'Second sheet' })).getByRole('button', { name: 'Pick' }));
+      await waitFor(() =>
+        expect(selectCostumeCharacterSheet).toHaveBeenCalledWith('grid', 'cast_ada', 'costume_overalls', 'asset_sheet_overalls_b')
       );
     });
 
@@ -260,6 +365,7 @@ describe('CastMemberCastingTab', () => {
       vi.mocked(castLookCandidate).mockResolvedValue({} as never);
 
       render(<CastMemberCastingTab projectName='grid' castMemberId='cast_ada' />);
+      await openCasting();
       fireEvent.click(await screen.findByRole('button', { name: 'Compare 3' }));
       const compare = await screen.findByRole('dialog', { name: 'Compare · Young' });
       loadRenderedImages();

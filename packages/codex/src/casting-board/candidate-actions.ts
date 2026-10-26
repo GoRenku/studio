@@ -1,5 +1,6 @@
 import { createProjectDataService } from '@gorenku/studio-core/server';
 import type { CastCastingResource, CastingCandidateStatus } from '@gorenku/studio-core/client';
+import { boardRounds, keptImageIds } from './board-rounds.js';
 import { notifyPanelProjectWrite } from '../panel-sessions/project-notifications.js';
 import { assertBoardIdle, startBoardRequest } from './board-requests.js';
 import { readCandidateBoardLook } from './candidate-board.js';
@@ -14,11 +15,13 @@ const CANDIDATE_STATUSES: Record<CandidateStatusAction['kind'], CastingCandidate
   restore: 'candidate',
 };
 
-/** Saves the candidate status through Core; it posts no message. */
+/** Hides or restores a candidate or sheet on the board through Core; it posts no message. */
 export async function setBoardCandidateStatus(context: CastingBoardActionContext, action: CandidateStatusAction): Promise<null> {
   const { record, homeDir } = context;
-  const { look } = await readCandidateBoardLook(record, candidateSubject(record), homeDir);
-  requireBoardCandidate(look, action.assetFileId);
+  const resource = await createProjectDataService().readCastCastingResource({ projectName: record.projectRef.name, homeDir, castMemberId: record.subject.castMemberId });
+  if (!boardRounds(record, resource).some((round) => round.candidates.some((candidate) => candidate.assetFileId === action.assetFileId))) {
+    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', `Asset File ${action.assetFileId} is not on this board.`);
+  }
   const report = await createProjectDataService().setCastingCandidateStatus({
     projectName: record.projectRef.name,
     homeDir,
@@ -47,17 +50,15 @@ export async function castBoardCandidate(context: CastingBoardActionContext, act
 }
 
 /** Sends the Look's kept (not hidden) candidates and the notes so the agent can open a new round with them as references. */
-export async function requestMoreLikeKept(context: CastingBoardActionContext, request: { kind: 'moreLikeKept'; notes: string }): Promise<string> {
+export async function requestMoreCandidatesLikeKept(context: CastingBoardActionContext, request: { kind: 'moreLikeKept'; notes: string }): Promise<string> {
   const { record, homeDir } = context;
   const { look } = await readCandidateBoardLook(record, candidateSubject(record), homeDir);
-  const referenceAssetFileIds = look.rounds.flatMap((round) => round.candidates)
-    .filter((candidate) => candidate.status !== 'hidden')
-    .map((candidate) => candidate.assetFileId);
+  const referenceAssetFileIds = keptImageIds(look.rounds, null);
   if (referenceAssetFileIds.length === 0) {
     throw castingBoardError('CODEX_CASTING_BOARD_INVALID', 'Every candidate is hidden. Show one again first.');
   }
   assertBoardIdle(record);
-  return startBoardRequest(context.state, record.sessionId, { kind: 'moreLikeKept', lookId: look.id, referenceAssetFileIds, notes: request.notes.trim() });
+  return startBoardRequest(context.state, record.sessionId, { kind: 'moreLikeKept', subject: { kind: 'castLook', id: look.id }, referenceAssetFileIds, notes: request.notes.trim() });
 }
 
 function candidateSubject(record: CastingBoardSessionRecord): Extract<CastingBoardSubject, { mode: 'candidates' }> {

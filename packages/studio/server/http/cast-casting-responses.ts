@@ -5,6 +5,7 @@ import {
 } from './asset-responses.js';
 
 type CastCastingLook = CastCastingResource['looks'][number];
+type CastCastingCostume = CastCastingResource['costumes'][number];
 
 export type CastingRoundViewResponse = Omit<CastingRoundView, 'candidates'> & {
   candidates: Array<Omit<CastingRoundView['candidates'][number], 'assetFile'> & {
@@ -12,12 +13,12 @@ export type CastingRoundViewResponse = Omit<CastingRoundView, 'candidates'> & {
   }>;
 };
 
-export type CastCastingResourceResponse = Omit<CastCastingResource, 'looks' | 'characterSheets'> & {
+export type CastCastingResourceResponse = Omit<CastCastingResource, 'looks' | 'costumes'> & {
   looks: Array<Omit<CastCastingLook, 'rounds' | 'castCandidate'> & {
     rounds: CastingRoundViewResponse[];
     castCandidate: StudioAssetFileResponse | null;
   }>;
-  characterSheets: StudioAssetFileResponse[];
+  costumes: Array<Omit<CastCastingCostume, 'rounds'> & { rounds: CastingRoundViewResponse[] }>;
 };
 
 export function toCastCastingResourceResponse(
@@ -28,19 +29,24 @@ export function toCastCastingResourceResponse(
     ...resource,
     looks: resource.looks.map((look) => ({
       ...look,
-      rounds: look.rounds.map((round) => ({
-        ...round,
-        candidates: round.candidates.map((candidate) => ({
-          ...candidate,
-          assetFile: toStudioAssetFileResponse(projectName, candidate.assetFile),
-        })),
-      })),
+      rounds: look.rounds.map((round) => toCastingRoundViewResponse(projectName, round)),
       castCandidate: look.castCandidate
         ? toStudioAssetFileResponse(projectName, look.castCandidate)
         : null,
     })),
-    characterSheets: resource.characterSheets.map((sheet) =>
-      toStudioAssetFileResponse(projectName, sheet)
-    ),
+    costumes: resource.costumes.map((costume) => ({
+      ...costume,
+      rounds: costume.rounds.map((round) => toCastingRoundViewResponse(projectName, round)),
+    })),
+  };
+}
+
+function toCastingRoundViewResponse(projectName: string, round: CastingRoundView): CastingRoundViewResponse {
+  return {
+    ...round,
+    candidates: round.candidates.map((candidate) => ({
+      ...candidate,
+      assetFile: toStudioAssetFileResponse(projectName, candidate.assetFile),
+    })),
   };
 }

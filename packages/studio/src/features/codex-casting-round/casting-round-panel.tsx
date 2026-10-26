@@ -13,7 +13,9 @@ import { Button } from '@/ui/button';
 import { Checkbox } from '@/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/ui/toggle-group';
+import { CostumeChecklist } from './costume-checklist';
 import { CountStepper } from './count-stepper';
+import { plural, roundCount, roundSubjectLine, ROUND_SUBJECT_COPY } from './round-subject-copy';
 import {
   answeredSummary,
   chosenProvider,
@@ -67,12 +69,15 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
   const [untickedTotal, setUntickedTotal] = useState(round.initialTotal);
   const [saveAsDefaults, setSaveAsDefaults] = useState(false);
   const [detail, setDetail] = useState<ImageDetailLevel>(round.initialDetail);
+  const [costumeIds, setCostumeIds] = useState<string[]>(() => (round.subject.kind === 'costumes' ? round.subject.costumes.map((costume) => costume.id) : []));
+  const copy = ROUND_SUBJECT_COPY[round.subject.kind];
   const modelKeys = round.options.map((option) => option.model.key);
   const tickedKeys = modelKeys.filter((key) => counts[key]);
   const total = tickedKeys.length > 0 ? countsTotal(counts) : untickedTotal;
-  const estimate = estimateCastingRoundCost(round.options, tickedRoutes(round, counts, providers), detail);
+  const rounds = roundCount(round, costumeIds);
+  const estimate = estimateCastingRoundCost({ options: round.options, routes: tickedRoutes(round, counts, providers), detail, roundCount: rounds });
   const disabled = !interaction.connected || interaction.busy;
-  const subject = `${round.castMember.name} · ${round.look.name}`;
+  const subject = roundSubjectLine(round);
   const notice = <CodexPanelNotice error={interaction.error} notificationPending={interaction.notificationPending} busy={interaction.busy} onRetryNotification={() => { void interaction.retryNotification(); }} />;
 
   const changeTotal = (next: number) => {
@@ -90,19 +95,21 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
     void interaction.answer(
       (connected, current) => respondToCastingRound(connected, {
         panelId: current.panelId,
-        choice: choice === 'canceled' ? { kind: 'canceled' } : { kind: 'generate', routes: tickedRoutes(current, counts, providers), maxConcurrentGenerations: current.maxConcurrentGenerations, detail },
-        saveAsCastingDefaults: saveAsDefaults,
+        choice: choice === 'canceled'
+          ? { kind: 'canceled' }
+          : { kind: 'generate', routes: tickedRoutes(current, counts, providers), maxConcurrentGenerations: current.maxConcurrentGenerations, detail, ...(current.subject.kind === 'costumes' ? { costumeIds } : {}) },
+        saveAsDefaults,
       }),
-      (connected, answered) => notifyCastingRound(connected, answered, answeredSummary(answered)),
+      (connected, answered) => notifyCastingRound(connected, answered, { title: copy.title, subject, summary: answeredSummary(answered) }),
     );
   };
 
   if (round.answer?.kind === 'canceled') {
-    return <section aria-label='Casting round' className='image-edit rounded-xl border border-[var(--dd-border)]'>{notice}<p className='m-0 px-4 py-3 text-[13px] text-[var(--dd-muted-fg)]'>Casting round canceled.</p></section>;
+    return <section aria-label={copy.title} className='image-edit rounded-xl border border-[var(--dd-border)]'>{notice}<p className='m-0 px-4 py-3 text-[13px] text-[var(--dd-muted-fg)]'>{copy.title} canceled.</p></section>;
   }
   if (round.answer?.kind === 'generate') {
     return (
-      <section aria-label='Casting round' className='image-edit rounded-xl border border-[var(--dd-border)]'>
+      <section aria-label={copy.title} className='image-edit rounded-xl border border-[var(--dd-border)]'>
         {notice}
         <div className='px-4 py-3'>
           <b className='block text-[12.5px]'>{subject}</b>
@@ -112,25 +119,28 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
     );
   }
   return (
-    <section aria-label='Casting round' className='image-edit flex h-screen min-h-0 flex-col overflow-hidden'>
+    <section aria-label={copy.title} className='image-edit flex h-screen min-h-0 flex-col overflow-hidden'>
       <header className='flex flex-wrap items-baseline gap-2.5 px-[18px] pb-2.5 pt-3.5'>
-        <h1 className='m-0 text-sm font-semibold'>Casting round</h1>
+        <h1 className='m-0 text-sm font-semibold'>{copy.title}</h1>
         <span className='text-xs text-[var(--dd-muted-fg)]'>{subject}</span>
       </header>
       {notice}
       <div className='flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-[18px] pb-4 pt-1'>
-        <Brief lines={round.brief} references={round.references} media={media} />
+        {round.subject.kind === 'costumes' ? <CostumeChecklist subject={round.subject} ticked={costumeIds} disabled={disabled} onChange={setCostumeIds} /> : null}
+        <Brief title={copy.briefTitle} lines={round.brief} references={round.references} media={media} />
         <div className='flex flex-wrap items-center gap-2.5'>
-          <span className='text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dd-muted-fg)]'>Candidates</span>
-          <CountStepper label='Candidates' value={total} min={Math.max(1, tickedKeys.length)} max={Math.max(1, tickedKeys.length) * round.maxCountPerModel} disabled={disabled} onChange={changeTotal} />
-          <span className='text-[12px] text-[var(--dd-muted-fg)]'>split across the models you pick · run {round.maxConcurrentGenerations} at a time</span>
+          <span className='text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dd-muted-fg)]'>{copy.countLabel}</span>
+          <CountStepper label={copy.countLabel} value={total} min={Math.max(1, tickedKeys.length)} max={Math.max(1, tickedKeys.length) * round.maxCountPerModel} disabled={disabled} onChange={changeTotal} />
+          <span className='text-[12px] text-[var(--dd-muted-fg)]'>
+            split across the models you pick{round.subject.kind === 'costumes' ? ` · ${plural(rounds, 'costume')}, ${plural(total * rounds, copy.noun)}` : ''} · run {round.maxConcurrentGenerations} at a time
+          </span>
         </div>
         <div className='flex flex-wrap items-center gap-2.5'>
           <span id='casting-round-detail-label' className='text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dd-muted-fg)]'>Detail</span>
           <ToggleGroup type='single' aria-labelledby='casting-round-detail-label' value={detail} disabled={disabled} onValueChange={(next) => { if (next) setDetail(next as ImageDetailLevel); }}>
             {IMAGE_DETAIL_LEVELS.map((level) => <ToggleGroupItem key={level} value={level}>{DETAIL_LABELS[level]}</ToggleGroupItem>)}
           </ToggleGroup>
-          <span className='text-[12px] text-[var(--dd-muted-fg)]'>image size for every candidate; higher shows more detail and costs more</span>
+          <span className='text-[12px] text-[var(--dd-muted-fg)]'>image size for every {copy.noun}; higher shows more detail and costs more</span>
         </div>
         {round.options.length === 0
           ? <p className='m-0 text-[12px] text-[var(--dd-muted-fg)]'>No provider with a saved API key offers an image model.</p>
@@ -139,6 +149,7 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
               {round.options.map((option) => (
                 <ModelCard
                   key={option.model.key}
+                  noun={copy.noun}
                   option={option}
                   detail={detail}
                   provider={chosenProvider(option, providers)}
@@ -152,26 +163,26 @@ function RoundCard(input: { round: CastingRound; interaction: RoundInteraction; 
               ))}
             </div>
           )}
-        <EstimateLine estimate={estimate} total={total} ticked={tickedKeys.length > 0} />
+        <EstimateLine estimate={estimate} total={total * rounds} ticked={tickedKeys.length > 0} />
         <div className='flex items-center gap-2'>
           <Checkbox id='casting-round-save-defaults' checked={saveAsDefaults} disabled={disabled} onCheckedChange={(checked) => setSaveAsDefaults(checked === true)} />
-          <label htmlFor='casting-round-save-defaults' className='text-[12.5px]'>Save these models, counts and detail as this project&apos;s casting defaults</label>
+          <label htmlFor='casting-round-save-defaults' className='text-[12.5px]'>Save these models, counts and detail as this project&apos;s {copy.defaultsName} defaults</label>
         </div>
       </div>
       <footer className='flex flex-wrap items-center justify-end gap-2.5 border-t border-[var(--dd-border)] px-[18px] py-3'>
         <Button type='button' variant='outline' size='sm' disabled={disabled} onClick={() => respond('canceled')}>Cancel</Button>
-        <Button type='button' size='sm' disabled={disabled || tickedKeys.length === 0} onClick={() => respond('generate')} className='bg-[var(--dd-primary)] font-semibold text-[var(--dd-primary-fg)] hover:bg-[var(--dd-primary)] hover:brightness-105'>
-          Ask agent to generate {total}
+        <Button type='button' size='sm' disabled={disabled || tickedKeys.length === 0 || rounds === 0} onClick={() => respond('generate')} className='bg-[var(--dd-primary)] font-semibold text-[var(--dd-primary-fg)] hover:bg-[var(--dd-primary)] hover:brightness-105'>
+          Ask agent to generate {total * rounds}
         </Button>
       </footer>
     </section>
   );
 }
 
-function Brief(input: { lines: string[]; references: CastingRoundReference[]; media: PanelMediaLibrary }) {
+function Brief(input: { title: string; lines: string[]; references: CastingRoundReference[]; media: PanelMediaLibrary }) {
   return (
     <div className='flex flex-col gap-2 rounded-[10px] border border-[var(--dd-border)] bg-[var(--dd-card)] px-3.5 py-3'>
-      <span className='text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dd-muted-fg)]'>What each candidate shows</span>
+      <span className='text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--dd-muted-fg)]'>{input.title}</span>
       <ul className='m-0 flex list-disc flex-col gap-1 pl-4 text-[12.5px]'>
         {input.lines.map((line, index) => <li key={index}>{line}</li>)}
       </ul>
@@ -196,6 +207,7 @@ function ReferenceThumbnail(input: { reference: CastingRoundReference; media: Pa
 }
 
 function ModelCard(input: {
+  noun: string;
   option: CastingRoundModelOption;
   detail: ImageDetailLevel;
   provider: CastingRoundProviderOption;
@@ -229,7 +241,7 @@ function ModelCard(input: {
       ) : (
         <span className='text-[11.5px] text-[var(--dd-muted-fg)]'>{provider.providerLabel}</span>
       )}
-      <GenerationCostEstimateView estimate={provider.estimates[input.detail]} label='Per candidate' />
+      <GenerationCostEstimateView estimate={provider.estimates[input.detail]} label={`Per ${input.noun}`} />
       {option.note ? <span className='text-[11.5px]'>{option.note}</span> : null}
     </div>
   );

@@ -1,6 +1,6 @@
 import { showCastLooks, validateCastLooksPlan, writeCastLooksPlan } from '../casting/looks/commands.js';
 import { readCastCastingResource } from '../casting/resource.js';
-import { createCastingRound, setCastingCandidateStatus, showCastingLook } from '../casting/rounds/commands.js';
+import { createCastingRound, setCastingCandidateStatus, showCastingCostume, showCastingLook } from '../casting/rounds/commands.js';
 import { setCastingSettings, showCastingSettings } from '../casting/settings.js';
 import { showCastWardrobe, validateCastWardrobePlan, writeCastWardrobePlan } from '../casting/wardrobe/commands.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
@@ -9,7 +9,7 @@ export function createCastingServiceWiring(): Pick<
   ProjectDataService,
   | 'showCastLooks' | 'validateCastLooksPlan' | 'writeCastLooksPlan'
   | 'showCastWardrobe' | 'validateCastWardrobePlan' | 'writeCastWardrobePlan'
-  | 'createCastingRound' | 'showCastingLook' | 'setCastingCandidateStatus'
+  | 'createCastingRound' | 'showCastingLook' | 'showCastingCostume' | 'setCastingCandidateStatus'
   | 'showCastingSettings' | 'setCastingSettings' | 'readCastCastingResource'
 > {
   return {
@@ -21,6 +21,7 @@ export function createCastingServiceWiring(): Pick<
     writeCastWardrobePlan,
     createCastingRound,
     showCastingLook,
+    showCastingCostume,
     setCastingCandidateStatus,
     showCastingSettings,
     setCastingSettings,

@@ -1,4 +1,5 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { assetFiles } from './asset-files.js';
 import { castMembers } from './cast-members.js';
 import { scenes } from './screenplay/index.js';
@@ -83,13 +84,13 @@ export const castCostumeScenes = sqliteTable(
   ],
 );
 
+/** A round belongs to exactly one subject: a Look (casting candidates) or a costume (character sheets). */
 export const castingRounds = sqliteTable(
   'casting_round',
   {
     id: text('id').primaryKey(),
-    castLookId: text('cast_look_id')
-      .notNull()
-      .references(() => castLooks.id),
+    castLookId: text('cast_look_id').references(() => castLooks.id),
+    castCostumeId: text('cast_costume_id').references(() => castCostumes.id),
     number: integer('number').notNull(),
     routesJson: text('routes_json').notNull(),
     maxConcurrentGenerations: integer('max_concurrent_generations').notNull(),
@@ -98,7 +99,13 @@ export const castingRounds = sqliteTable(
     createdAt: text('created_at').notNull(),
   },
   (table) => [
-    uniqueIndex('casting_round_look_number_idx').on(table.castLookId, table.number),
+    check('casting_round_one_subject_check', sql`(${table.castLookId} is null) <> (${table.castCostumeId} is null)`),
+    uniqueIndex('casting_round_look_number_idx')
+      .on(table.castLookId, table.number)
+      .where(sql`${table.castLookId} is not null`),
+    uniqueIndex('casting_round_costume_number_idx')
+      .on(table.castCostumeId, table.number)
+      .where(sql`${table.castCostumeId} is not null`),
   ],
 );
 

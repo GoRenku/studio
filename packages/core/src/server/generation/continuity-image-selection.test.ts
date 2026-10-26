@@ -4,12 +4,12 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
-import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
+import { createCostumeSheetRound, createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 
 describe('continuity image attachment selection', () => {
   const projectData = createProjectDataService();
   let project: { projectName: string; homeDir: string };
-  let costumeId: string;
+  let sheetRound: Awaited<ReturnType<typeof createCostumeSheetRound>>;
 
   beforeEach(async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-continuity-selection-'));
@@ -32,26 +32,21 @@ describe('continuity image attachment selection', () => {
     });
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'image.png'), 'image');
-    const looks = await projectData.writeCastLooksPlan({
-      ...project,
-      document: { kind: 'castLooksPlan', castMemberId: 'cast_test0002', looks: [{ name: 'Main', sceneIds: [] }] },
+    sheetRound = await createCostumeSheetRound({
+      projectData,
+      homeDir: project.homeDir,
+      projectName: project.projectName,
+      castMemberId: 'cast_test0002',
+      sourceProjectRelativePath: 'tmp/image.png',
     });
-    const wardrobe = await projectData.writeCastWardrobePlan({
-      ...project,
-      document: {
-        kind: 'castWardrobePlan',
-        castMemberId: 'cast_test0002',
-        costumes: [{ name: 'Main', lookId: looks.looks[0]!.id, wardrobe: ['Dark robe'], continuityNotes: [], sceneIds: [] }],
-      },
-    });
-    costumeId = wardrobe.costumes[0]!.id;
   });
 
   const subjects = [
     {
       purpose: 'cast.profile',
       sheetPurpose: 'cast.character-sheet',
-      sheetTarget: () => ({ kind: 'castCostume' as const, id: costumeId }),
+      sheetTarget: () => ({ kind: 'castingRound' as const, id: sheetRound.sheetRoundId }),
+      sheetOptions: () => ({ castingModelKey: sheetRound.modelKey }),
       owner: { kind: 'castMember', id: 'cast_test0002' },
       readResource: () => projectData.readCastMemberResource({ ...project, castMemberId: 'cast_test0002' }),
       readOverview: async () => (await projectData.readCastOverviewResource(project)).cast.items,
@@ -98,6 +93,7 @@ describe('continuity image attachment selection', () => {
         purpose: subject.sheetPurpose,
         target: subject.sheetTarget(),
         sourceProjectRelativePath: 'tmp/image.png',
+        ...('sheetOptions' in subject ? subject.sheetOptions() : {}),
       });
       expect((await projectData.listAssetFilePage({ ...project, owner: subject.owner })).selectedAssetFileId)
         .toBeNull();

@@ -86,9 +86,13 @@ export type CastCastingLookResponse = Omit<CastCastingResource['looks'][number],
   castCandidate: StudioAssetFileResponse | null;
 };
 
-export type CastCastingResourceResponse = Omit<CastCastingResource, 'looks' | 'characterSheets'> & {
+export type CastCastingCostumeResponse = Omit<CastCastingResource['costumes'][number], 'rounds'> & {
+  rounds: CastingRoundViewResponse[];
+};
+
+export type CastCastingResourceResponse = Omit<CastCastingResource, 'looks' | 'costumes'> & {
   looks: CastCastingLookResponse[];
-  characterSheets: StudioAssetFileResponse[];
+  costumes: CastCastingCostumeResponse[];
 };
 
 export type CastMemberResourceResponse = Omit<

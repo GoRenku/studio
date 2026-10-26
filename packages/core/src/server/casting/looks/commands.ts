@@ -78,7 +78,7 @@ function costumeScenesByLook(session: DatabaseSession, castMemberId: string): Ma
 
 function lookDependencies(session: DatabaseSession, lookId: string): string[] {
   const costumes = countCastCostumeRecordsForLook(session, lookId);
-  const rounds = listCastingRoundRecords(session, lookId).length;
+  const rounds = listCastingRoundRecords(session, { kind: 'castLook', id: lookId }).length;
   return [
     ...(costumes > 0 ? [`${costumes} costume${costumes === 1 ? '' : 's'}`] : []),
     ...(rounds > 0 ? [`${rounds} casting round${rounds === 1 ? '' : 's'}`] : []),

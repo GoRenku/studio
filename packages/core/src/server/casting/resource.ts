@@ -1,5 +1,5 @@
 import type { CastCastingResource } from '../../client/casting/model.js';
-import { listAssetFilesInSession, isAssetFileAvailableInSession, toAssetFile } from '../asset-files/projection.js';
+import { isAssetFileAvailableInSession, toAssetFile } from '../asset-files/projection.js';
 import { readAssetFileRecordIncludingDiscarded } from '../database/access/asset-files.js';
 import { listCastCostumeRecords } from '../database/access/casting/costumes.js';
 import { listCastLookRecords } from '../database/access/casting/looks.js';
@@ -29,11 +29,6 @@ export function readCastCastingResourceFromSession(session: DatabaseSession, cas
   }
   const screenplayScenes = readCanonicalScreenplay(session).scenes;
   const sceneOrder = new Map(screenplayScenes.map((scene, index) => [scene.id, index]));
-  const characterSheets = listAssetFilesInSession(session, {
-    owner: { kind: 'castMember', id: castMemberId },
-    type: 'character_sheet',
-    mediaKind: 'image',
-  });
   return {
     castMember: { id: castMember.id, name: castMember.name },
     scenes: screenplayScenes.map((scene) => ({
@@ -45,12 +40,14 @@ export function readCastCastingResourceFromSession(session: DatabaseSession, cas
       const look = toCastLook(session, record, sceneOrder);
       return {
         ...look,
-        rounds: listCastingRoundViews(session, look.id),
+        rounds: listCastingRoundViews(session, { kind: 'castLook', id: look.id }),
         castCandidate: readActiveAssetFile(session, look.castCandidateAssetFileId),
       };
     }),
-    costumes: listCastCostumeRecords(session, castMemberId).map((record) => toCastCostume(session, record, sceneOrder)),
-    characterSheets,
+    costumes: listCastCostumeRecords(session, castMemberId).map((record) => ({
+      ...toCastCostume(session, record, sceneOrder),
+      rounds: listCastingRoundViews(session, { kind: 'castCostume', id: record.id }),
+    })),
   };
 }
 

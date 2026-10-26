@@ -137,7 +137,7 @@ describe('ProjectSettingsFields', () => {
     trigger.focus();
     fireEvent.keyDown(trigger, { key: 'ArrowDown' });
     fireEvent.click(await screen.findByRole('option', { name: 'Mid' }));
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ casting: { routes: [], candidateDetail: 'mid', characterSheetDetail: 'highest' } }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ casting: { candidateRoutes: [], characterSheetRoutes: [], candidateDetail: 'mid', characterSheetDetail: 'highest' } }));
   });
 
   it('disables the model select when no models are available', () => {
@@ -226,7 +226,7 @@ function providers(): ProviderCredentialStatus[] {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 9,
+    version: 10,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -269,6 +269,6 @@ function settings(): ProjectSettingsDocument {
         maxConcurrentGenerations: 1,
       },
     },
-    casting: { routes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' },
+    casting: { candidateRoutes: [], characterSheetRoutes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' },
   };
 }

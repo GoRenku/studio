@@ -64,6 +64,27 @@ function candidateBoard(overrides: Partial<CastingCandidateBoard> = {}): Casting
   };
 }
 
+/** Two costumes of Young: Harbor coat (two sheets, one picked) and Riding coat (one sheet, none picked). */
+function sheetBoard(overrides: Partial<CastingSheetBoard> = {}): CastingSheetBoard {
+  const round = (id: string, sheets: string[]) => ({
+    id, number: 1, expectedCount: sheets.length, estimatedCost: null, pending: [],
+    routes: [{ provider: 'acme-cloud', model: portrait, count: sheets.length }],
+    candidates: sheets.map((assetFileId, index) => ({ assetFileId, status: 'candidate' as const, model: portrait, imageUri: `renku-casting-board://board/media/${assetFileId}-${index}` })),
+  });
+  return {
+    mode: 'sheets', sessionId: 'board', revision: 1, castMember: { id: 'cast_1', name: 'Ana' },
+    look: { id: 'look_1', name: 'Young' },
+    scenes: [{ id: 'scene_1', heading: 'EXT. HARBOR', productionNumber: '3' }, { id: 'scene_2', heading: 'INT. PALACE' }],
+    focusCostumeId: null,
+    costumes: [
+      { id: 'costume_1', name: 'Harbor coat', sceneIds: ['scene_1'], pickedAssetFileId: 'sheet_1', rounds: [round('round_1', ['sheet_1', 'sheet_3'])] },
+      { id: 'costume_2', name: 'Riding coat', sceneIds: ['scene_2'], pickedAssetFileId: null, rounds: [round('round_2', ['sheet_2'])] },
+    ],
+    action: null, lastCompletedAction: null,
+    ...overrides,
+  };
+}
+
 async function openBoard(board: CastingCandidateBoard | CastingSheetBoard) {
   integration.board = board;
   render(<CastingBoardPanel />);
@@ -125,22 +146,32 @@ describe('Casting board panel', () => {
     expect(screen.getByRole('button', { name: 'Compare 0' })).toHaveProperty('disabled', true);
   });
 
-  it('picks a sheet per costume and sends the picks', async () => {
-    const sheets: CastingSheetBoard = {
-      mode: 'sheets', sessionId: 'board', revision: 1, castMember: { id: 'cast_1', name: 'Ana' },
-      scenes: [{ id: 'scene_1', heading: 'EXT. HARBOR', productionNumber: '3' }, { id: 'scene_2', heading: 'INT. PALACE' }],
-      looks: [{ id: 'look_1', name: 'Young', castImageUri: 'renku-casting-board://board/media/3' }],
-      costumes: [{ id: 'costume_1', name: 'Harbor coat', lookId: 'look_1', sceneIds: ['scene_1'], pickedAssetFileId: null }],
-      sheets: [{ assetFileId: 'sheet_1', imageUri: 'renku-casting-board://board/media/4' }],
-      action: null, lastCompletedAction: null,
-    };
-    await openBoard(sheets);
-    expect(screen.getByText('Scene 3')).toBeTruthy();
-    expect(screen.getByText('From: Young · cast')).toBeTruthy();
-    integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: { ...sheets, revision: 2, costumes: [{ ...sheets.costumes[0]!, pickedAssetFileId: 'sheet_1' }] } }));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Pick for Harbor coat' })); });
-    expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'pickSheet', costumeId: 'costume_1', assetFileId: 'sheet_1' } });
-    expect(screen.getByText('1 of 1 picked')).toBeTruthy();
+  it('shows one costume\'s sheet rounds at a time and picks a sheet with no message', async () => {
+    const board = sheetBoard();
+    await openBoard(board);
+    expect(screen.getByRole('tab', { name: /Riding coat/ }).getAttribute('data-state')).toBe('active');
+    expect(screen.getByRole('tab', { name: /Harbor coat/ }).textContent).toContain('Picked');
+    expect(screen.getByRole('tab', { name: 'Sheets 1' })).toBeTruthy();
+    expect(screen.queryByText('Send picks to agent')).toBeNull();
+
+    integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: { ...board, revision: 2, costumes: [board.costumes[0]!, { ...board.costumes[1]!, pickedAssetFileId: 'sheet_2' }] } }));
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Pick' })); });
+    expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'pickSheet', costumeId: 'costume_2', assetFileId: 'sheet_2' } });
+    expect(screen.getByText('2 of 2 picked')).toBeTruthy();
+    expect(integration.notify).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /Harbor coat/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Harbor coat/ }));
+    expect(await screen.findByRole('tab', { name: 'Sheets 2' })).toBeTruthy();
+  });
+
+  it('asks for more sheets like the kept ones of the costume shown', async () => {
+    await openBoard(sheetBoard({ focusCostumeId: 'costume_1' }));
+    integration.request.mockResolvedValue({ sessionId: 'board', actionId: 'action_1', session: sheetBoard({ action: { actionId: 'action_1', kind: 'moreLikeKept', status: 'pending' } }) });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Notes for the next round' }), { target: { value: 'Rougher seams' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'More like these' })); });
+    expect(integration.request).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', request: { kind: 'moreLikeKept', notes: 'Rougher seams', costumeId: 'costume_1' } });
+    expect(integration.notify.mock.calls[0]![2]).toBe('More character sheets requested · Ana · Young');
   });
 
   describe('zoom', () => {
@@ -211,25 +242,18 @@ describe('Casting board panel', () => {
       expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'hide', assetFileId: 'af_3' } });
     });
 
-    it('opens a character sheet large from its corner button and picks it from the viewer', async () => {
-      const sheets: CastingSheetBoard = {
-        mode: 'sheets', sessionId: 'board', revision: 1, castMember: { id: 'cast_1', name: 'Ana' },
-        scenes: [{ id: 'scene_1', heading: 'EXT. HARBOR', productionNumber: '3' }],
-        looks: [{ id: 'look_1', name: 'Young', castImageUri: null }],
-        costumes: [{ id: 'costume_1', name: 'Harbor coat', lookId: 'look_1', sceneIds: ['scene_1'], pickedAssetFileId: null }],
-        sheets: [{ assetFileId: 'sheet_1', imageUri: 'renku-casting-board://board/media/4' }],
-        action: null, lastCompletedAction: null,
-      };
-      await openBoard(sheets);
-      fireEvent.click(await screen.findByRole('button', { name: 'View sheet large' }));
+    it('opens a character sheet large and picks it from the viewer', async () => {
+      const board = sheetBoard();
+      await openBoard(board);
+      fireEvent.click(await screen.findByRole('button', { name: 'Open character sheet from acme portrait' }));
       const viewer = await screen.findByRole('dialog');
       loadRenderedImages();
       fireEvent.click(within(viewer).getByRole('button', { name: 'Zoom in' }));
       expect(within(viewer).getByRole('button', { name: 'Fit to view' }).textContent).toBe('75%');
 
-      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: { ...sheets, revision: 2, costumes: [{ ...sheets.costumes[0]!, pickedAssetFileId: 'sheet_1' }] } }));
+      integration.act.mockImplementation(async () => ({ sessionId: 'board', actionId: null, session: { ...board, revision: 2, costumes: [board.costumes[0]!, { ...board.costumes[1]!, pickedAssetFileId: 'sheet_2' }] } }));
       await act(async () => { fireEvent.click(within(viewer).getByRole('button', { name: 'Pick' })); });
-      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'pickSheet', costumeId: 'costume_1', assetFileId: 'sheet_1' } });
+      expect(integration.act).toHaveBeenCalledWith(integration.bridge, { sessionId: 'board', action: { kind: 'pickSheet', costumeId: 'costume_2', assetFileId: 'sheet_2' } });
       expect(within(viewer).getByText('Picked')).toBeTruthy();
     });
   });

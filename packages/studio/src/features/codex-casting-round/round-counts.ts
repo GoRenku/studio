@@ -1,6 +1,7 @@
 import { estimateCastingRoundCost } from '@gorenku/studio-core/client';
 import type { CastingRound, CastingRoundModelOption, CastingRoundProviderOption } from '@gorenku/studio-codex/casting-round';
 import { formatUsd } from '@/features/media-generation-request/generation-cost-estimate-format';
+import { plural, ROUND_SUBJECT_COPY } from './round-subject-copy';
 
 /** Counts per ticked model, keyed by model key, in the panel's option order. */
 export type RoundCounts = Record<string, number>;
@@ -31,16 +32,20 @@ export function countsTotal(counts: RoundCounts): number {
   return Object.values(counts).reduce((total, count) => total + count, 0);
 }
 
-/** "10 candidates on 3 models, lowest detail, 4 at a time · estimated $0.67" from the recorded answer. */
+/**
+ * "10 candidates on 3 models, lowest detail, 4 at a time · estimated $0.67", or for costumes
+ * "2 costumes · 2 sheets each on 2 models, …", from the recorded answer.
+ */
 export function answeredSummary(round: CastingRound): string {
   const answer = round.answer;
   if (answer?.kind !== 'generate') return '';
   const total = answer.routes.reduce((sum, route) => sum + route.count, 0);
-  const models = `${answer.routes.length} ${answer.routes.length === 1 ? 'model' : 'models'}`;
-  return `${total} ${total === 1 ? 'candidate' : 'candidates'} on ${models}, ${answer.detail} detail, ${answer.maxConcurrentGenerations} at a time · ${answeredCost(round.options, answer)}`;
+  const images = plural(total, ROUND_SUBJECT_COPY[round.subject.kind].noun);
+  const subject = answer.costumeIds ? `${plural(answer.costumeIds.length, 'costume')} · ${images} each` : images;
+  return `${subject} on ${plural(answer.routes.length, 'model')}, ${answer.detail} detail, ${answer.maxConcurrentGenerations} at a time · ${answeredCost(round.options, answer)}`;
 }
 
 function answeredCost(options: CastingRoundModelOption[], answer: Extract<CastingRound['answer'], { kind: 'generate' }>): string {
   if (answer.estimatedCost) return `estimated ${formatUsd(answer.estimatedCost.amount)}`;
-  return estimateCastingRoundCost(options, answer.routes, answer.detail).hostPlanOnly ? 'ChatGPT plan usage' : 'estimate unavailable';
+  return estimateCastingRoundCost({ options, routes: answer.routes, detail: answer.detail, roundCount: 1 }).hostPlanOnly ? 'ChatGPT plan usage' : 'estimate unavailable';
 }

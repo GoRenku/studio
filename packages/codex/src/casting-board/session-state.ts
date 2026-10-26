@@ -8,7 +8,7 @@ export const CASTING_BOARD_SCHEME = 'renku-casting-board';
 
 export type CastingBoardSubject =
   | { mode: 'candidates'; castMemberId: string; lookId: string }
-  | { mode: 'sheets'; castMemberId: string };
+  | { mode: 'sheets'; castMemberId: string; lookId: string; costumeId: string | null };
 
 export interface CastingBoardSessionParts {
   projectRef: StudioProjectRef;

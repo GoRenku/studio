@@ -13,6 +13,7 @@ export interface CastCastingCommandFlags {
   project?: string;
   cast?: string;
   look?: string;
+  costume?: string;
   assetFile?: string;
   status?: string;
 }
@@ -45,10 +46,7 @@ const CAST_CASTING_COMMANDS: Record<string, CastCastingCommandHandler> = {
   'wardrobe validate': async (context) => writeJson(context.io, await context.service.validateCastWardrobePlan(await documentInput(context, 'cast wardrobe validate'))),
   'wardrobe write': async (context) => writeAndNotify(context, 'cast wardrobe write', await context.service.writeCastWardrobePlan(await documentInput(context, 'cast wardrobe write'))),
   'casting round create': async (context) => writeAndNotify(context, 'cast casting round create', await context.service.createCastingRound(await documentInput(context, 'cast casting round create'))),
-  'casting show': async (context) => writeJson(context.io, await context.service.showCastingLook({
-    homeDir: context.homeDir,
-    lookId: requiredFlag(context.flags.look, '--look'),
-  })),
+  'casting show': async (context) => writeJson(context.io, await showCasting(context)),
   'casting candidate status': async (context) => writeAndNotify(context, 'cast casting candidate status', await context.service.setCastingCandidateStatus({
     homeDir: context.homeDir,
     assetFileId: requiredFlag(context.flags.assetFile, '--asset-file'),
@@ -94,6 +92,21 @@ async function writeAndNotify(context: CastCastingCommandContext, command: strin
     command,
   });
   writeJson(context.io, report);
+}
+
+/** A Look's casting rounds with --look, or a costume's character sheet rounds with --costume. */
+function showCasting(context: CastCastingCommandContext) {
+  const { look, costume } = context.flags;
+  if ((look === undefined) === (costume === undefined)) {
+    throw new StructuredError({
+      code: 'CLI174',
+      message: 'Pass exactly one of --look or --costume.',
+      issues: [createDiagnosticError('CLI174', 'Pass exactly one of --look or --costume.', { path: ['--look'], context: 'renku CLI arguments' }, 'Use --look <look-id> for casting candidates or --costume <costume-id> for character sheets.')],
+    });
+  }
+  return look !== undefined
+    ? context.service.showCastingLook({ homeDir: context.homeDir, lookId: look })
+    : context.service.showCastingCostume({ homeDir: context.homeDir, costumeId: costume! });
 }
 
 function candidateStatus(value: string | undefined): CastingCandidateStatus {

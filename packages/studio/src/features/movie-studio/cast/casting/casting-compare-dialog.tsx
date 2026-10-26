@@ -1,28 +1,35 @@
 import { X } from 'lucide-react';
+import type { CastingRoundKind } from '@gorenku/studio-core/client';
 import { CompareView } from '@/features/casting-views/compare-view';
-import type { CastCastingLookResponse } from '@/services/studio-project-contracts';
+import type { CastingRoundViewResponse } from '@/services/studio-project-contracts';
 import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
-import { lookKept } from './casting-summaries';
+import { keptCandidates } from './casting-summaries';
 
-/** The shared Compare view for one Look's kept candidates, in a large window over the Casting tab. */
+/** The shared Compare view for the kept images of a Look's or costume's rounds, in a large window over the Casting tab. */
 export function CastingCompareDialog({
-  look,
+  kind,
+  title,
+  rounds,
+  chosenAssetFileId,
   open,
   onOpenChange,
   pendingAssetFileId,
-  onCast,
+  onChoose,
   onHide,
 }: {
-  look: CastCastingLookResponse;
+  kind: CastingRoundKind;
+  title: string;
+  rounds: CastingRoundViewResponse[];
+  chosenAssetFileId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pendingAssetFileId: string | null;
-  onCast: (assetFileId: string) => void;
+  onChoose: (assetFileId: string) => void;
   onHide: (assetFileId: string) => void;
 }) {
-  const roundNumbers = new Map(look.rounds.map((round) => [round.id, round.number]));
-  const candidates = lookKept(look).map((candidate) => ({
+  const roundNumbers = new Map(rounds.map((round) => [round.id, round.number]));
+  const candidates = keptCandidates(rounds, chosenAssetFileId).map((candidate) => ({
     assetFileId: candidate.assetFileId,
     imageUrl: candidate.assetFile.url,
     label: `Round ${roundNumbers.get(candidate.roundId)} · ${candidate.model.name}`,
@@ -34,8 +41,8 @@ export function CastingCompareDialog({
         className='flex h-[calc(100vh-3rem)] w-[calc(100vw-3rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none'
       >
         <header className='flex h-11 flex-none items-center gap-2 px-[18px]'>
-          <DialogTitle className='text-sm normal-case tracking-normal'>Compare · {look.name}</DialogTitle>
-          <DialogDescription className='sr-only'>Two kept candidates side by side with one shared zoom; each side steps through the rest.</DialogDescription>
+          <DialogTitle className='text-sm normal-case tracking-normal'>Compare · {title}</DialogTitle>
+          <DialogDescription className='sr-only'>Two kept images side by side with one shared zoom; each side steps through the rest.</DialogDescription>
           <DialogClose asChild>
             <Button type='button' variant='ghost' size='icon' aria-label='Close compare' className='ml-auto h-7 w-7 text-muted-foreground hover:text-foreground'>
               <X className='h-3.5 w-3.5' />
@@ -43,11 +50,12 @@ export function CastingCompareDialog({
           </DialogClose>
         </header>
         <CompareView
+          kind={kind}
           candidates={candidates}
-          castAssetFileId={look.castCandidateAssetFileId}
+          chosenAssetFileId={chosenAssetFileId}
           disabled={pendingAssetFileId !== null}
-          castDisabled={pendingAssetFileId !== null}
-          onCast={onCast}
+          chooseDisabled={pendingAssetFileId !== null}
+          onChoose={onChoose}
           onHide={onHide}
         />
       </DialogContent>

@@ -1,5 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AssetFile } from '@gorenku/studio-core/client';
 import { createCastingFixture, type CastingFixture } from '../testing/casting-fixture.js';
@@ -12,7 +10,7 @@ let second: AssetFile;
 
 beforeAll(async () => {
   fixture = await createCastingFixture();
-  roundId = await fixture.createRound(fixture.looks.young.id);
+  roundId = await fixture.createRound({ kind: 'castLook', id: fixture.looks.young.id });
   first = await fixture.importCandidate(roundId, 'acme-portrait');
   second = await fixture.importCandidate(roundId, 'acme-faces');
 });
@@ -50,8 +48,9 @@ describe('Casting board', () => {
     });
   });
 
-  it('requires the id that belongs to the mode', async () => {
-    expect((await fixture.client.callTool({ name: 'casting.board.open', arguments: { project: 'movie', mode: 'candidates', castMemberId: fixture.castMemberId } })).isError).toBe(true);
+  it('requires a Look and takes a costume only in sheets mode', async () => {
+    expect((await fixture.client.callTool({ name: 'casting.board.open', arguments: { project: 'movie', mode: 'candidates' } })).isError).toBe(true);
+    expect((await fixture.client.callTool({ name: 'casting.board.open', arguments: { project: 'movie', mode: 'candidates', lookId: fixture.looks.young.id, costumeId: 'cast_costume_x' } })).isError).toBe(true);
   });
 
   it('shows rounds with their candidates, models and pending counts, and fills in on re-read', async () => {
@@ -81,7 +80,7 @@ describe('Casting board', () => {
 
   it('refuses candidates that are not on the board and actions of the other mode', async () => {
     const board = await openCandidates();
-    const otherRound = await fixture.createRound(fixture.looks.older.id);
+    const otherRound = await fixture.createRound({ kind: 'castLook', id: fixture.looks.older.id });
     const other = await fixture.importCandidate(otherRound, 'acme-faces');
     expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'hide', assetFileId: other.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
     expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'pickSheet', costumeId: 'costume_x', assetFileId: first.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
@@ -100,7 +99,7 @@ describe('Casting board', () => {
 
     expect(await fixture.call<CastingBoardConsumeResult>('casting.board.consume', { sessionId: board.sessionId })).toEqual({
       status: 'consumed', sessionId: board.sessionId,
-      request: { kind: 'moreLikeKept', lookId: fixture.looks.young.id, referenceAssetFileIds: [first.id], notes: 'Keep the eyes.' },
+      request: { kind: 'moreLikeKept', subject: { kind: 'castLook', id: fixture.looks.young.id }, referenceAssetFileIds: [first.id], notes: 'Keep the eyes.' },
     });
     expect(await fixture.call<CastingBoardConsumeResult>('casting.board.consume', { sessionId: board.sessionId })).toEqual({ status: 'alreadyConsumed', sessionId: board.sessionId });
     expect((await readBoard<CastingCandidateBoard>(board.sessionId)).lastCompletedAction).toEqual({ actionId: receipt.actionId, kind: 'moreLikeKept' });
@@ -125,7 +124,7 @@ describe('Casting board', () => {
     });
   });
 
-  it('picks a sheet per costume through Core and sends the picks', async () => {
+  it('shows one Look\'s costumes with their sheet rounds, hides and picks through Core, and asks for more like the kept sheets', async () => {
     const { costumes } = await fixture.service.writeCastWardrobePlan({
       homeDir: fixture.homeDir, projectName: 'movie',
       document: { kind: 'castWardrobePlan', castMemberId: fixture.castMemberId, costumes: [
@@ -133,22 +132,30 @@ describe('Casting board', () => {
         { name: 'Armour', lookId: fixture.looks.older.id, wardrobe: ['Plate'], continuityNotes: [], sceneIds: fixture.sceneIds.slice(1) },
       ] },
     });
-    await fs.writeFile(path.join(fixture.projectFolder, 'tmp', 'sheet.png'), 'sheet');
-    const sheet = (await fixture.service.attachGenerationMedia({
-      homeDir: fixture.homeDir, projectName: 'movie', purpose: 'cast.character-sheet', target: { kind: 'castCostume', id: costumes[0]!.id }, sourceProjectRelativePath: 'tmp/sheet.png',
-    } as never)).assetFile as AssetFile;
+    const harbor = costumes[0]!.id;
+    const sheetRound = await fixture.createRound({ kind: 'castCostume', id: harbor });
+    const kept = await fixture.importSheet(sheetRound, 'acme-portrait');
+    const hidden = await fixture.importSheet(sheetRound, 'acme-faces');
 
-    const board = (await fixture.call<{ session: CastingSheetBoard }>('casting.board.open', { project: 'movie', mode: 'sheets', castMemberId: fixture.castMemberId })).session;
-    expect(board.costumes.map((costume) => costume.name)).toEqual(['Harbor coat', 'Armour']);
-    expect(board.sheets.map((entry) => entry.assetFileId)).toContain(sheet.id);
-    expect(board.looks.find((look) => look.id === fixture.looks.young.id)?.castImageUri).toEqual(expect.any(String));
+    const board = (await fixture.call<{ session: CastingSheetBoard }>('casting.board.open', { project: 'movie', mode: 'sheets', lookId: fixture.looks.young.id, costumeId: harbor })).session;
+    expect(board).toMatchObject({ look: { id: fixture.looks.young.id, name: 'Young' }, focusCostumeId: harbor });
+    expect(board.costumes.map((costume) => [costume.name, costume.rounds.map((round) => round.candidates.length)])).toEqual([['Harbor coat', [2]]]);
 
-    const picked = await act(board.sessionId, { kind: 'pickSheet', costumeId: costumes[0]!.id, assetFileId: sheet.id });
-    expect((picked.session as CastingSheetBoard).costumes[0]!.pickedAssetFileId).toBe(sheet.id);
+    await act(board.sessionId, { kind: 'hide', assetFileId: hidden.id });
+    expect((await fixture.service.showCastingCostume({ homeDir: fixture.homeDir, projectName: 'movie', costumeId: harbor })).rounds[0]!.candidates.map((candidate) => candidate.status)).toEqual(['candidate', 'hidden']);
+    expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'hide', assetFileId: first.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
+
+    expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'pickSheet', costumeId: costumes[1]!.id, assetFileId: kept.id } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
+    expect((await fixture.callError('casting.board.act', { sessionId: board.sessionId, action: { kind: 'pickSheet', costumeId: harbor, assetFileId: first.id } })).error.code).toBe('CORE_ASSET_SELECTION_INVALID');
+    const picked = await act(board.sessionId, { kind: 'pickSheet', costumeId: harbor, assetFileId: kept.id });
+    expect((picked.session as CastingSheetBoard).costumes[0]!.pickedAssetFileId).toBe(kept.id);
+    expect(picked.actionId).toBeNull();
+
     expect((await fixture.callError('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeKept', notes: '' } })).error.code).toBe('CODEX_CASTING_BOARD_INVALID');
-    await fixture.call('casting.board.request', { sessionId: board.sessionId, request: { kind: 'sheetPicksDone' } });
+    await fixture.call('casting.board.request', { sessionId: board.sessionId, request: { kind: 'moreLikeKept', notes: 'Rougher seams.', costumeId: harbor } });
     expect(await fixture.call<CastingBoardConsumeResult>('casting.board.consume', { sessionId: board.sessionId })).toEqual({
-      status: 'consumed', sessionId: board.sessionId, request: { kind: 'sheetPicksDone', picks: [{ costumeId: costumes[0]!.id, assetFileId: sheet.id }] },
+      status: 'consumed', sessionId: board.sessionId,
+      request: { kind: 'moreLikeKept', subject: { kind: 'castCostume', id: harbor }, referenceAssetFileIds: [kept.id], notes: 'Rougher seams.' },
     });
   });
 });

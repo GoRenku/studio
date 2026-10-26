@@ -98,6 +98,10 @@ export function planWardrobeRequest(castMemberName: string): string {
   return `Plan ${castMemberName}'s wardrobe.`;
 }
 
-export function costumeCharacterSheetsRequest(castMemberName: string): string {
-  return `Make ${castMemberName}'s character sheets.`;
+export function characterSheetRoundRequest(castMemberName: string, costumeName: string): string {
+  return `Run a character sheet round for ${castMemberName}'s ${costumeName}.`;
+}
+
+export function moreSheetsLikeKeptRequest(castMemberName: string, costumeName: string): string {
+  return `Run another sheet round for ${castMemberName}'s ${costumeName}, like the kept sheets.`;
 }

@@ -1,12 +1,12 @@
-import type { CastingRoundView } from '../../../client/casting/model.js';
+import type { CastingRoundSubject, CastingRoundView } from '../../../client/casting/model.js';
 import { isAssetFileAvailableInSession, toAssetFile } from '../../asset-files/projection.js';
 import { readAssetFileRecordIncludingDiscarded } from '../../database/access/asset-files.js';
 import { listCastingCandidateRecords, listCastingRoundRecords } from '../../database/access/casting/rounds.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 
-/** A Look's rounds, newest first, with each active candidate and its file. Discarded candidates drop out. */
-export function listCastingRoundViews(session: DatabaseSession, lookId: string): CastingRoundView[] {
-  const rounds = listCastingRoundRecords(session, lookId);
+/** A Look's or costume's rounds, newest first, with each active image and its file. Discarded images drop out. */
+export function listCastingRoundViews(session: DatabaseSession, subject: CastingRoundSubject): CastingRoundView[] {
+  const rounds = listCastingRoundRecords(session, subject);
   const candidates = listCastingCandidateRecords(session, rounds.map((round) => round.id));
   return rounds.map((round) => ({
     ...round,

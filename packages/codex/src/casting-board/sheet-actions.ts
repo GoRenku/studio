@@ -1,18 +1,16 @@
 import { createProjectDataService } from '@gorenku/studio-core/server';
 import { notifyPanelProjectWrite } from '../panel-sessions/project-notifications.js';
 import { assertBoardIdle, startBoardRequest } from './board-requests.js';
+import { keptImageIds } from './board-rounds.js';
 import { castingBoardError } from './diagnostics.js';
 import { boardSubject } from './session-projection.js';
-import { readSheetBoardResource } from './sheet-board.js';
+import { lookCostumes, readSheetBoardLook } from './sheet-board.js';
 import type { CastingBoardActionContext, CastingBoardSessionRecord, CastingBoardSubject } from './session-state.js';
 
-/** Picks the sheet for the costume through Core; it posts no message. */
+/** Picks the sheet for the costume through Core, which checks it is a sheet of the costume's rounds; it posts no message. */
 export async function pickBoardSheet(context: CastingBoardActionContext, action: { kind: 'pickSheet'; costumeId: string; assetFileId: string }): Promise<null> {
   const { record, homeDir } = context;
-  const resource = await readSheetBoardResource(record, sheetSubject(record), homeDir);
-  if (!resource.costumes.some((costume) => costume.id === action.costumeId)) {
-    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', `Costume ${action.costumeId} is not on this board.`);
-  }
+  await requireBoardCostume(record, action.costumeId, homeDir);
   const report = await createProjectDataService().selectAssetFile({
     projectName: record.projectRef.name,
     homeDir,
@@ -24,15 +22,33 @@ export async function pickBoardSheet(context: CastingBoardActionContext, action:
   return null;
 }
 
-/** Sends the current picks so the agent can continue with the sheets. */
-export async function requestSheetPicksDone(context: CastingBoardActionContext): Promise<string> {
+/** Sends the costume's kept sheets and the notes so the agent can open its next sheet round with them as references. */
+export async function requestMoreSheetsLikeKept(context: CastingBoardActionContext, request: { kind: 'moreLikeKept'; notes: string; costumeId?: string }): Promise<string> {
   const { record, homeDir } = context;
-  const resource = await readSheetBoardResource(record, sheetSubject(record), homeDir);
+  if (!request.costumeId) {
+    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', 'Name the costume whose sheets the next round should follow.');
+  }
+  const costume = await requireBoardCostume(record, request.costumeId, homeDir);
+  const referenceAssetFileIds = keptImageIds(costume.rounds, costume.characterSheetAssetFileId);
+  if (referenceAssetFileIds.length === 0) {
+    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', `${costume.name} has no kept sheets. Show one again first.`);
+  }
   assertBoardIdle(record);
-  const picks = resource.costumes.flatMap((costume) => costume.characterSheetAssetFileId
-    ? [{ costumeId: costume.id, assetFileId: costume.characterSheetAssetFileId }]
-    : []);
-  return startBoardRequest(context.state, record.sessionId, { kind: 'sheetPicksDone', picks });
+  return startBoardRequest(context.state, record.sessionId, {
+    kind: 'moreLikeKept',
+    subject: { kind: 'castCostume', id: costume.id },
+    referenceAssetFileIds,
+    notes: request.notes.trim(),
+  });
+}
+
+async function requireBoardCostume(record: CastingBoardSessionRecord, costumeId: string, homeDir?: string) {
+  const { resource, look } = await readSheetBoardLook(record, sheetSubject(record), homeDir);
+  const costume = lookCostumes(resource, look.id).find((candidate) => candidate.id === costumeId);
+  if (!costume) {
+    throw castingBoardError('CODEX_CASTING_BOARD_INVALID', `Costume ${costumeId} is not on this board.`);
+  }
+  return costume;
 }
 
 function sheetSubject(record: CastingBoardSessionRecord): Extract<CastingBoardSubject, { mode: 'sheets' }> {

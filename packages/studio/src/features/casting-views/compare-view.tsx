@@ -1,34 +1,38 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
+import type { CastingRoundKind } from '@gorenku/studio-core/client';
 import { ChevronLeft, ChevronRight, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { handleImageZoomKey, useImageZoom, type ImageZoom } from '@/ui/image-zoom';
 import { ImageZoomControls } from '@/ui/image-zoom-controls';
 import { ZoomableImage } from '@/ui/zoomable-image';
-import { CandidateCastAction } from './candidate-actions';
+import { CandidateChoiceAction } from './candidate-actions';
+import { CASTING_ROUND_KIND_LABELS } from './round-kind-labels';
 import { compareArrangement, type CompareArrangement } from './compare-arrangement';
 
-/** A kept candidate as Compare shows it; the caller resolves the image URL. */
+/** A kept candidate or sheet as Compare shows it; the caller resolves the image URL. */
 export interface CompareCandidate {
   assetFileId: string;
   imageUrl: string | undefined;
-  /** "Round 1 · FLUX 3": the image's alt text. */
+  /** "Round 1 · Model": the image's alt text. */
   label: string;
 }
 
 type CompareSideKey = 'first' | 'second';
 
 /**
- * Two kept candidates side by side (or stacked when that shows both larger) with one shared zoom.
- * Each side steps through the candidates on its own, skipping the one the other side shows, so one
- * side can stay put while the other walks the rest. Each side casts or hides its own candidate.
+ * Two kept images of a Look's or costume's rounds side by side (or stacked when that shows both
+ * larger) with one shared zoom. Each side steps through the images on its own, skipping the one the
+ * other side shows, so one side can stay put while the other walks the rest. Each side casts (or
+ * picks) or hides its own image.
  */
 export function CompareView(input: {
+  kind: CastingRoundKind;
   candidates: CompareCandidate[];
-  castAssetFileId: string | null;
+  chosenAssetFileId: string | null;
   disabled: boolean;
-  castDisabled: boolean;
-  onCast: (assetFileId: string) => void;
+  chooseDisabled: boolean;
+  onChoose: (assetFileId: string) => void;
   onHide: (assetFileId: string) => void;
 }) {
   const { candidates } = input;
@@ -86,6 +90,7 @@ export function CompareView(input: {
   });
 
   if (!first) return null;
+  const { noun } = CASTING_ROUND_KIND_LABELS[input.kind];
 
   const arrangement: CompareArrangement = areaSize && zoom.layout
     ? compareArrangement({
@@ -104,12 +109,13 @@ export function CompareView(input: {
       zoom={zoom}
       measuresZoom={key === 'first'}
       canStep={stepFrom(key, 1) !== undefined}
-      isCast={candidate.assetFileId === input.castAssetFileId}
+      kind={input.kind}
+      isChosen={candidate.assetFileId === input.chosenAssetFileId}
       disabled={input.disabled}
-      castDisabled={input.castDisabled}
+      chooseDisabled={input.chooseDisabled}
       onStep={(offset) => step(key, offset)}
       onHide={() => hide(key)}
-      onCast={() => input.onCast(candidate.assetFileId)}
+      onChoose={() => input.onChoose(candidate.assetFileId)}
     />
   );
 
@@ -122,8 +128,8 @@ export function CompareView(input: {
           second ? COMPARE_GRID_CLASS[arrangement] : 'grid-cols-1',
         )}
       >
-        {side('first', first, 'First candidate')}
-        {second ? side('second', second, 'Second candidate') : null}
+        {side('first', first, `First ${noun}`)}
+        {second ? side('second', second, `Second ${noun}`) : null}
       </div>
       <ImageZoomControls zoom={zoom} className='absolute bottom-3 left-1/2 z-10 -translate-x-1/2' />
     </div>
@@ -143,22 +149,23 @@ function CompareSide(input: {
   /** The first side's stage sizes the shared zoom steps; the second follows the same view. */
   measuresZoom: boolean;
   canStep: boolean;
-  isCast: boolean;
+  kind: CastingRoundKind;
+  isChosen: boolean;
   disabled: boolean;
-  castDisabled: boolean;
+  chooseDisabled: boolean;
   onStep: (offset: number) => void;
   onHide: () => void;
-  onCast: () => void;
+  onChoose: () => void;
 }) {
   return (
     <section aria-label={input.label} className='flex min-h-0 flex-col bg-panel-bg'>
       <div className='grid h-11 flex-none grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-panel-border px-2.5'>
         <span className='col-start-2 flex items-center gap-1'>
-          <Button type='button' variant='ghost' size='icon' aria-label='Previous candidate' title='Previous' disabled={!input.canStep} className='h-7 w-7' onClick={() => input.onStep(-1)}>
+          <Button type='button' variant='ghost' size='icon' aria-label={`Previous ${CASTING_ROUND_KIND_LABELS[input.kind].noun}`} title='Previous' disabled={!input.canStep} className='h-7 w-7' onClick={() => input.onStep(-1)}>
             <ChevronLeft className='h-4 w-4' />
           </Button>
           <span className='min-w-[3.5rem] text-center font-mono text-[11.5px] tabular-nums text-muted-foreground'>{input.position} of {input.total}</span>
-          <Button type='button' variant='ghost' size='icon' aria-label='Next candidate' title='Next' disabled={!input.canStep} className='h-7 w-7' onClick={() => input.onStep(1)}>
+          <Button type='button' variant='ghost' size='icon' aria-label={`Next ${CASTING_ROUND_KIND_LABELS[input.kind].noun}`} title='Next' disabled={!input.canStep} className='h-7 w-7' onClick={() => input.onStep(1)}>
             <ChevronRight className='h-4 w-4' />
           </Button>
         </span>
@@ -166,7 +173,7 @@ function CompareSide(input: {
           <Button type='button' variant='outline' size='sm' disabled={input.disabled} className='h-7 gap-1.5 text-[12px]' onClick={input.onHide}>
             <EyeOff aria-hidden='true' className='h-3.5 w-3.5' />Hide
           </Button>
-          <CandidateCastAction isCast={input.isCast} disabled={input.castDisabled} onCast={input.onCast} className='h-7' />
+          <CandidateChoiceAction kind={input.kind} isChosen={input.isChosen} disabled={input.chooseDisabled} onChoose={input.onChoose} className='h-7' />
         </span>
       </div>
       <div className='relative min-h-0 flex-1 bg-muted'>

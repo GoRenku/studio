@@ -6,17 +6,20 @@ import type {
   CastCastingResource,
   CastingCandidateStatus,
   CastingEstimatedCost,
+  CastingRoundSubject,
   CastingRoute,
   GenerationLaneModel,
 } from '@gorenku/studio-core/client';
 
 export type CastingBoardMode = 'candidates' | 'sheets';
 
-/** A request the user sends to the agent from the board; the agent consumes the latest one once. */
+/**
+ * A request the user sends to the agent from the board; the agent consumes the latest one once.
+ * moreLikeKept names the Look or costume whose next round should use the kept images as references.
+ */
 export type CastingBoardRequest =
-  | { kind: 'moreLikeKept'; lookId: string; referenceAssetFileIds: string[]; notes: string }
-  | { kind: 'cast'; lookId: string; assetFileId: string }
-  | { kind: 'sheetPicksDone'; picks: Array<{ costumeId: string; assetFileId: string }> };
+  | { kind: 'moreLikeKept'; subject: CastingRoundSubject; referenceAssetFileIds: string[]; notes: string }
+  | { kind: 'cast'; lookId: string; assetFileId: string };
 
 export type CastingBoardRequestKind = CastingBoardRequest['kind'];
 
@@ -62,20 +65,29 @@ export interface CastingCandidateBoard extends CastingBoardBase {
   rounds: CastingBoardRound[];
 }
 
+/** One costume of the board's Look with its character sheet rounds, newest first. */
+export interface CastingSheetBoardCostume {
+  id: string;
+  name: string;
+  sceneIds: string[];
+  pickedAssetFileId: string | null;
+  rounds: CastingBoardRound[];
+}
+
 export interface CastingSheetBoard extends CastingBoardBase {
   mode: 'sheets';
+  look: { id: string; name: string };
   scenes: CastCastingResource['scenes'];
-  looks: Array<{ id: string; name: string; castImageUri: string | null }>;
-  costumes: Array<{ id: string; name: string; lookId: string; sceneIds: string[]; pickedAssetFileId: string | null }>;
-  /** Every active Character Sheet of the Cast Member; any of them can be picked for a costume. */
-  sheets: Array<{ assetFileId: string; imageUri: string }>;
+  /** The costume the board opens on when the agent named one. */
+  focusCostumeId: string | null;
+  costumes: CastingSheetBoardCostume[];
 }
 
 export type CastingBoard = CastingCandidateBoard | CastingSheetBoard;
 
 export type CastingBoardOpenInput =
   | { project: string; mode: 'candidates'; lookId: string }
-  | { project: string; mode: 'sheets'; castMemberId: string };
+  | { project: string; mode: 'sheets'; lookId: string; costumeId?: string };
 
 /** Durable board actions, written through Core; only cast also waits for the agent. */
 export type CastingBoardActAction =
@@ -91,7 +103,8 @@ export interface CastingBoardActInput {
   action: CastingBoardActAction;
 }
 
-export type CastingBoardRequestAction = { kind: 'moreLikeKept'; notes: string } | { kind: 'sheetPicksDone' };
+/** On a sheets board, moreLikeKept names the costume shown. */
+export type CastingBoardRequestAction = { kind: 'moreLikeKept'; notes: string; costumeId?: string };
 
 export interface CastingBoardRequestInput {
   sessionId: string;

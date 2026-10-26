@@ -28,3 +28,11 @@ export function sceneSummary(sceneIds: string[], scenes: SceneStripScene[]): str
   const plural = runs.length > 1 || runs[0]!.length > 1;
   return `${plural ? 'Scenes' : 'Scene'} ${labels.join(', ')}`;
 }
+
+/** "Scene 13" for one scene, else "15 scenes": short enough for a card. */
+export function shortSceneLabel(sceneIds: string[], scenes: SceneStripScene[]): string {
+  if (sceneIds.length > 1) {
+    return `${sceneIds.length} scenes`;
+  }
+  return sceneSummary(sceneIds, scenes);
+}

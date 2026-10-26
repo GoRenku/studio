@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { CastingRoundSubject } from '../../client/casting/model.js';
 import { createProjectDataService } from '../project-data-service.js';
 import { openCurrentProject } from '../project-selection/index.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
@@ -56,12 +57,12 @@ describe('casting', () => {
     return { young: report.looks[0]!, older: report.looks[1]! };
   }
 
-  async function createRound(lookId: string, referenceAssetFileIds: string[] = []) {
+  async function createRound(subject: CastingRoundSubject, referenceAssetFileIds: string[] = []) {
     return (await projectData.createCastingRound({
       homeDir,
       document: {
         kind: 'castingRoundCreate',
-        lookId,
+        subject,
         routes: [
           { provider: 'fal-ai', model: { key: 'model-a', name: 'Model A' }, count: 2 },
           { provider: 'fal-ai', model: { key: 'model-b', name: 'Model B' }, count: 1 },
@@ -71,6 +72,20 @@ describe('casting', () => {
         estimatedCost: { amount: 0.12, currency: 'USD' },
       },
     })).round;
+  }
+
+  const lookSubject = (id: string): CastingRoundSubject => ({ kind: 'castLook', id });
+  const costumeSubject = (id: string): CastingRoundSubject => ({ kind: 'castCostume', id });
+
+  function importSheet(roundId: string, select?: boolean) {
+    return projectData.attachGenerationMedia({
+      homeDir,
+      purpose: 'cast.character-sheet',
+      target: { kind: 'castingRound', id: roundId },
+      sourceProjectRelativePath: 'tmp/image.png',
+      castingModelKey: 'model-a',
+      ...(select ? { select } : {}),
+    });
   }
 
   function importCandidate(roundId: string, castingModelKey = 'model-a') {
@@ -159,8 +174,8 @@ describe('casting', () => {
 
   it('records candidates of a round and casts one for its Look only', async () => {
     const { young, older } = await writeTwoLooks();
-    const round = await createRound(young.id);
-    expect(round).toMatchObject({ number: 1, lookId: young.id, maxConcurrentGenerations: 3 });
+    const round = await createRound(lookSubject(young.id));
+    expect(round).toMatchObject({ number: 1, subject: { kind: 'castLook', id: young.id }, maxConcurrentGenerations: 3 });
     await expect(importCandidate(round.id, 'model-z')).rejects.toMatchObject({ code: 'CASTING_CANDIDATE_MODEL_INVALID' });
     const first = await importCandidate(round.id);
     await importCandidate(round.id, 'model-b');
@@ -182,7 +197,7 @@ describe('casting', () => {
     })).rejects.toMatchObject({ code: 'CORE_ASSET_SELECTION_INVALID' });
     await projectData.selectAssetFile({ ...project, homeDir, target: { kind: 'castLook', id: young.id }, assetFileId: first.assetFile.id });
 
-    const second = await createRound(older.id, [first.assetFile.id]);
+    const second = await createRound(lookSubject(older.id), [first.assetFile.id]);
     expect(second.number).toBe(1);
     const context = await projectData.readMediaGenerationContext({
       homeDir, purpose: 'cast.casting-candidate', target: { kind: 'castingRound', id: second.id },
@@ -202,33 +217,94 @@ describe('casting', () => {
       homeDir,
       document: { kind: 'castLooksPlan', castMemberId: 'cast_test0001', looks: [{ name: 'Main', sceneIds: [] }] },
     });
-    const otherRound = await createRound(otherLooks.looks[0]!.id);
+    const otherRound = await createRound(lookSubject(otherLooks.looks[0]!.id));
     const otherCandidate = await importCandidate(otherRound.id);
-    await expect(createRound(young.id, [otherCandidate.assetFile.id]))
+    await expect(createRound(lookSubject(young.id), [otherCandidate.assetFile.id]))
       .rejects.toMatchObject({ issues: [expect.objectContaining({ code: 'CASTING_ROUND_REFERENCE_NOT_OWNED' })] });
   });
 
-  it('picks a sheet per costume and suggests it first in that scene', async () => {
-    const { older } = await writeTwoLooks();
+  async function writeArmour(lookId: string) {
     const wardrobe = await projectData.writeCastWardrobePlan({
       homeDir,
       document: {
         kind: 'castWardrobePlan',
         castMemberId: MEHMED,
-        costumes: [{ name: 'Armour', lookId: older.id, wardrobe: ['Plate'], continuityNotes: [], sceneIds: [sceneIds[0]!] }],
+        costumes: [
+          { name: 'Armour', lookId, wardrobe: ['Plate'], continuityNotes: [], sceneIds: [sceneIds[0]!] },
+          { name: 'Robe', lookId, wardrobe: ['Dark robe'], continuityNotes: [], sceneIds: [] },
+        ],
       },
     });
-    const costumeId = wardrobe.costumes[0]!.id;
-    const picked = await projectData.attachGenerationMedia({
-      homeDir, purpose: 'cast.character-sheet', target: { kind: 'castCostume', id: costumeId },
-      sourceProjectRelativePath: 'tmp/image.png', select: true,
+    return { armour: wardrobe.costumes[0]!, robe: wardrobe.costumes[1]! };
+  }
+
+  async function castLook(lookId: string) {
+    const round = await createRound(lookSubject(lookId));
+    const candidate = await importCandidate(round.id);
+    await projectData.selectAssetFile({ ...project, homeDir, target: { kind: 'castLook', id: lookId }, assetFileId: candidate.assetFile.id });
+    return candidate.assetFile.id;
+  }
+
+  it('runs character sheet rounds per costume once its Look is cast', async () => {
+    const { young, older } = await writeTwoLooks();
+    const { armour, robe } = await writeArmour(older.id);
+    await expect(createRound(costumeSubject(armour.id))).rejects.toMatchObject({ code: 'CASTING_ROUND_LOOK_NOT_CAST' });
+    const cast = await castLook(older.id);
+
+    const round = await createRound(costumeSubject(armour.id), [cast]);
+    expect(round).toMatchObject({ number: 1, subject: { kind: 'castCostume', id: armour.id } });
+    expect((await createRound(costumeSubject(robe.id))).number).toBe(1);
+    expect((await createRound(costumeSubject(armour.id))).number).toBe(2);
+
+    await expect(projectData.attachGenerationMedia({
+      homeDir, purpose: 'cast.casting-candidate', target: { kind: 'castingRound', id: round.id },
+      sourceProjectRelativePath: 'tmp/image.png', castingModelKey: 'model-a',
+    })).rejects.toMatchObject({ code: 'CORE_GENERATION_TARGET_INVALID' });
+    const youngRound = await createRound(lookSubject(young.id));
+    await expect(importSheet(youngRound.id)).rejects.toMatchObject({ code: 'CORE_GENERATION_TARGET_INVALID' });
+    await expect(importSheet(round.id, true)).rejects.toMatchObject({ code: 'CORE_ASSET_SELECTION_UNSUPPORTED' });
+
+    const first = await importSheet(round.id);
+    const second = await importSheet(round.id);
+    expect(first.assetFile.type).toBe('character_sheet');
+    await projectData.setCastingCandidateStatus({ homeDir, assetFileId: second.assetFile.id, status: 'hidden' });
+    const shown = await projectData.showCastingCostume({ homeDir, costumeId: armour.id });
+    expect(shown.rounds.map((entry) => entry.number)).toEqual([2, 1]);
+    expect(shown.rounds[1]!.candidates.map((candidate) => [candidate.assetFileId, candidate.status])).toEqual([
+      [first.assetFile.id, 'candidate'],
+      [second.assetFile.id, 'hidden'],
+    ]);
+
+    const context = await projectData.readMediaGenerationContext({
+      homeDir, purpose: 'cast.character-sheet', target: { kind: 'castingRound', id: round.id },
     });
-    await projectData.attachGenerationMedia({
-      homeDir, purpose: 'cast.character-sheet', target: { kind: 'castCostume', id: costumeId },
-      sourceProjectRelativePath: 'tmp/image.png',
+    expect(context.targetContext).toMatchObject({ kind: 'characterSheetRound', costume: { id: armour.id }, look: { id: older.id } });
+    expect(context.outputGuidance.aspectRatio?.value).toBe('16:9');
+    expect(context.suggestedReferences.find((group) => group.id === 'cast-identity')?.candidates).toEqual([
+      expect.objectContaining({ assetFileId: cast, isWorkflowSelected: true }),
+    ]);
+    expect(context.suggestedReferences.find((group) => group.id === 'cast-continuity')?.candidates.map((candidate) => candidate.assetFileId))
+      .toEqual([first.assetFile.id]);
+
+    await expect(projectData.selectAssetFile({
+      ...project, homeDir, target: { kind: 'castCostume', id: robe.id }, assetFileId: first.assetFile.id,
+    })).rejects.toMatchObject({ code: 'CORE_ASSET_SELECTION_INVALID' });
+    await projectData.selectAssetFile({ ...project, homeDir, target: { kind: 'castCostume', id: armour.id }, assetFileId: first.assetFile.id });
+
+    await projectData.setCastingCandidateStatus({ homeDir, assetFileId: first.assetFile.id, status: 'hidden' });
+    const nextRound = await createRound(costumeSubject(armour.id));
+    const nextContext = await projectData.readMediaGenerationContext({
+      homeDir, purpose: 'cast.character-sheet', target: { kind: 'castingRound', id: nextRound.id },
     });
-    expect((await projectData.showCastWardrobe({ homeDir, castMemberId: MEHMED })).costumes[0]!.characterSheetAssetFileId)
-      .toBe(picked.assetFile.id);
+    expect(nextContext.suggestedReferences.find((group) => group.id === 'cast-continuity')?.candidates).toEqual([
+      expect.objectContaining({ assetFileId: first.assetFile.id, isDisplaySelected: true }),
+    ]);
+
+    const resource = await projectData.readCastCastingResource({ ...project, homeDir, castMemberId: MEHMED });
+    expect(resource.costumes.map((costume) => [costume.name, costume.characterSheetAssetFileId, costume.rounds.length])).toEqual([
+      ['Armour', first.assetFile.id, 3],
+      ['Robe', null, 1],
+    ]);
 
     const scene = await projectData.readMediaGenerationContext({
       homeDir, purpose: 'scene.storyboard-sheet', target: { kind: 'scene', id: sceneIds[0]! },
@@ -237,25 +313,50 @@ describe('casting', () => {
       throw new Error('Expected Scene context.');
     }
     const mehmed = scene.targetContext.castMembers.find((member) => member.castMember.id === MEHMED);
-    expect(mehmed?.wardrobe).toMatchObject({ look: { id: older.id, name: 'Older' }, costume: { name: 'Armour' }, characterSheetAssetFileId: picked.assetFile.id });
+    expect(mehmed?.wardrobe).toMatchObject({ look: { id: older.id, name: 'Older' }, costume: { name: 'Armour' }, characterSheetAssetFileId: first.assetFile.id });
     const continuity = scene.suggestedReferences.find((group) => group.id === 'cast-continuity' && group.subject?.id === MEHMED);
-    expect(continuity?.candidates[0]).toMatchObject({ assetFileId: picked.assetFile.id, isWorkflowSelected: true });
-    expect(continuity?.candidates).toHaveLength(2);
+    expect(continuity?.candidates[0]).toMatchObject({ assetFileId: first.assetFile.id, isWorkflowSelected: true });
+  });
+
+  it('keeps a costume with sheet rounds in its Look and releases its sheets when it is removed', async () => {
+    const { young, older } = await writeTwoLooks();
+    const { armour, robe } = await writeArmour(older.id);
+    await castLook(older.id);
+    const round = await createRound(costumeSubject(armour.id));
+    const sheet = await importSheet(round.id);
+    await projectData.selectAssetFile({ ...project, homeDir, target: { kind: 'castCostume', id: armour.id }, assetFileId: sheet.assetFile.id });
+
+    await expect(projectData.writeCastWardrobePlan({
+      homeDir,
+      document: {
+        kind: 'castWardrobePlan',
+        castMemberId: MEHMED,
+        costumes: [{ id: armour.id, name: 'Armour', lookId: young.id, wardrobe: ['Plate'], continuityNotes: [], sceneIds: [] }],
+      },
+    })).rejects.toMatchObject({ issues: [expect.objectContaining({ code: 'CASTING_COSTUME_LOOK_CHANGE_HAS_SHEETS' })] });
 
     const removed = await projectData.writeCastWardrobePlan({
-      homeDir, document: { kind: 'castWardrobePlan', castMemberId: MEHMED, costumes: [] },
+      homeDir,
+      document: {
+        kind: 'castWardrobePlan',
+        castMemberId: MEHMED,
+        costumes: [{ id: robe.id, name: 'Robe', lookId: young.id, wardrobe: ['Dark robe'], continuityNotes: [], sceneIds: [] }],
+      },
     });
-    expect(removed.clearedSheetSelections).toEqual([costumeId]);
+    expect(removed).toMatchObject({ clearedSheetSelections: [armour.id], releasedSheetAssetFileIds: [sheet.assetFile.id] });
+    await expect(projectData.showCastingCostume({ homeDir, costumeId: armour.id })).rejects.toMatchObject({ code: 'CASTING_COSTUME_NOT_FOUND' });
+    const assets = await projectData.readCastCastingResource({ ...project, homeDir, castMemberId: MEHMED });
+    expect(assets.costumes.map((costume) => costume.rounds)).toEqual([[]]);
   });
 
   it('saves casting defaults in Project Settings', async () => {
     const routes = [{ provider: 'fal-ai', model: { key: 'model-a', name: 'Model A' }, count: 4 }];
-    expect((await projectData.showCastingSettings({ homeDir })).casting).toEqual({ routes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' });
-    const casting = { routes, candidateDetail: 'mid', characterSheetDetail: 'highest' };
+    expect((await projectData.showCastingSettings({ homeDir })).casting).toEqual({ candidateRoutes: [], characterSheetRoutes: [], candidateDetail: 'lowest', characterSheetDetail: 'highest' });
+    const casting = { candidateRoutes: routes, characterSheetRoutes: [{ ...routes[0], count: 2 }], candidateDetail: 'mid', characterSheetDetail: 'highest' };
     const report = await projectData.setCastingSettings({ ...project, homeDir, casting });
     expect(report.casting).toEqual(casting);
     expect((await projectData.showCastingSettings({ homeDir })).casting).toEqual(casting);
-    await expect(projectData.setCastingSettings({ ...project, homeDir, casting: { ...casting, routes: [{ ...routes[0], count: 0 }] } }))
+    await expect(projectData.setCastingSettings({ ...project, homeDir, casting: { ...casting, characterSheetRoutes: [{ ...routes[0], count: 0 }] } }))
       .rejects.toMatchObject({ code: 'CASTING_DOCUMENT_INVALID' });
     await expect(projectData.setCastingSettings({ ...project, homeDir, casting: { ...casting, candidateDetail: '4K' } }))
       .rejects.toMatchObject({ code: 'CASTING_DOCUMENT_INVALID' });
