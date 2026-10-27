@@ -141,6 +141,23 @@ Renku Studio (`http://localhost:5173`, project `urban-basilica`) at
 1440×900 @2x with Playwright. Recapture with any Playwright-driven script
 pointing at the same routes if the product UI changes.
 
+The casting and Character Arc tutorials use real Big Fish Studio views,
+captured at 1440×1000 with Playwright, viewing only:
+
+| Website file | Studio subject and view |
+| --- | --- |
+| `screens/karl-casting.png` | Karl > Casting > Storybook Giant > Casting; three kept and three hidden candidates |
+| `screens/karl-casting-compare.png` | Karl > Storybook Giant > Compare; shared Studio/Codex comparison component, captured in Studio |
+| `screens/karl-character-sheets.png` | Karl > Storybook Giant > Cave rags; picked sheet and costume cards |
+| `screens/karl-real-look.png` | Karl > Real Karl, 55 > Funeral suit; two sheet options and one pick, Scenes 198–200 |
+| `screens/edward-bloom-character-arc.png` | Edward Bloom > Arc; summary and timeline |
+| `screens/edward-bloom-turning-points.png` | Edward Bloom > Arc; scrolled to the turning-point cards |
+
+These captures do not generate media, change casting selections, or revise
+project documents. The tutorials describe Codex panels from their current
+implementation and skill contracts; screenshots show Studio, not a simulated
+Codex conversation.
+
 Shot Planning uses two tabs with full inline Studio screenshots: the Bombardment
 Shot List and the Harbor Blender Previs comparison. Blender Previs is selected
 initially.

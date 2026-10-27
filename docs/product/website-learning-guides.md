@@ -23,6 +23,17 @@ instruction so that downloading Renku remains a focused task.
   a path into video generation; completing both is not required.
 - The optional sample project guide explains how to clone the Basilica project
   directly into the configured Project Library and open it from Projects.
+- `/tutorials/casting/` follows Big Fish's Karl through scene-specific Looks,
+  casting candidates, comparison, wardrobe, and character sheet rounds with
+  one pick per costume. It explains the Codex plugin panels and Studio's
+  Casting tab, plus the quick agent-led approach used for Basilica and Sintel.
+  Current one-option requests still use the Look/costume round contracts;
+  the guide does not imply a separate direct-to-Cast sheet generation API.
+- `/tutorials/character-arcs/` uses Edward Bloom to explain the arcs produced
+  by screenplay analysis for protagonists and key supporting roles, the
+  Interpretation label, arc types, scene evidence, and turning-point cards.
+  One person's arc spans all their age-specific Looks. The Inspiration
+  chapter links to this guide, and Cast and world links to the casting guide.
 - Recipes work through one technique on a real scene, using media from
   recorded Renku runs. The first is "Previs a dialogue scene in Blender",
   built on Basilica Scene 2. A recipe makes no time claim it has not measured
@@ -55,6 +66,11 @@ Verify wording against the current owning implementation and documentation:
 - Decisions 0048 and 0080 for the two Lookbook roles and Beat Storyboard style.
 - The sister `studio-skills` project for specialist workflow handoffs and current
   generation, Shot List, and Blender Previs capabilities.
+- Casting Director's Looks, casting rounds, wardrobe plan, and Cast media
+  handoff references; Media Producer's character sheet reference; ADR 0127
+  and the Studio Casting tab/shared Compare implementation.
+- Screenplay Analyst's Character Arc guidance and CLI workflow; ADR 0125
+  as updated by ADR 0127, and the Studio Arc tab implementation.
 
 Download page facts:
 
